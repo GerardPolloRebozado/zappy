@@ -79,78 +79,10 @@ pub fn unescape_str(s: &str) -> String {
 /// ```
 ///
 pub fn parse_args(input: &str) -> Vec<String> {
-    let mut args = Vec::new();
-    let mut current = String::new();
-    let mut in_quotes = false;
-    let mut in_arg = false;
-    let mut arg_quoted = false;
-    let mut escaped = false;
-    let mut it = input.chars().peekable();
-    while let Some(c) = it.next() {
-        if escaped {
-            current.push(c);
-            escaped = false;
-            continue;
-        }
-
-        if in_quotes {
-            if c == '\\' {
-                if let Some(&nc) = it.peek() {
-                    if nc == '"' || nc == '\\' {
-                        escaped = true;
-                        continue;
-                    }
-                }
-            }
-            if c == '"' {
-                in_quotes = false;
-                args.push(current.clone());
-                current.clear();
-                in_arg = false;
-                continue;
-            }
-            current.push(c);
-        } else {
-            if c.is_whitespace() {
-                if in_arg {
-                    if args.len() > 0 && !arg_quoted {
-                        return Vec::new();
-                    }
-                    args.push(current.clone());
-                    current.clear();
-                    in_arg = false;
-                }
-            } else if c == '"' {
-                if in_arg {
-                    return Vec::new();
-                }
-                in_quotes = true;
-                in_arg = true;
-                arg_quoted = true;
-            } else {
-                if !in_arg {
-                    in_arg = true;
-                    arg_quoted = false;
-                } else if arg_quoted {
-                    return Vec::new();
-                }
-                current.push(c);
-            }
-        }
-    }
-
-    if in_quotes {
-        return Vec::new();
-    }
-
-    if in_arg {
-        if args.len() > 0 && !arg_quoted {
-            return Vec::new();
-        }
-        args.push(current);
-    }
-
-    args
+    input
+        .split_whitespace()
+        .map(|s| s.to_string())
+        .collect()
 }
 
 #[cfg(test)]
