@@ -1,19 +1,11 @@
-use myteams::common::protocol::{Response, ResponseCode, event::EventCode};
-use myteams::common::{Date, Message, Team, User};
+use zappy::common::protocol::{Response, ResponseCode, event::EventCode};
+use zappy::common::{Team, User};
 
 #[test]
 fn test_server_event_serialization_feature() {
     let events = vec![
         (EventCode::LoggedIn, Some("\"u1\" \"name\"".to_string())),
         (EventCode::LoggedOut, Some("\"u1\" \"name\"".to_string())),
-        (
-            EventCode::MessageReceived,
-            Some("\"u1\" \"body\"".to_string()),
-        ),
-        (
-            EventCode::TeamCreated,
-            Some("\"t1\" \"name\" \"desc\"".to_string()),
-        ),
     ];
 
     for (code, data) in events {

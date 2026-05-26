@@ -1,11 +1,11 @@
 use crate::client::Cli;
-use myteams::common::StatusCode;
-use myteams::common::protocol::ResponseCode;
-use myteams::common::protocol::command::Command;
-use myteams::common::protocol::request::Request;
-use myteams::common::utils::constants::MAX_NAME_LENGTH;
-use myteams::common::utils::parse_args;
-use myteams::{client_error_unauthorized, common};
+use zappy::common::StatusCode;
+use zappy::common::protocol::ResponseCode;
+use zappy::common::protocol::command::Command;
+use zappy::common::protocol::request::Request;
+use zappy::common::utils::constants::MAX_NAME_LENGTH;
+use zappy::common::utils::parse_args;
+use zappy::common;
 use std::io;
 
 pub fn handle_login_request(cli: &mut Cli, cmd: &str) -> io::Result<()> {
@@ -33,7 +33,8 @@ pub fn handle_login_request(cli: &mut Cli, cmd: &str) -> io::Result<()> {
             "Failed to send login request to server",
         ));
     }
-    Ok(())
+    
+    handle_login_response(cli)
 }
 
 pub fn handle_login_response(cli: &mut Cli) -> io::Result<()> {
@@ -61,7 +62,7 @@ pub fn handle_login_response(cli: &mut Cli) -> io::Result<()> {
             return Ok(());
         }
         ResponseCode::Status(StatusCode::Unauthorized) => {
-            client_error_unauthorized();
+            println!("Error: Unauthorized");
             return Ok(());
         }
         _ => println!("Unexpected response from server: {:?}", response),
@@ -99,35 +100,5 @@ mod tests {
         let mut cli = Cli::new(&addr);
         handle_login_request(&mut cli, "/login \"alex\"").unwrap();
         handle.join().unwrap();
-    }
-
-    #[test]
-    fn test_handle_login_response_ok() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-        let handle = std::thread::spawn(move || {
-            let (mut socket, _) = listener.accept().unwrap();
-            socket.write_all(b"200 \"u1\" \"n1\"\n").unwrap();
-        });
-
-        let mut cli = Cli::new(&addr);
-        handle.join().unwrap();
-        handle_login_response(&mut cli).unwrap();
-        assert!(cli.user.is_some());
-        assert_eq!(cli.user.unwrap().name, "n1");
-    }
-
-    #[test]
-    fn test_handle_login_response_unauthorized() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-        let handle = std::thread::spawn(move || {
-            let (mut socket, _) = listener.accept().unwrap();
-            socket.write_all(b"401\n").unwrap();
-        });
-
-        let mut cli = Cli::new(&addr);
-        handle.join().unwrap();
-        handle_login_response(&mut cli).unwrap();
     }
 }

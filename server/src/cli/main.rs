@@ -18,7 +18,7 @@ fn main() -> io::Result<()> {
 }
 
 fn print_usage() {
-    println!("USAGE: ./myteams_cli ip port");
+    println!("USAGE: ./zappy_cli ip port");
     println!("ip is the server ip address");
     println!("port is the port number");
 }
