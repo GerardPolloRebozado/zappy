@@ -1,40 +1,20 @@
-use crate::commands;
-use crate::commands::handle_login_request;
 use nix::poll::{PollFd, PollFlags};
 use std::io;
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::str::FromStr;
-use zappy::common::protocol::command::Command;
-use zappy::common::utils::constants::MAX_BODY_LENGTH;
-use zappy::common::{Request, Response, User};
-
-use std::collections::VecDeque;
 use std::os::fd::AsFd;
 
 pub struct Cli {
     pub socket: TcpStream,
-    pub user: Option<User>,
-    pub pending_request: Option<Request>,
-    pub buffered_data: String,
-    pub status_queue: VecDeque<Response>,
 }
 
 impl Cli {
     pub fn new(socket: &str) -> Self {
         let new_socket = TcpStream::connect(socket).expect("Failed to connect to server");
-        Self {
-            socket: new_socket,
-            user: None,
-            pending_request: None,
-            buffered_data: String::new(),
-            status_queue: VecDeque::new(),
-        }
+        Self { socket: new_socket }
     }
 
     pub fn run(&mut self) {
-        println!("Connected to server. Type /help for commands.");
-
         loop {
             let mut socket_ready = false;
             let mut socket_hup = false;
@@ -51,7 +31,6 @@ impl Cli {
                     if e == nix::errno::Errno::EINTR {
                         continue;
                     }
-                    eprintln!("Poll error: {}", e);
                     break;
                 }
 
@@ -64,152 +43,28 @@ impl Cli {
                 }
             }
 
-            // Handle Socket events (Priority)
+            // Read from server and print to stdout
             if socket_ready {
-                if let Err(_) = self.process_socket_data() {
-                    println!("Server disconnected.");
-                    break;
+                let mut buffer = [0; 4096];
+                match self.socket.read(&mut buffer) {
+                    Ok(0) => break,
+                    Ok(n) => {
+                        let _ = io::stdout().write_all(&buffer[..n]);
+                        let _ = io::stdout().flush();
+                    }
+                    Err(_) => break,
                 }
             } else if socket_hup {
-                println!("Server connection lost.");
                 break;
             }
 
-            // Handle Stdin
+            // Read from stdin and send to server
             if stdin_ready {
                 let mut input = String::new();
                 if io::stdin().read_line(&mut input).is_ok() {
-                    let trimmed = input.trim();
-                    if trimmed.is_empty() {
-                        continue;
+                    if self.socket.write_all(input.as_bytes()).is_err() {
+                        break;
                     }
-                    if self.handle_command(trimmed).is_err() {
-                        // handle_command already prints errors
-                    }
-                }
-            }
-        }
-    }
-
-    fn handle_command(&mut self, cmd: &str) -> io::Result<()> {
-        let mut parts = cmd.trim().splitn(2, char::is_whitespace);
-        let command = parts.next().unwrap_or("");
-
-        match command {
-            "/help" => {
-                commands::help();
-            }
-            "/login" => {
-                handle_login_request(self, cmd)?;
-            }
-            "/logout" => {
-                std::process::exit(0);
-            }
-            _ => {
-                self.pending_request = Some(Request {
-                    command: Command::Unknown(cmd.to_string()),
-                });
-                self.handle_request()?;
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn handle_request(&mut self) -> io::Result<()> {
-        let req = match &self.pending_request {
-            Some(r) => r.to_string().into_bytes(),
-            None => return Ok(()),
-        };
-
-        while self.pending_request.is_some() {
-            let mut socket_ready = false;
-            {
-                let mut fds = vec![PollFd::new(self.socket.as_fd(), PollFlags::POLLOUT)];
-                if let Err(_e) = nix::poll::poll(&mut fds, None::<u16>) {
-                    return Err(io::Error::new(io::ErrorKind::Other, "Poll error"));
-                }
-                if let Some(r) = fds[0].revents() {
-                    socket_ready = r.contains(PollFlags::POLLOUT);
-                }
-            }
-
-            if socket_ready {
-                if let Err(_e) = self.socket.write_all(&req) {
-                    return Err(io::Error::new(io::ErrorKind::Other, "Write error"));
-                }
-                self.pending_request = None;
-                break;
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn process_socket_data(&mut self) -> io::Result<()> {
-        let mut buffer = [0; MAX_BODY_LENGTH];
-        match self.socket.read(&mut buffer) {
-            Ok(0) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::ConnectionAborted,
-                    "Server closed connection",
-                ));
-            }
-            Ok(n) => {
-                self.buffered_data
-                    .push_str(&String::from_utf8_lossy(&buffer[..n]));
-                while let Some(pos) = self.buffered_data.find('\n') {
-                    let line = self.buffered_data[..pos].to_string();
-                    self.buffered_data.drain(..pos + 1);
-                    if line.trim().is_empty() {
-                        continue;
-                    }
-
-                    // Zappy handshake: WELCOME
-                    if line.trim() == "WELCOME" {
-                        println!("Server: WELCOME");
-                        continue;
-                    }
-
-                    if let Ok(response) = Response::from_str(line.trim()) {
-                        match response.code {
-                            zappy::common::protocol::response::ResponseCode::Event(_) => {
-                                commands::handle_event(response);
-                            }
-                            zappy::common::protocol::response::ResponseCode::Status(_) => {
-                                self.status_queue.push_back(response);
-                            }
-                        }
-                    } else {
-                        println!("Server raw: {}", line);
-                    }
-                }
-            }
-            Err(e) => return Err(e),
-        }
-        Ok(())
-    }
-
-    pub fn handle_response(&mut self) -> Option<Response> {
-        loop {
-            if let Some(resp) = self.status_queue.pop_front() {
-                return Some(resp);
-            }
-
-            let mut socket_ready = false;
-            {
-                let mut fds = vec![PollFd::new(self.socket.as_fd(), PollFlags::POLLIN)];
-                if let Err(_e) = nix::poll::poll(&mut fds, None::<u16>) {
-                    return None;
-                }
-                if let Some(r) = fds[0].revents() {
-                    socket_ready = r.contains(PollFlags::POLLIN);
-                }
-            }
-
-            if socket_ready {
-                if self.process_socket_data().is_err() {
-                    return None;
                 }
             }
         }

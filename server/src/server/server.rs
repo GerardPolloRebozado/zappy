@@ -1,3 +1,8 @@
+use nix::poll::{PollFd, PollFlags};
+use std::collections::HashMap;
+use std::io::Write;
+use std::net::TcpListener;
+use std::os::fd::AsFd;
 use zappy::common::StatusCode;
 use zappy::common::client::{Client, ClientState};
 use zappy::common::protocol::ResponseCode;
@@ -6,17 +11,18 @@ use zappy::common::protocol::request::Request;
 use zappy::common::user::User;
 use zappy::common::utils::escape_str;
 use zappy::common::{Response, Team};
-use nix::poll::{PollFd, PollFlags};
-use std::collections::HashMap;
-use std::io::Write;
-use std::net::TcpListener;
-use std::os::fd::AsFd;
+
+pub struct Map {
+    pub width: u32,
+    pub height: u32,
+}
 
 pub struct Server {
     pub listener: TcpListener,
     pub clients: HashMap<String, Client>,
     pub users: HashMap<String, User>,
     pub teams: HashMap<String, Team>,
+    pub map: Map,
     pub freq: u32,
 }
 
@@ -28,7 +34,11 @@ impl Server {
             clients: HashMap::new(),
             users: HashMap::new(),
             teams: HashMap::new(),
-            freq: 100, // Default frequency
+            map: Map {
+                width: 10,
+                height: 10,
+            },
+            freq: 100,
         }
     }
 
@@ -72,9 +82,7 @@ impl Server {
 
     pub fn accept_connections(&mut self) {
         if let Ok((mut socket, _addr)) = self.listener.accept() {
-            // Zappy specification: Immediately send WELCOME\n
             let _ = socket.write_all(b"WELCOME\n");
-            
             let new_client = Client::new(socket);
             self.clients.insert(new_client.uuid.clone(), new_client);
         }
@@ -167,31 +175,31 @@ impl Server {
 
         if client_state == ClientState::WaitingForTeamName {
             match request.command {
-                Command::Login(team_name) => {
+                Command::Unknown(team_name) => {
                     if team_name == "GRAPHIC" {
                         if let Some(client) = self.clients.get_mut(client_uuid) {
                             client.state = ClientState::Authenticated;
                         }
                     } else {
+                        // Handshake response: CLIENT-NUM \n X Y
                         if let Some(client) = self.clients.get_mut(client_uuid) {
                             client.state = ClientState::Authenticated;
                             client.pending_responses.push(Response::new(
                                 ResponseCode::Status(StatusCode::Ok),
-                                Some("1".to_string()), // CLIENT-NUM
+                                Some("1".to_string()),
                             ));
                             client.pending_responses.push(Response::new(
                                 ResponseCode::Status(StatusCode::Ok),
-                                Some("10 10".to_string()), // X Y
+                                Some(format!("{} {}", self.map.width, self.map.height)),
                             ));
                         }
                     }
                 }
                 _ => {
                     if let Some(client) = self.clients.get_mut(client_uuid) {
-                        client.pending_responses.push(Response::new(
-                            ResponseCode::Status(StatusCode::Ko),
-                            None,
-                        ));
+                        client
+                            .pending_responses
+                            .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
                     }
                 }
             }
@@ -199,21 +207,24 @@ impl Server {
         }
 
         match request.command {
+            // EXAMPLE AI COMMAND: Forward
             Command::Forward => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
-                    client.pending_responses.push(Response::new(ResponseCode::Status(StatusCode::Ok), None));
+                    client
+                        .pending_responses
+                        .push(Response::new(ResponseCode::Status(StatusCode::Ok), None));
                 }
             }
+            // EXAMPLE GUI COMMAND: msz
             Command::Msz => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
                     client.pending_responses.push(Response::new(
                         ResponseCode::Status(StatusCode::Ok),
-                        Some("msz 10 10".to_string())
+                        Some(format!("msz {} {}", self.map.width, self.map.height)),
                     ));
                 }
             }
-            Command::Unknown(cmd) => {
-                println!("Unknown command received: {}", cmd);
+            Command::Unknown(_) => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
                     client.pending_responses.push(Response {
                         code: ResponseCode::Status(StatusCode::Ko),
@@ -223,10 +234,9 @@ impl Server {
             }
             _ => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
-                    client.pending_responses.push(Response {
-                        code: ResponseCode::Status(StatusCode::Ok),
-                        data: None,
-                    });
+                    client
+                        .pending_responses
+                        .push(Response::new(ResponseCode::Status(StatusCode::Ok), None));
                 }
             }
         }
@@ -280,40 +290,6 @@ impl Server {
         }
     }
 
-    pub fn save(&mut self) {
-        for client in self.clients.values_mut() {
-            let _ = client.socket.shutdown(std::net::Shutdown::Both);
-        }
-        self.clients.clear();
-    }
-
-    pub fn load(&mut self) {
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use zappy::common::protocol::status::StatusCode;
-    use std::net::TcpListener;
-
-    fn create_test_server() -> Server {
-        Server {
-            listener: TcpListener::bind("127.0.0.1:0").unwrap(),
-            clients: HashMap::new(),
-            users: HashMap::new(),
-            teams: HashMap::new(),
-            freq: 100,
-        }
-    }
-
-    #[test]
-    fn test_server_broadcast_global() {
-        let mut server = create_test_server();
-        let event = Response {
-            code: ResponseCode::Status(StatusCode::Ok),
-            data: Some("test".to_string()),
-        };
-        server.broadcast_global(event);
-    }
+    pub fn save(&mut self) {}
+    pub fn load(&mut self) {}
 }

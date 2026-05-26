@@ -62,8 +62,8 @@ impl FromStr for Request {
                 Command::Sst(t)
             }
 
-            // If it doesn't match any command, it's either the team name (handshake) or unknown
-            _ => Command::Login(cmd_name),
+            // For the handshake, any non-command string in the first message is handled by the server state
+            _ => Command::Unknown(cmd_name),
         };
 
         Ok(Request { command })
