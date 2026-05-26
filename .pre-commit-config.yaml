@@ -1,6 +1,20 @@
 repos:
--   repo: https://github.com/pre-commit/mirrors-clang-format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.13
+    hooks:
+      - id: ruff
+        files: ^ai/.*\.py$
+      - id: ruff-format
+        files: ^ai/.*\.py$
+
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: master
+    hooks:
+      - id: fmt
+        files: ^server/.*\.rs$
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v18.1.5
     hooks:
-    -   id: clang-format
+      - id: clang-format
         files: ^gui/.*\.(c|h|cpp|hpp)$
