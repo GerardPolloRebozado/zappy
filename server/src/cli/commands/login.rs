@@ -61,8 +61,8 @@ pub fn handle_login_response(cli: &mut Cli) -> io::Result<()> {
             }
             return Ok(());
         }
-        ResponseCode::Status(StatusCode::Unauthorized) => {
-            println!("Error: Unauthorized");
+        ResponseCode::Status(StatusCode::Ko) => {
+            println!("ko");
             return Ok(());
         }
         _ => println!("Unexpected response from server: {:?}", response),

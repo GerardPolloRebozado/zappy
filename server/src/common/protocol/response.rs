@@ -8,15 +8,6 @@ pub enum ResponseCode {
     Event(EventCode),
 }
 
-impl ResponseCode {
-    pub fn to_u32(&self) -> u32 {
-        match self {
-            ResponseCode::Status(s) => *s as u32,
-            ResponseCode::Event(e) => *e as u32,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Response {
     pub code: ResponseCode,
@@ -33,46 +24,50 @@ impl FromStr for Response {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split_whitespace().collect();
-        if parts.is_empty() {
+        let s = s.trim();
+        if s.is_empty() {
             return Err(());
         }
 
-        let code_u32 = parts[0].parse::<u32>().map_err(|_| ())?;
-        let code = match code_u32 {
-            200 => ResponseCode::Status(StatusCode::Ok),
-            201 => ResponseCode::Status(StatusCode::Created),
-            400 => ResponseCode::Status(StatusCode::BadRequest),
-            401 => ResponseCode::Status(StatusCode::Unauthorized),
-            403 => ResponseCode::Status(StatusCode::Forbidden),
-            404 => ResponseCode::Status(StatusCode::NotFound),
-            409 => ResponseCode::Status(StatusCode::Conflict),
-            442 => ResponseCode::Status(StatusCode::ImACoffeePot),
-            500 => ResponseCode::Status(StatusCode::InternalServerError),
-            600 => ResponseCode::Event(EventCode::LoggedIn),
-            601 => ResponseCode::Event(EventCode::LoggedOut),
-            _ => return Err(()),
-        };
+        // Zappy specific logic: 
+        // "ok" -> Status(StatusCode::Ok)
+        // "ko" -> Status(StatusCode::Ko)
+        // Everything else is either data or an event
+        if s == "ok" {
+            return Ok(Response { code: ResponseCode::Status(StatusCode::Ok), data: None });
+        }
+        if s == "ko" {
+            return Ok(Response { code: ResponseCode::Status(StatusCode::Ko), data: None });
+        }
 
-        let data = if parts.len() > 1 {
-            Some(parts[1..].join(" "))
-        } else {
-            None
-        };
-
-        Ok(Response { code, data })
+        // For now, let's treat other strings as Status::Ok with data if they don't match events
+        // In a real implementation, we'd have a more robust parser for GUI events (msz, bct, etc)
+        Ok(Response {
+            code: ResponseCode::Status(StatusCode::Ok),
+            data: Some(s.to_string()),
+        })
     }
 }
 
 impl ToString for Response {
     fn to_string(&self) -> String {
-        let mut s = format!("{}", self.code.to_u32());
-        if let Some(ref data) = self.data {
-            s.push_str(" ");
-            s.push_str(data);
+        match self.code {
+            ResponseCode::Status(StatusCode::Ok) => {
+                if let Some(ref data) = self.data {
+                    format!("{}\n", data)
+                } else {
+                    "ok\n".to_string()
+                }
+            }
+            ResponseCode::Status(StatusCode::Ko) => "ko\n".to_string(),
+            ResponseCode::Event(_) => {
+                if let Some(ref data) = self.data {
+                    format!("{}\n", data)
+                } else {
+                    "\n".to_string()
+                }
+            }
         }
-        s.push_str("\n");
-        s
     }
 }
 
@@ -82,18 +77,35 @@ mod tests {
     use crate::common::protocol::status::StatusCode;
 
     #[test]
-    fn test_response_to_string() {
+    fn test_response_to_string_ok() {
         let resp = Response {
             code: ResponseCode::Status(StatusCode::Ok),
-            data: Some("Hello".to_string()),
+            data: None,
         };
-        assert_eq!(resp.to_string(), "200 Hello\n");
+        assert_eq!(resp.to_string(), "ok\n");
     }
 
     #[test]
-    fn test_response_from_str() {
-        let resp = Response::from_str("200 Hello").unwrap();
+    fn test_response_to_string_ko() {
+        let resp = Response {
+            code: ResponseCode::Status(StatusCode::Ko),
+            data: None,
+        };
+        assert_eq!(resp.to_string(), "ko\n");
+    }
+
+    #[test]
+    fn test_response_to_string_data() {
+        let resp = Response {
+            code: ResponseCode::Status(StatusCode::Ok),
+            data: Some("msz 10 10".to_string()),
+        };
+        assert_eq!(resp.to_string(), "msz 10 10\n");
+    }
+
+    #[test]
+    fn test_response_from_str_ok() {
+        let resp = Response::from_str("ok").unwrap();
         assert_eq!(resp.code, ResponseCode::Status(StatusCode::Ok));
-        assert_eq!(resp.data, Some("Hello".to_string()));
     }
 }
