@@ -8,7 +8,7 @@ use zappy::common::utils::escape_str;
 pub fn handle_login(server: &mut Server, client_uuid: &str, name: String) {
     if name.len() > MAX_NAME_LENGTH {
         let response = Response {
-            code: ResponseCode::Status(StatusCode::BadRequest),
+            code: ResponseCode::Status(StatusCode::Ko),
             data: None,
         };
         if let Some(client) = server.clients.get_mut(client_uuid) {
@@ -102,7 +102,7 @@ mod tests {
         assert_eq!(client.pending_responses.len(), 1);
         assert_eq!(
             client.pending_responses[0].code,
-            ResponseCode::Status(StatusCode::BadRequest)
+            ResponseCode::Status(StatusCode::Ko)
         );
     }
 }

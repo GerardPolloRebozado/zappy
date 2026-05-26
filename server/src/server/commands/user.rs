@@ -25,7 +25,7 @@ pub fn handle_user(server: &mut Server, client_uuid: &str, user_uuid: &str) {
     if user.is_none() {
         let client = server.clients.get_mut(client_uuid).unwrap();
         client.pending_responses.push(Response::new(
-            ResponseCode::Status(StatusCode::NotFound),
+            ResponseCode::Status(StatusCode::Ko),
             Some(user_uuid.to_string()),
         ));
         return;
@@ -73,7 +73,7 @@ mod tests {
         
         let client = server.clients.get(client_uuid).unwrap();
         assert_eq!(client.pending_responses.len(), 1);
-        assert_eq!(client.pending_responses[0].code, ResponseCode::Status(StatusCode::NotFound));
+        assert_eq!(client.pending_responses[0].code, ResponseCode::Status(StatusCode::Ko));
     }
 
     #[test]

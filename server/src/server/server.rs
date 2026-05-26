@@ -106,7 +106,7 @@ impl Server {
                                         {
                                             client.pending_responses.push(Response {
                                                 code: ResponseCode::Status(
-                                                    StatusCode::Unauthorized,
+                                                    StatusCode::Ko,
                                                 ),
                                                 data: None,
                                             });
@@ -118,7 +118,7 @@ impl Server {
                                     Err(_) => {
                                         if let Some(client) = self.clients.get_mut(&uuid) {
                                             client.pending_responses.push(Response {
-                                                code: ResponseCode::Status(StatusCode::BadRequest),
+                                                code: ResponseCode::Status(StatusCode::Ko),
                                                 data: None,
                                             });
                                         }
@@ -178,7 +178,7 @@ impl Server {
                 println!("Unknown command received: {}", cmd);
                 if let Some(client) = self.clients.get_mut(client_uuid) {
                     client.pending_responses.push(Response {
-                        code: ResponseCode::Status(StatusCode::BadRequest),
+                        code: ResponseCode::Status(StatusCode::Ko),
                         data: None,
                     });
                 }
@@ -186,7 +186,7 @@ impl Server {
             _ => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
                     client.pending_responses.push(Response {
-                        code: ResponseCode::Status(StatusCode::BadRequest),
+                        code: ResponseCode::Status(StatusCode::Ko),
                         data: None,
                     });
                 }
