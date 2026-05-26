@@ -31,3 +31,4 @@ myteams_server
 node_modules
 *.so
 *.dylib
+doxy-docs
