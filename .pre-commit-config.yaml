@@ -1,20 +1,28 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.13
+    rev: v0.15.14
     hooks:
       - id: ruff
         files: ^ai/.*\.py$
+        args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
         files: ^ai/.*\.py$
 
   - repo: https://github.com/doublify/pre-commit-rust
-    rev: master
+    rev: v1.0
     hooks:
       - id: fmt
         files: ^server/.*\.rs$
+        args: ["--manifest-path", "server/Cargo.toml", "--"]
+      - id: cargo-check
+        files: ^server/.*\.rs$
+        args: ["--manifest-path", "server/Cargo.toml"]
+      - id: clippy
+        files: ^server/.*\.rs$
+        args: ["--manifest-path", "server/Cargo.toml", "--", "-D", "warnings"]
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v18.1.5
+    rev: v22.1.5
     hooks:
       - id: clang-format
         files: ^gui/.*\.(c|h|cpp|hpp)$
