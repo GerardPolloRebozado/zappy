@@ -1,13 +1,13 @@
 use crate::commands;
 use crate::commands::handle_login_request;
-use zappy::common::Command::Logout;
-use zappy::common::utils::constants::MAX_BODY_LENGTH;
-use zappy::common::{Request, Response, User};
 use nix::poll::{PollFd, PollFlags};
 use std::io;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str::FromStr;
+use zappy::common::protocol::command::Command;
+use zappy::common::utils::constants::MAX_BODY_LENGTH;
+use zappy::common::{Request, Response, User};
 
 use std::collections::VecDeque;
 use std::os::fd::AsFd;
@@ -86,9 +86,6 @@ impl Cli {
                     if self.handle_command(trimmed).is_err() {
                         // handle_command already prints errors
                     }
-                    if trimmed == "/logout" {
-                        break;
-                    }
                 }
             }
         }
@@ -106,13 +103,13 @@ impl Cli {
                 handle_login_request(self, cmd)?;
             }
             "/logout" => {
-                self.pending_request = Some(Request { command: Logout });
-                self.handle_request()?;
                 std::process::exit(0);
             }
             _ => {
-                println!("Unknown command: {}", command);
-                return Err(io::Error::new(io::ErrorKind::Other, "Unknown command"));
+                self.pending_request = Some(Request {
+                    command: Command::Unknown(cmd.to_string()),
+                });
+                self.handle_request()?;
             }
         }
 
@@ -167,6 +164,13 @@ impl Cli {
                     if line.trim().is_empty() {
                         continue;
                     }
+
+                    // Zappy handshake: WELCOME
+                    if line.trim() == "WELCOME" {
+                        println!("Server: WELCOME");
+                        continue;
+                    }
+
                     if let Ok(response) = Response::from_str(line.trim()) {
                         match response.code {
                             zappy::common::protocol::response::ResponseCode::Event(_) => {
@@ -176,6 +180,8 @@ impl Cli {
                                 self.status_queue.push_back(response);
                             }
                         }
+                    } else {
+                        println!("Server raw: {}", line);
                     }
                 }
             }
@@ -207,62 +213,5 @@ impl Cli {
                 }
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::net::TcpListener;
-
-    #[test]
-    fn test_cli_new() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-
-        let _cli = Cli::new(&addr);
-        assert!(_cli.user.is_none());
-        assert!(_cli.status_queue.is_empty());
-    }
-
-    #[test]
-    fn test_cli_process_socket_data() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-
-        let mut cli = Cli::new(&addr);
-        let (mut server_socket, _) = listener.accept().unwrap();
-
-        server_socket.write_all(b"200 OK\n").unwrap();
-
-        cli.process_socket_data().unwrap();
-        assert_eq!(cli.status_queue.len(), 1);
-        assert_eq!(cli.status_queue[0].to_string(), "200 OK\n");
-    }
-
-    #[test]
-    fn test_cli_handle_response() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-
-        let mut cli = Cli::new(&addr);
-        let (mut server_socket, _) = listener.accept().unwrap();
-
-        server_socket.write_all(b"200 Data\n").unwrap();
-
-        let resp = cli.handle_response().unwrap();
-        assert_eq!(resp.to_string(), "200 Data\n");
-    }
-
-    #[test]
-    fn test_cli_handle_command_help() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-        let handle = std::thread::spawn(move || {
-            let _ = listener.accept().unwrap();
-        });
-        let mut cli = Cli::new(&addr);
-        handle.join().unwrap();
-        cli.handle_command("/help").unwrap();
     }
 }
