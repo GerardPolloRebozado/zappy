@@ -1,0 +1,59 @@
+use crate::common::Response;
+use crate::common::utils::constants::MAX_BODY_LENGTH;
+use crate::common::utils::uuid_v4;
+use std::io::Read;
+use std::net::TcpStream;
+
+#[derive(Clone)]
+pub struct ClientContext {
+    pub team_uuid: Option<String>,
+    pub channel_uuid: Option<String>,
+    pub thread_uuid: Option<String>,
+}
+
+pub struct Client {
+    pub uuid: String,
+    pub socket: TcpStream,
+    pub user: Option<String>,
+    buffered_data: Option<String>,
+    pub pending_responses: Vec<Response>,
+    pub client_ctx: ClientContext,
+}
+
+impl Client {
+    pub fn new(socket: TcpStream) -> Client {
+        Client {
+            uuid: uuid_v4(),
+            socket,
+            user: None,
+            buffered_data: None,
+            pending_responses: Vec::new(),
+            client_ctx: ClientContext {
+                team_uuid: None,
+                channel_uuid: None,
+                thread_uuid: None,
+            },
+        }
+    }
+
+    pub fn read_data(&mut self) -> Option<String> {
+        let mut buffer = [0; MAX_BODY_LENGTH];
+        match self.socket.read(&mut buffer) {
+            Ok(0) => Some(String::from("/disconnect")),
+            Ok(n) => {
+                let msg = String::from_utf8_lossy(&buffer[..n]);
+
+                let mut buf = self.buffered_data.take().unwrap_or_default();
+                buf.push_str(&msg);
+
+                if buf.ends_with('\n') {
+                    Some(buf)
+                } else {
+                    self.buffered_data = Some(buf);
+                    None
+                }
+            }
+            Err(_) => None,
+        }
+    }
+}
