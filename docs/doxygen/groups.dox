@@ -1,0 +1,63 @@
+/**
+ * @defgroup ai_module AI Component
+ * @brief All code related to the AI client.
+ * @{
+ *   @dir ai
+ *   @brief Root directory for the AI component.
+ * @}
+ */
+
+/**
+ * @defgroup gui_module GUI Component
+ * @brief All code related to the Graphical User Interface.
+ * @{
+ *   @dir gui
+ *   @brief Root directory for the GUI component.
+ * @}
+ */
+
+/**
+ * @defgroup server_module Server Component
+ * @brief All code related to the Zappy Server.
+ * @{
+ *   @dir server
+ *   @brief Root directory for the Server component.
+ *
+ *   @defgroup server_common Server Common
+ *   @brief Shared utilities and protocol definitions for the server.
+ *   @ingroup server_module
+ *   @{
+ *     @dir server/src/common
+ *   @}
+ * @}
+ */
+
+/**
+ * @page ai AI
+ * @brief AI Component Overview
+ * 
+ * Welcome to the AI documentation. This component handles the autonomous behavior
+ * of the Zappy players.
+ *
+ * For technical details, see the @ref ai_module "AI Module".
+ */
+
+/**
+ * @page gui GUI
+ * @brief GUI Component Overview
+ * 
+ * Welcome to the GUI documentation. This component provides the visual representation
+ * of the Zappy world.
+ *
+ * For technical details, see the @ref gui_module "GUI Module".
+ */
+
+/**
+ * @page server Server
+ * @brief Server Component Overview
+ * 
+ * Welcome to the Server documentation. This component is the heart of the Zappy game,
+ * managing the world, players, and resources.
+ *
+ * For technical details, see the @ref server_module "Server Module".
+ */
