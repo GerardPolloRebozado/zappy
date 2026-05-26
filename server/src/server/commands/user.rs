@@ -1,6 +1,6 @@
 use crate::server::Server;
-use myteams::common::protocol::ResponseCode;
-use myteams::common::{Response, StatusCode};
+use zappy::common::protocol::ResponseCode;
+use zappy::common::{Response, StatusCode};
 
 pub fn handle_users(server: &mut Server, client_uuid: &str) {
     let mut users_list = "".to_string();
@@ -49,14 +49,13 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
     use std::net::TcpListener;
-    use myteams::common::User;
+    use zappy::common::User;
 
     fn create_test_server() -> Server {
         Server {
             listener: TcpListener::bind("127.0.0.1:0").unwrap(),
             clients: HashMap::new(),
             users: HashMap::new(),
-            private_messages: Vec::new(),
             teams: HashMap::new(),
         }
     }
@@ -68,7 +67,7 @@ mod tests {
         
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let socket = std::net::TcpStream::connect(listener.local_addr().unwrap()).unwrap();
-        server.clients.insert(client_uuid.to_string(), myteams::common::client::Client::new(socket));
+        server.clients.insert(client_uuid.to_string(), zappy::common::client::Client::new(socket));
         
         handle_user(&mut server, client_uuid, "non-existent-user");
         
@@ -85,7 +84,7 @@ mod tests {
 
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let socket = std::net::TcpStream::connect(listener.local_addr().unwrap()).unwrap();
-        let client = myteams::common::client::Client::new(socket);
+        let client = zappy::common::client::Client::new(socket);
         server.clients.insert(client_uuid.to_string(), client);
         
         handle_users(&mut server, client_uuid);
@@ -95,4 +94,3 @@ mod tests {
         assert!(client.pending_responses.last().unwrap().data.as_ref().unwrap().contains("user1"));
     }
 }
-

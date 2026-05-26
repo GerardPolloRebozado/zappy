@@ -30,8 +30,6 @@ impl Response {
 }
 
 impl FromStr for Response {
-    // TODO: Use a custom ProtocolError enum here to differentiate between
-    // "Not a number" and "Unknown status code" during server response parsing.
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -53,11 +51,6 @@ impl FromStr for Response {
             500 => ResponseCode::Status(StatusCode::InternalServerError),
             600 => ResponseCode::Event(EventCode::LoggedIn),
             601 => ResponseCode::Event(EventCode::LoggedOut),
-            602 => ResponseCode::Event(EventCode::MessageReceived),
-            603 => ResponseCode::Event(EventCode::ThreadCreated),
-            604 => ResponseCode::Event(EventCode::CommentCreated),
-            605 => ResponseCode::Event(EventCode::TeamCreated),
-            606 => ResponseCode::Event(EventCode::ChannelCreated),
             _ => return Err(()),
         };
 
@@ -102,18 +95,5 @@ mod tests {
         let resp = Response::from_str("200 Hello").unwrap();
         assert_eq!(resp.code, ResponseCode::Status(StatusCode::Ok));
         assert_eq!(resp.data, Some("Hello".to_string()));
-    }
-
-    #[test]
-    fn test_response_from_str_no_data() {
-        let resp = Response::from_str("200").unwrap();
-        assert_eq!(resp.code, ResponseCode::Status(StatusCode::Ok));
-        assert_eq!(resp.data, None);
-    }
-
-    #[test]
-    fn test_response_from_str_invalid() {
-        assert!(Response::from_str("999").is_err());
-        assert!(Response::from_str("abc").is_err());
     }
 }

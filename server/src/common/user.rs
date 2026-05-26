@@ -1,6 +1,5 @@
 use crate::common::utils::serializing::{read_str, write_str};
 use crate::common::utils::uuid_v4;
-use crate::server_event_user_loaded;
 use std::fs::File;
 
 #[derive(Clone)]
@@ -39,7 +38,6 @@ impl User {
     pub fn read_from_file(file: &mut File) -> User {
         let msg = read_str(file).unwrap();
         let user = User::from_string(&msg).expect("Error importing message from file");
-        server_event_user_loaded(user.uuid.as_str(), user.name.as_str());
         user
     }
 }

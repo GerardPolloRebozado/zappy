@@ -1,10 +1,9 @@
 use crate::server::Server;
-use myteams::common::protocol::response::{Response, ResponseCode};
-use myteams::common::protocol::status::StatusCode;
-use myteams::common::user::User;
-use myteams::common::utils::constants::MAX_NAME_LENGTH;
-use myteams::common::utils::escape_str;
-use myteams::{server_event_user_created_safe, server_event_user_logged_in_safe};
+use zappy::common::protocol::response::{Response, ResponseCode};
+use zappy::common::protocol::status::StatusCode;
+use zappy::common::user::User;
+use zappy::common::utils::constants::MAX_NAME_LENGTH;
+use zappy::common::utils::escape_str;
 
 pub fn handle_login(server: &mut Server, client_uuid: &str, name: String) {
     if name.len() > MAX_NAME_LENGTH {
@@ -36,9 +35,7 @@ fn resolve_user(server: &mut Server, name: &String) -> String {
 fn create_new_user(server: &mut Server, name: &String) -> String {
     let user = User::new(name.clone());
     let uuid = user.uuid.clone();
-    server_event_user_created_safe(&uuid, name);
     server.users.insert(uuid.clone(), user);
-    // TODO: Persistence save
     uuid.clone()
 }
 
@@ -46,8 +43,6 @@ fn perform_login(server: &mut Server, client_uuid: &str, user_uuid: String) {
     if let Some(client) = server.clients.get_mut(client_uuid) {
         client.user = Some(user_uuid.clone());
     }
-
-    server_event_user_logged_in_safe(user_uuid.as_str());
 }
 
 fn send_success_response(
@@ -65,7 +60,7 @@ fn send_success_response(
     }
 
     let event_resp = Response {
-        code: ResponseCode::Event(myteams::common::protocol::event::EventCode::LoggedIn),
+        code: ResponseCode::Event(zappy::common::protocol::event::EventCode::LoggedIn),
         data: Some(format!("\"{}\" \"{}\"", user_uuid, escape_str(name))),
     };
     server.broadcast_global(event_resp);
@@ -82,7 +77,6 @@ mod tests {
             listener: TcpListener::bind("127.0.0.1:0").unwrap(),
             clients: HashMap::new(),
             users: HashMap::new(),
-            private_messages: Vec::new(),
             teams: HashMap::new(),
         }
     }
@@ -97,7 +91,7 @@ mod tests {
         let socket = std::net::TcpStream::connect(listener.local_addr().unwrap()).unwrap();
         server.clients.insert(
             client_uuid.to_string(),
-            myteams::common::client::Client::new(socket),
+            zappy::common::client::Client::new(socket),
         );
 
         let long_name = "a".repeat(MAX_NAME_LENGTH + 1);

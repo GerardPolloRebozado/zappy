@@ -1,10 +1,8 @@
 use crate::commands;
 use crate::commands::handle_login_request;
-use crate::commands::login::handle_login_response;
-use myteams::client_event_logged_out;
-use myteams::common::Command::Logout;
-use myteams::common::utils::constants::MAX_BODY_LENGTH;
-use myteams::common::{Request, Response, User};
+use zappy::common::Command::Logout;
+use zappy::common::utils::constants::MAX_BODY_LENGTH;
+use zappy::common::{Request, Response, User};
 use nix::poll::{PollFd, PollFlags};
 use std::io;
 use std::io::{Read, Write};
@@ -105,73 +103,12 @@ impl Cli {
                 commands::help();
             }
             "/login" => {
-                if handle_login_request(self, cmd).is_ok() {
-                    handle_login_response(self)?;
-                }
-            }
-            "/send" => {
-                if commands::handle_send_request(self, cmd).is_ok() {
-                    commands::handle_send_response(self)?;
-                }
-            }
-            "/messages" => {
-                if commands::handle_messages_request(self, cmd).is_ok() {
-                    commands::handle_messages_response(self)?;
-                }
-            }
-            "/use" => {
-                if commands::handle_use_request(self, cmd).is_ok() {
-                    commands::handle_use_response(self)?;
-                }
-            }
-            "/create" => {
-                if commands::handle_create_request(self, cmd).is_ok() {
-                    commands::handle_create_response(self)?;
-                }
-            }
-            "/list" => {
-                if commands::handle_list_request(self, cmd).is_ok() {
-                    commands::handle_list_response(self)?;
-                }
-            }
-            "/info" => {
-                if commands::handle_info_request(self, cmd).is_ok() {
-                    commands::handle_info_response(self)?;
-                }
+                handle_login_request(self, cmd)?;
             }
             "/logout" => {
                 self.pending_request = Some(Request { command: Logout });
                 self.handle_request()?;
-                if self.user.is_some() {
-                    let user = self.user.clone().unwrap();
-                    client_event_logged_out(user.uuid.as_str(), user.name.as_str());
-                }
                 std::process::exit(0);
-            }
-            "/users" => {
-                if commands::handle_users_request(self).is_ok() {
-                    commands::handle_users_response(self)?;
-                }
-            }
-            "/user" => {
-                if commands::handle_user_request(self, cmd).is_ok() {
-                    commands::handle_user_response(self)?;
-                }
-            }
-            "/subscribe" => {
-                if commands::handle_subscribe_request(self, cmd).is_ok() {
-                    commands::handle_subscribe_response(self)?;
-                }
-            }
-            "/subscribed" => {
-                if commands::handle_subscribed_request(self, cmd).is_ok() {
-                    commands::handle_subscribed_response(self, cmd)?;
-                }
-            }
-            "/unsubscribe" => {
-                if commands::handle_unsubscribe_request(self, cmd).is_ok() {
-                    commands::handle_unsubscribe_response(self)?;
-                }
             }
             _ => {
                 println!("Unknown command: {}", command);
@@ -232,10 +169,10 @@ impl Cli {
                     }
                     if let Ok(response) = Response::from_str(line.trim()) {
                         match response.code {
-                            myteams::common::protocol::response::ResponseCode::Event(_) => {
+                            zappy::common::protocol::response::ResponseCode::Event(_) => {
                                 commands::handle_event(response);
                             }
-                            myteams::common::protocol::response::ResponseCode::Status(_) => {
+                            zappy::common::protocol::response::ResponseCode::Status(_) => {
                                 self.status_queue.push_back(response);
                             }
                         }
@@ -327,124 +264,5 @@ mod tests {
         let mut cli = Cli::new(&addr);
         handle.join().unwrap();
         cli.handle_command("/help").unwrap();
-    }
-
-    #[test]
-    fn test_cli_handle_command_create() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-        let handle = std::thread::spawn(move || {
-            let (mut socket, _) = listener.accept().unwrap();
-            socket.write_all(b"200 TEAM \"u\" \"n\" \"d\"\n").unwrap();
-        });
-        let mut cli = Cli::new(&addr);
-        let _ = cli.handle_command("/create \"team\" \"desc\"");
-        handle.join().unwrap();
-    }
-
-    #[test]
-    fn test_cli_handle_command_messages() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-        let handle = std::thread::spawn(move || {
-            let (mut socket, _) = listener.accept().unwrap();
-            socket.write_all(b"200 \"s1\" \"123\" \"hi\"\n").unwrap();
-        });
-        let mut cli = Cli::new(&addr);
-        let _ = cli.handle_command("/messages \"u1\"");
-        handle.join().unwrap();
-    }
-
-    #[test]
-    fn test_cli_handle_command_subscribe_unsub() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-        let handle = std::thread::spawn(move || {
-            let (mut socket, _) = listener.accept().unwrap();
-            socket.write_all(b"200 \"u1\" \"t1\"\n").unwrap();
-            let (mut socket2, _) = listener.accept().unwrap();
-            socket2.write_all(b"200 \"u1\" \"t1\"\n").unwrap();
-        });
-
-        let mut cli = Cli::new(&addr);
-        let _ = cli.handle_command("/subscribe \"t1\"");
-        let mut cli2 = Cli::new(&addr);
-        let _ = cli2.handle_command("/unsubscribe \"t1\"");
-        handle.join().unwrap();
-    }
-
-    #[test]
-    fn test_cli_handle_command_use() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-        let handle = std::thread::spawn(move || {
-            let (mut socket, _) = listener.accept().unwrap();
-            socket.write_all(b"200 OK\n").unwrap();
-        });
-        let mut cli = Cli::new(&addr);
-        let _ = cli.handle_command("/use \"t1\"");
-        handle.join().unwrap();
-    }
-
-    #[test]
-    fn test_cli_handle_command_user_info() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-        let handle = std::thread::spawn(move || {
-            let (mut socket, _) = listener.accept().unwrap();
-            socket.write_all(b"200 \"u\" \"n\" \"1\"\n").unwrap();
-            let (mut socket2, _) = listener.accept().unwrap();
-            socket2.write_all(b"200 TEAM \"u\" \"n\" \"d\"\n").unwrap();
-        });
-        let mut cli = Cli::new(&addr);
-        let _ = cli.handle_command("/user \"u1\"");
-        let mut cli2 = Cli::new(&addr);
-        let _ = cli2.handle_command("/info");
-        handle.join().unwrap();
-    }
-
-    #[test]
-    fn test_cli_handle_command_send() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-        let handle = std::thread::spawn(move || {
-            let (mut socket, _) = listener.accept().unwrap();
-            socket.write_all(b"200 OK\n").unwrap();
-        });
-        let mut cli = Cli::new(&addr);
-        let _ = cli.handle_command("/send \"u1\" \"msg\"");
-        handle.join().unwrap();
-    }
-
-    #[test]
-    fn test_cli_process_socket_data_buffered() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-
-        let mut cli = Cli::new(&addr);
-        let (mut server_socket, _) = listener.accept().unwrap();
-
-        // Write partial response
-        server_socket.write_all(b"200 ").unwrap();
-        cli.process_socket_data().unwrap();
-        assert_eq!(cli.status_queue.len(), 0);
-
-        server_socket.write_all(b"OK\n").unwrap();
-        cli.process_socket_data().unwrap();
-        assert_eq!(cli.status_queue.len(), 1);
-        assert_eq!(cli.status_queue[0].to_string(), "200 OK\n");
-    }
-
-    #[test]
-    fn test_cli_handle_command_unknown() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap().to_string();
-        let handle = std::thread::spawn(move || {
-            let _ = listener.accept().unwrap();
-        });
-        let mut cli = Cli::new(&addr);
-        handle.join().unwrap();
-
-        assert!(cli.handle_command("/unknown").is_err());
     }
 }

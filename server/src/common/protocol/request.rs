@@ -37,24 +37,7 @@ impl FromStr for Request {
             "LOGOUT" => Command::Logout,
             "USERS" => Command::Users,
             "USER" if args.len() > 1 => Command::User(args[1].clone()),
-            "SEND" if args.len() > 2 => Command::Send(args[1].clone(), args[2].clone()),
-            "MESSAGES" if args.len() > 1 => Command::Messages(args[1].clone()),
-            "SUBSCRIBE" if args.len() > 1 => Command::Subscribe(args[1].clone()),
-            "SUBSCRIBED" => Command::Subscribed(args.get(1).cloned()),
-            "UNSUBSCRIBE" if args.len() > 1 => Command::Unsubscribe(args[1].clone()),
-            "USE" => Command::Use(
-                args.get(1).cloned(),
-                args.get(2).cloned(),
-                args.get(3).cloned(),
-            ),
-            "CREATE" => Command::Create(if args.len() > 1 {
-                args[1..].to_vec()
-            } else {
-                vec![]
-            }),
-            "LIST" => Command::List,
-            "INFO" => Command::Info,
-            _ => return Err(()),
+            _ => Command::Unknown(cmd_name.to_string()),
         };
 
         Ok(Request { command })
@@ -64,7 +47,6 @@ impl FromStr for Request {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::protocol::command::Command;
 
     #[test]
     fn test_request_from_str_login() {
@@ -76,20 +58,5 @@ mod tests {
     fn test_request_from_str_logout() {
         let req = Request::from_str("LOGOUT").unwrap();
         assert_eq!(req.command, Command::Logout);
-    }
-
-    #[test]
-    fn test_request_from_str_send() {
-        let req = Request::from_str("SEND \"uuid\" \"hello\"").unwrap();
-        assert_eq!(
-            req.command,
-            Command::Send("uuid".to_string(), "hello".to_string())
-        );
-    }
-
-    #[test]
-    fn test_request_from_str_invalid() {
-        assert!(Request::from_str("INVALID").is_err());
-        assert!(Request::from_str("LOGIN").is_err()); // Missing arg
     }
 }
