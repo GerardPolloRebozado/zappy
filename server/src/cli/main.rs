@@ -1,4 +1,3 @@
-mod commands;
 pub mod client;
 
 use crate::client::Cli;

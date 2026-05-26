@@ -7,11 +7,11 @@ repos:
       - id: ruff-format
         files: ^ai/.*\.py$
 
-  - repo: https://github.com/doublify/pre-commit-rust
-    rev: master
-    hooks:
-      - id: fmt
-        files: ^server/.*\.rs$
+#  - repo: https://github.com/doublify/pre-commit-rust
+#    rev: master
+#    hooks:
+#      - id: fmt
+#        files: ^server/.*\.rs$
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v18.1.5
