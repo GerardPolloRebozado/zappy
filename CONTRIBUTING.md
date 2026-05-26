@@ -14,4 +14,5 @@
 ## Standards
 - **Testing**: Every PR must include unit tests. The specific framework is TBD, but coverage is required.
 - **Documentation**: Use Doxygen or an equivalent tool for code documentation where applicable.
+- **Commits**: Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) (gitmoji is also acceptable)
 - **Formatting**: Enforced via git hooks using `.clang-format`.
