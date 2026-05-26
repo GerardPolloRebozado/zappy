@@ -3,8 +3,7 @@ name: Mirror Repository
 on:
   push:
     branches: [ "*" ]
-  tags:
-    - "*"
+    tags: [ "*" ]
   workflow_dispatch:
 
 jobs:
@@ -18,11 +17,7 @@ jobs:
           fetch-depth: 0
 
       - name: Mirror to Target
-        env:
-          MIRROR_URL: ${{ secrets.MIRROR_TARGET_URL }}
-        run: |
-          if [ -z "$MIRROR_URL" ]; then
-            echo "Error: MIRROR_TARGET_URL secret is not set."
-            exit 1
-          fi
-          git push --mirror "$MIRROR_URL"
+        uses: pixta-dev/repository-mirroring-action@v1
+        with:
+          target_repo_url: git@github.com:EpitechPGE2-2025/G-YEP-400-BAR-4-1-zappy-1.git
+          ssh_private_key: ${{ secrets.GIT_SSH_PRIVATE_KEY }}
