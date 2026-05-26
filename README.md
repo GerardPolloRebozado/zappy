@@ -2,3 +2,5 @@
 
 Run the following command when clonning to automatically format:
 `pre-commit install`
+
+pol se la come 
