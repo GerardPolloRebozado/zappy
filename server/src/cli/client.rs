@@ -43,7 +43,6 @@ impl Cli {
                 }
             }
 
-            // Read from server and print to stdout
             if socket_ready {
                 let mut buffer = [0; 4096];
                 match self.socket.read(&mut buffer) {
@@ -58,13 +57,12 @@ impl Cli {
                 break;
             }
 
-            // Read from stdin and send to server
             if stdin_ready {
                 let mut input = String::new();
-                if io::stdin().read_line(&mut input).is_ok() {
-                    if self.socket.write_all(input.as_bytes()).is_err() {
-                        break;
-                    }
+                if io::stdin().read_line(&mut input).is_ok()
+                    && self.socket.write_all(input.as_bytes()).is_err()
+                {
+                    break;
                 }
             }
         }

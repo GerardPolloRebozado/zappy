@@ -12,12 +12,12 @@ pub fn random_bytes() -> [u8; 16] {
         state = 1;
     }
     let mut bytes: [u8; 16] = [0; 16];
-    for i in 0..16 {
-        state ^= state << 13; // Shift Left 13 XOR
-        state ^= state >> 17; // Shift Right 17 XOR
-        state ^= state << 5; // Shift Left 5 XOR
+    for byte in &mut bytes {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
 
-        bytes[i] = state as u8;
+        *byte = state as u8;
     }
     bytes
 }
@@ -79,10 +79,7 @@ pub fn unescape_str(s: &str) -> String {
 /// ```
 ///
 pub fn parse_args(input: &str) -> Vec<String> {
-    input
-        .split_whitespace()
-        .map(|s| s.to_string())
-        .collect()
+    input.split_whitespace().map(|s| s.to_string()).collect()
 }
 
 #[cfg(test)]

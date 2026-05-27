@@ -7,7 +7,8 @@ use std::net::TcpStream;
 #[derive(Clone, PartialEq, Eq)]
 pub enum ClientState {
     WaitingForTeamName,
-    Authenticated,
+    AuthenticatedAI,
+    AuthenticatedGUI,
 }
 
 pub struct Client {

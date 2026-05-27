@@ -1,34 +1,57 @@
 use crate::common::utils::serializing::{read_str, write_str};
 use crate::common::utils::uuid_v4;
+use std::fmt;
 use std::fs::File;
+
+use crate::common::Resource;
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct User {
     pub uuid: String,
     pub name: String,
+    pub level: u8,
+    pub life_units: f32,
+    pub inventory: HashMap<Resource, u32>,
 }
 
 impl User {
     pub fn new(name: String) -> Self {
+        let mut inventory = HashMap::new();
+        inventory.insert(Resource::Food, 10);
+
         Self {
             uuid: uuid_v4(),
             name,
+            level: 1,
+            life_units: 10.0,
+            inventory,
         }
     }
 
     pub fn from_string(s: &str) -> Option<Self> {
-        let parts: Vec<&str> = s.splitn(2, ' ').collect();
-        if parts.len() != 2 {
+        let parts: Vec<&str> = s.split('|').collect();
+
+        if parts.len() != 5 {
             return None;
         }
-        Some(Self {
-            uuid: parts[0].to_string(),
-            name: parts[1].to_string(),
-        })
-    }
 
-    pub fn to_string(&self) -> String {
-        format!("{} {}", self.uuid, self.name)
+        let uuid = parts[0].to_string();
+        let name = parts[1].to_string();
+        let level: u8 = parts[2].parse().ok()?;
+        let life_units: f32 = parts[3].parse().ok()?;
+        let food: u32 = parts[4].parse().ok()?;
+
+        let mut inventory = HashMap::new();
+        inventory.insert(Resource::Food, food);
+
+        Some(Self {
+            uuid,
+            name,
+            level,
+            life_units,
+            inventory,
+        })
     }
 
     pub fn write_to_file(&self, file: &mut File) {
@@ -37,8 +60,13 @@ impl User {
 
     pub fn read_from_file(file: &mut File) -> User {
         let msg = read_str(file).unwrap();
-        let user = User::from_string(&msg).expect("Error importing message from file");
-        user
+        User::from_string(&msg).expect("Error importing message from file")
+    }
+}
+
+impl fmt::Display for User {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.uuid, self.name)
     }
 }
 
