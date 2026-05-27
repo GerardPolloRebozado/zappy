@@ -35,3 +35,6 @@ doxy-docs
 
 zappy.txt
 .venv
+
+zappy_server
+zappy_cli
