@@ -3,13 +3,9 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::net::TcpListener;
 use std::os::fd::AsFd;
-use zappy::common::StatusCode;
-use zappy::common::client::{Client, ClientState};
-use zappy::common::protocol::ResponseCode;
-use zappy::common::protocol::command::Command;
-use zappy::common::protocol::request::Request;
-use zappy::common::user::User;
-use zappy::common::{Response, Team};
+use zappy_server::common::client::{Client, ClientState};
+use zappy_server::common::protocol::ResponseCode;
+use zappy_server::common::*;
 
 pub struct Map {
     pub width: u32,
@@ -152,7 +148,7 @@ impl Server {
                 && let Some(user_uuid) = &client.user
             {
                 let event_resp = Response {
-                    code: ResponseCode::Event(zappy::common::protocol::event::EventCode::Pdi),
+                    code: ResponseCode::Event(protocol::event::EventCode::Pdi),
                     data: Some(user_uuid.clone()),
                 };
                 self.broadcast_global(event_resp);
