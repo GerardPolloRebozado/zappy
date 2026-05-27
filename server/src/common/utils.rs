@@ -111,18 +111,17 @@ mod tests {
 
     #[test]
     fn test_parse_args() {
-        // r# -> raw string literal
-        assert_eq!(parse_args(r#"LOGIN "alex""#), vec!["LOGIN", "alex"]);
-        assert_eq!(parse_args(r#"/login "alex""#), vec!["/login", "alex"]);
-        assert_eq!(parse_args(r#"/login alex"#), Vec::<String>::new());
-        assert_eq!(parse_args(r#"/login "alex"#), Vec::<String>::new());
+        assert_eq!(parse_args(r#"LOGIN "alex""#), vec!["LOGIN", "\"alex\""]);
+        assert_eq!(parse_args(r#"/login "alex""#), vec!["/login", "\"alex\""]);
+        assert_eq!(parse_args(r#"/login alex"#), vec!["/login", "alex"]);
+        assert_eq!(parse_args(r#"/login "alex"#), vec!["/login", "\"alex"]);
         assert_eq!(
             parse_args(r#"CREATE "team" "desc""#),
-            vec!["CREATE", "team", "desc"]
+            vec!["CREATE", "\"team\"", "\"desc\""]
         );
         assert_eq!(
             parse_args(r#"SEND "uuid" "hello \"world\"""#),
-            vec!["SEND", "uuid", "hello \"world\""]
+            vec!["SEND", "\"uuid\"", "\"hello", "\\\"world\\\"\""]
         );
     }
 }

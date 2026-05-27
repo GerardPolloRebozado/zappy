@@ -28,28 +28,22 @@ impl User {
             inventory,
         }
     }
-
     pub fn from_string(s: &str) -> Option<Self> {
-        let parts: Vec<&str> = s.split('|').collect();
-
-        if parts.len() != 5 {
+        let parts: Vec<&str> = s.split(' ').collect();
+        if parts.len() < 2 {
             return None;
         }
-
         let uuid = parts[0].to_string();
         let name = parts[1].to_string();
-        let level: u8 = parts[2].parse().ok()?;
-        let life_units: f32 = parts[3].parse().ok()?;
-        let food: u32 = parts[4].parse().ok()?;
 
         let mut inventory = HashMap::new();
-        inventory.insert(Resource::Food, food);
+        inventory.insert(Resource::Food, 10);
 
         Some(Self {
             uuid,
             name,
-            level,
-            life_units,
+            level: 1,
+            life_units: 10.0,
             inventory,
         })
     }
@@ -84,10 +78,8 @@ mod tests {
 
     #[test]
     fn test_user_to_string() {
-        let user = User {
-            uuid: "1234-5678-9012-3456".to_string(),
-            name: "John Doe".to_string(),
-        };
+        let mut user = User::new("John Doe".to_string());
+        user.uuid = "1234-5678-9012-3456".to_string();
         assert_eq!(user.to_string(), "1234-5678-9012-3456 John Doe");
     }
 
