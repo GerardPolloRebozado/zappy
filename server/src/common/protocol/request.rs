@@ -7,9 +7,9 @@ pub struct Request {
     pub command: Command,
 }
 
-impl ToString for Request {
-    fn to_string(&self) -> String {
-        format!("{}\n", self.command)
+impl std::fmt::Display for Request {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", self.command)
     }
 }
 
@@ -30,7 +30,6 @@ impl FromStr for Request {
         let cmd_name = args[0].to_string();
 
         let command = match cmd_name.as_str() {
-            // AI Commands
             "Forward" => Command::Forward,
             "Right" => Command::Right,
             "Left" => Command::Left,
@@ -44,7 +43,6 @@ impl FromStr for Request {
             "Set" if args.len() > 1 => Command::Set(args[1].clone()),
             "Incantation" => Command::Incantation,
 
-            // GUI Commands
             "msz" => Command::Msz,
             "bct" if args.len() > 2 => {
                 let x = args[1].parse().map_err(|_| ())?;
@@ -62,7 +60,6 @@ impl FromStr for Request {
                 Command::Sst(t)
             }
 
-            // For the handshake, any non-command string in the first message is handled by the server state
             _ => Command::Unknown(cmd_name),
         };
 

@@ -1,6 +1,5 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
-    // AI Commands
     Forward,
     Right,
     Left,
@@ -14,7 +13,6 @@ pub enum Command {
     Set(String),
     Incantation,
 
-    // GUI Commands
     Msz,
     Bct(u32, u32),
     Mct,
@@ -25,8 +23,7 @@ pub enum Command {
     Sgt,
     Sst(u32),
 
-    // Internal / Skeleton leftovers
-    Login(String), // This will be used for the Team Name handshake
+    Login(String),
     Unknown(String),
 }
 

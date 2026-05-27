@@ -9,7 +9,6 @@ use zappy::common::protocol::ResponseCode;
 use zappy::common::protocol::command::Command;
 use zappy::common::protocol::request::Request;
 use zappy::common::user::User;
-use zappy::common::utils::escape_str;
 use zappy::common::{Response, Team};
 
 pub struct Map {
@@ -20,10 +19,11 @@ pub struct Map {
 pub struct Server {
     pub listener: TcpListener,
     pub clients: HashMap<String, Client>,
-    pub users: HashMap<String, User>,
-    pub teams: HashMap<String, Team>,
+    pub _users: HashMap<String, User>,
+    pub _teams: HashMap<String, Team>,
     pub map: Map,
-    pub freq: u32,
+    pub _freq: u32,
+    // TODO: Add a task scheduler for time management (action / f delay)
 }
 
 impl Server {
@@ -32,13 +32,13 @@ impl Server {
             listener: TcpListener::bind("0.0.0.0:8080")
                 .expect("Error starting server on port 8080"),
             clients: HashMap::new(),
-            users: HashMap::new(),
-            teams: HashMap::new(),
+            _users: HashMap::new(),
+            _teams: HashMap::new(),
             map: Map {
                 width: 10,
                 height: 10,
             },
-            freq: 100,
+            _freq: 100,
         }
     }
 
@@ -64,7 +64,7 @@ impl Server {
 
         let listener_ready = fds[0]
             .revents()
-            .map_or(false, |f| f.contains(PollFlags::POLLIN));
+            .is_some_and(|f| f.contains(PollFlags::POLLIN));
 
         let client_revents: Vec<PollFlags> = fds[1..]
             .iter()
@@ -100,32 +100,32 @@ impl Server {
         for (i, uuid) in client_keys.into_iter().enumerate() {
             let revents = client_revents[i];
 
-            if revents.contains(PollFlags::POLLIN) {
-                if let Some(client) = self.clients.get_mut(&uuid) {
-                    match client.read_data() {
-                        Some(msg) => {
-                            let trimmed = msg.trim();
-                            if trimmed == "/disconnect" {
-                                disconnected.push(uuid);
-                                continue;
-                            } else {
-                                match trimmed.parse::<Request>() {
-                                    Ok(req) => {
-                                        requests_to_read.push((uuid.clone(), req));
-                                    }
-                                    Err(_) => {
-                                        if let Some(client) = self.clients.get_mut(&uuid) {
-                                            client.pending_responses.push(Response {
-                                                code: ResponseCode::Status(StatusCode::Ko),
-                                                data: None,
-                                            });
-                                        }
+            if revents.contains(PollFlags::POLLIN)
+                && let Some(client) = self.clients.get_mut(&uuid)
+            {
+                match client.read_data() {
+                    Some(msg) => {
+                        let trimmed = msg.trim();
+                        if trimmed == "/disconnect" {
+                            disconnected.push(uuid);
+                            continue;
+                        } else {
+                            match trimmed.parse::<Request>() {
+                                Ok(req) => {
+                                    requests_to_read.push((uuid.clone(), req));
+                                }
+                                Err(_) => {
+                                    if let Some(client) = self.clients.get_mut(&uuid) {
+                                        client.pending_responses.push(Response {
+                                            code: ResponseCode::Status(StatusCode::Ko),
+                                            data: None,
+                                        });
                                     }
                                 }
                             }
                         }
-                        None => disconnected.push(uuid.clone()),
                     }
+                    None => disconnected.push(uuid.clone()),
                 }
             }
             if revents.contains(PollFlags::POLLOUT) {
@@ -139,30 +139,23 @@ impl Server {
 
         for uuid in requests_to_write {
             let client = self.clients.get_mut(&uuid);
-            match client {
-                None => {}
-                Some(c) => {
-                    let responses: Vec<Response> = c.pending_responses.drain(..).collect();
-                    for response in responses {
-                        self.handle_response(uuid.as_str(), response);
-                    }
+            if let Some(c) = client {
+                let responses: Vec<Response> = c.pending_responses.drain(..).collect();
+                for response in responses {
+                    self.handle_response(uuid.as_str(), response);
                 }
             }
         }
 
         for uuid in disconnected {
-            if let Some(client) = self.clients.remove(&uuid) {
-                if let Some(user_uuid) = &client.user {
-                    if let Some(user) = self.users.get(user_uuid) {
-                        let event_resp = Response {
-                            code: ResponseCode::Event(
-                                zappy::common::protocol::event::EventCode::LoggedOut,
-                            ),
-                            data: Some(format!("\"{}\" \"{}\"", user.uuid, escape_str(&user.name))),
-                        };
-                        self.broadcast_global(event_resp);
-                    }
-                }
+            if let Some(client) = self.clients.remove(&uuid)
+                && let Some(user_uuid) = &client.user
+            {
+                let event_resp = Response {
+                    code: ResponseCode::Event(zappy::common::protocol::event::EventCode::Pdi),
+                    data: Some(user_uuid.clone()),
+                };
+                self.broadcast_global(event_resp);
             }
         }
     }
@@ -178,23 +171,23 @@ impl Server {
                 Command::Unknown(team_name) => {
                     if team_name == "GRAPHIC" {
                         if let Some(client) = self.clients.get_mut(client_uuid) {
-                            client.state = ClientState::Authenticated;
+                            client.state = ClientState::AuthenticatedGUI;
                         }
-                    } else {
-                        // Handshake response: CLIENT-NUM \n X Y
-                        if let Some(client) = self.clients.get_mut(client_uuid) {
-                            client.state = ClientState::Authenticated;
-                            client.pending_responses.push(Response::new(
-                                ResponseCode::Status(StatusCode::Ok),
-                                Some("1".to_string()),
-                            ));
-                            client.pending_responses.push(Response::new(
-                                ResponseCode::Status(StatusCode::Ok),
-                                Some(format!("{} {}", self.map.width, self.map.height)),
-                            ));
-                        }
+                    } else if let Some(client) = self.clients.get_mut(client_uuid) {
+                        client.state = ClientState::AuthenticatedAI;
+
+                        client.pending_responses.push(Response::new(
+                            ResponseCode::Status(StatusCode::Ok),
+                            Some("1".to_string()),
+                        ));
+
+                        client.pending_responses.push(Response::new(
+                            ResponseCode::Status(StatusCode::Ok),
+                            Some(format!("{} {}", self.map.width, self.map.height)),
+                        ));
                     }
                 }
+
                 _ => {
                     if let Some(client) = self.clients.get_mut(client_uuid) {
                         client
@@ -203,11 +196,11 @@ impl Server {
                     }
                 }
             }
+
             return;
         }
 
         match request.command {
-            // EXAMPLE AI COMMAND: Forward
             Command::Forward => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
                     client
@@ -215,7 +208,37 @@ impl Server {
                         .push(Response::new(ResponseCode::Status(StatusCode::Ok), None));
                 }
             }
-            // EXAMPLE GUI COMMAND: msz
+
+            // TODO: Implement Look command logic
+            Command::Look => {
+                if let Some(client) = self.clients.get_mut(client_uuid) {
+                    client.pending_responses.push(Response::new(
+                        ResponseCode::Status(StatusCode::Ok),
+                        Some("[player, food, ...]".to_string()),
+                    ));
+                }
+            }
+
+            // TODO: Implement Inventory command logic
+            Command::Inventory => {
+                if let Some(client) = self.clients.get_mut(client_uuid) {
+                    client.pending_responses.push(Response::new(
+                        ResponseCode::Status(StatusCode::Ok),
+                        Some("[food 10, linemate 0, ...]".to_string()),
+                    ));
+                }
+            }
+
+            // TODO: Implement Incantation command logic
+            Command::Incantation => {
+                if let Some(client) = self.clients.get_mut(client_uuid) {
+                    client.pending_responses.push(Response::new(
+                        ResponseCode::Status(StatusCode::Ok),
+                        Some("Elevation underway".to_string()),
+                    ));
+                }
+            }
+
             Command::Msz => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
                     client.pending_responses.push(Response::new(
@@ -224,6 +247,7 @@ impl Server {
                     ));
                 }
             }
+
             Command::Unknown(_) => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
                     client.pending_responses.push(Response {
@@ -232,6 +256,7 @@ impl Server {
                     });
                 }
             }
+
             _ => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
                     client
@@ -241,51 +266,19 @@ impl Server {
             }
         }
     }
-
     pub fn handle_response(&mut self, client_uuid: &str, response: Response) {
         let client = self.clients.get_mut(client_uuid).unwrap();
         let _ = client.socket.write_all(response.to_string().as_ref());
     }
 
+    // TODO: Separate `broadcast_global` into a system that accepts `ServerEvent`.
+    // The broadcaster should check `client.state`:
+    // - If `AuthenticatedAI`: send `event.to_ai_string()`
+    // - If `AuthenticatedGUI`: send `event.to_gui_string()`
     pub fn broadcast_global(&mut self, event: Response) {
         for client in self.clients.values_mut() {
             if client.user.is_some() {
                 client.pending_responses.push(event.clone());
-            }
-        }
-    }
-
-    pub fn broadcast_to_team(&mut self, team_members: &[String], event: Response) {
-        for client in self.clients.values_mut() {
-            if let Some(user_uuid) = &client.user {
-                if team_members.contains(user_uuid) {
-                    client.pending_responses.push(event.clone());
-                }
-            }
-        }
-    }
-
-    pub fn broadcast_to_team_except(
-        &mut self,
-        team_members: &[String],
-        exclude_uuid: &str,
-        event: Response,
-    ) {
-        for client in self.clients.values_mut() {
-            if let Some(user_uuid) = &client.user {
-                if user_uuid != exclude_uuid && team_members.contains(user_uuid) {
-                    client.pending_responses.push(event.clone());
-                }
-            }
-        }
-    }
-
-    pub fn send_to_user(&mut self, target_uuid: &str, event: Response) {
-        for client in self.clients.values_mut() {
-            if let Some(user_uuid) = &client.user {
-                if user_uuid == target_uuid {
-                    client.pending_responses.push(event.clone());
-                }
             }
         }
     }
