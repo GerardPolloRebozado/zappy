@@ -1,5 +1,5 @@
-use zappy::common::protocol::{Command, Request, Response, ResponseCode, StatusCode};
 use std::str::FromStr;
+use zappy_server::common::protocol::{Command, Request, Response, ResponseCode, StatusCode};
 
 #[test]
 fn test_cli_request_creation_feature() {
