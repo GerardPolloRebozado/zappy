@@ -1,5 +1,6 @@
 import sys
 import socket
+import argparse
 
 
 def connect(port, name, ip):
@@ -14,22 +15,17 @@ def connect(port, name, ip):
 
     try:
         s.connect((ip, port))
-    except ConnectionRefusedError:
+    except (ConnectionRefusedError, socket.gaierror):
         print(f"Could not connect to server at {ip}:{port}")
         return 84
 
-    print(s.recv(1024).decode())
-
-    s.close()
+    try:
+        print(s.recv(1024).decode())
+    except Exception:
+        return 84
+    finally:
+        s.close()
     return 0
-
-
-def print_help():
-    """
-    Prints help message
-    :return: nothing
-    """
-    print("USAGE: ./zappy_ai -p port -n name -ip ip address")
 
 
 def main():
@@ -37,24 +33,23 @@ def main():
     Main function, reads the command line arguments and calls the connect function
     :return: 0 or 84 on error
     """
-    params = sys.argv[1:]
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("-p", type=int, dest="port", help="port number")
+    parser.add_argument("-n", type=str, dest="name", help="name of the team")
+    parser.add_argument("-ip", type=str, dest="ip", help="ip address")
+    parser.add_argument("-h", "--help", action="help", help="show help message")
 
-    if params == []:
-        print_help()
+    try:
+        args = parser.parse_args()
+        if args.port is None or args.name is None or args.ip is None:
+            print("USAGE: ./zappy_ai -p port -n name -ip ip address")
+            return 84
+        return connect(args.port, args.name, args.ip)
+    except SystemExit as e:
+        return 0 if e.code == 0 else 84
+    except Exception:
         return 84
-    if params[0] == "-h" or params[0] == "--help":
-        print_help()
-        return 0
-
-    if params[0] == "-p":
-        port = int(params[1])
-    if params[2] == "-n":
-        name = str(params[3])
-    if params[4] == "-ip":
-        ip = str(params[5])
-    connect(port, name, ip)
-    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
