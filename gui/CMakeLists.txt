@@ -42,6 +42,9 @@ endif()
 
 set(SOURCES
         src/main.cpp
+        include/IElement.hpp
+        include/AElement.hpp
+        src/AElement.cpp
 )
 
 add_executable(zappy_gui ${SOURCES} ${HEADERS})
