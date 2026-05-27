@@ -36,5 +36,10 @@ doxy-docs
 zappy.txt
 .venv
 
+# Server
 zappy_server
 zappy_cli
+
+# AI
+zappy_ai
+__pycache__/
