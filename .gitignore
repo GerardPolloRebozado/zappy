@@ -34,12 +34,15 @@ node_modules
 doxy-docs
 
 zappy.txt
-.venv
 
 # Server
 zappy_server
 zappy_cli
 
 # AI
+.venv
 zappy_ai
 __pycache__/
+
+#CMake
+build
