@@ -2,5 +2,12 @@
 
 This is the AI project for the Multis - Zappy repository.
 
-Add your AI-specific overview, build instructions and important links here.
+### Run AI client
+```bash
+python3 client.py -p [port] -n [team_name] -ip [ip address]
+```
 
+### Run tests
+```bash
+python3 -m unittest tests/test_client.py
+```
