@@ -24,7 +24,7 @@ set(FETCHCONTENT_QUIET FALSE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE) # don't build the supplied example games
 set(GLFW_BUILD_WAYLAND ON CACHE BOOL "" FORCE) # enable wayland on linux
-set(GLFW_BUILD_X11 OFF CACHE BOOL "" FORCE) # disable x11 on linux (switch these settings around as you please)
+set(GLFW_BUILD_X11 ON CACHE BOOL "" FORCE) # disable x11 on linux (switch these settings around as you please)
 
 FetchContent_Declare(
         raylib
@@ -33,7 +33,13 @@ FetchContent_Declare(
         GIT_PROGRESS TRUE
 )
 
-FetchContent_MakeAvailable(raylib)
+FetchContent_Declare(
+    raylib-cpp
+    GIT_REPOSITORY https://github.com/RobLoach/raylib-cpp.git
+    GIT_TAG v6.0.0
+)
+
+FetchContent_MakeAvailable(raylib raylib-cpp)
 
 # 2. Link libraries using the KEYWORD signature (PRIVATE) for EVERYTHING
 if (APPLE)
@@ -44,7 +50,8 @@ if (APPLE)
     )
 endif()
 
-target_link_libraries(zappy_gui PRIVATE raylib)
+add_executable(zappy_gui ${SOURCES} ${HEADERS})
+target_link_libraries(${PROJECT_NAME} PRIVATE raylib raylib_cpp)
 
 # 3. Include directories
 target_include_directories(zappy_gui PRIVATE
