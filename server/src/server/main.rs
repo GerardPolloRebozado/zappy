@@ -2,7 +2,6 @@ use crate::server::Server;
 use crate::signal::{SIGNAL_RECEIVED, install_sigint_handler};
 use std::io;
 
-mod commands;
 mod server;
 pub mod signal;
 

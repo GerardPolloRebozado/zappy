@@ -7,9 +7,9 @@ pub struct Request {
     pub command: Command,
 }
 
-impl ToString for Request {
-    fn to_string(&self) -> String {
-        format!("{}\n", self.command)
+impl std::fmt::Display for Request {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", self.command)
     }
 }
 
@@ -22,74 +22,47 @@ impl FromStr for Request {
             return Err(());
         }
 
-        let (cmd_name, args_str) = match s.find(' ') {
-            Some(idx) => (&s[..idx], &s[idx..]),
-            None => (s, ""),
-        };
-
-        let args = parse_args(&format!("CMD{}", args_str));
-        if !args_str.trim().is_empty() && args.is_empty() {
+        let args = parse_args(s);
+        if args.is_empty() {
             return Err(());
         }
 
-        let command = match cmd_name.to_uppercase().as_str() {
-            "LOGIN" if args.len() > 1 => Command::Login(args[1].clone()),
-            "LOGOUT" => Command::Logout,
-            "USERS" => Command::Users,
-            "USER" if args.len() > 1 => Command::User(args[1].clone()),
-            "SEND" if args.len() > 2 => Command::Send(args[1].clone(), args[2].clone()),
-            "MESSAGES" if args.len() > 1 => Command::Messages(args[1].clone()),
-            "SUBSCRIBE" if args.len() > 1 => Command::Subscribe(args[1].clone()),
-            "SUBSCRIBED" => Command::Subscribed(args.get(1).cloned()),
-            "UNSUBSCRIBE" if args.len() > 1 => Command::Unsubscribe(args[1].clone()),
-            "USE" => Command::Use(
-                args.get(1).cloned(),
-                args.get(2).cloned(),
-                args.get(3).cloned(),
-            ),
-            "CREATE" => Command::Create(if args.len() > 1 {
-                args[1..].to_vec()
-            } else {
-                vec![]
-            }),
-            "LIST" => Command::List,
-            "INFO" => Command::Info,
-            _ => return Err(()),
+        let cmd_name = args[0].to_string();
+
+        let command = match cmd_name.as_str() {
+            "Forward" => Command::Forward,
+            "Right" => Command::Right,
+            "Left" => Command::Left,
+            "Look" => Command::Look,
+            "Inventory" => Command::Inventory,
+            "Broadcast" if args.len() > 1 => Command::Broadcast(args[1..].join(" ")),
+            "Connect_nbr" => Command::ConnectNbr,
+            "Fork" => Command::Fork,
+            "Eject" => Command::Eject,
+            "Take" if args.len() > 1 => Command::Take(args[1].clone()),
+            "Set" if args.len() > 1 => Command::Set(args[1].clone()),
+            "Incantation" => Command::Incantation,
+
+            "msz" => Command::Msz,
+            "bct" if args.len() > 2 => {
+                let x = args[1].parse().map_err(|_| ())?;
+                let y = args[2].parse().map_err(|_| ())?;
+                Command::Bct(x, y)
+            }
+            "mct" => Command::Mct,
+            "tna" => Command::Tna,
+            "ppo" if args.len() > 1 => Command::Ppo(args[1].clone()),
+            "plv" if args.len() > 1 => Command::Plv(args[1].clone()),
+            "pin" if args.len() > 1 => Command::Pin(args[1].clone()),
+            "sgt" => Command::Sgt,
+            "sst" if args.len() > 1 => {
+                let t = args[1].parse().map_err(|_| ())?;
+                Command::Sst(t)
+            }
+
+            _ => Command::Unknown(cmd_name),
         };
 
         Ok(Request { command })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::common::protocol::command::Command;
-
-    #[test]
-    fn test_request_from_str_login() {
-        let req = Request::from_str("LOGIN \"alex\"").unwrap();
-        assert_eq!(req.command, Command::Login("alex".to_string()));
-    }
-
-    #[test]
-    fn test_request_from_str_logout() {
-        let req = Request::from_str("LOGOUT").unwrap();
-        assert_eq!(req.command, Command::Logout);
-    }
-
-    #[test]
-    fn test_request_from_str_send() {
-        let req = Request::from_str("SEND \"uuid\" \"hello\"").unwrap();
-        assert_eq!(
-            req.command,
-            Command::Send("uuid".to_string(), "hello".to_string())
-        );
-    }
-
-    #[test]
-    fn test_request_from_str_invalid() {
-        assert!(Request::from_str("INVALID").is_err());
-        assert!(Request::from_str("LOGIN").is_err()); // Missing arg
     }
 }
