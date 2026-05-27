@@ -32,3 +32,5 @@ node_modules
 *.so
 *.dylib
 doxy-docs
+
+*.txt
