@@ -174,7 +174,7 @@ impl Server {
                             client.state = ClientState::AuthenticatedGUI;
                         }
                     } else if let Some(client) = self.clients.get_mut(client_uuid) {
-                        client.state = ClientState::AuthenticatedAI;
+                        client.state = ClientState::AuthenticatedAI(team_name);
 
                         client.pending_responses.push(Response::new(
                             ResponseCode::Status(StatusCode::Ok),
