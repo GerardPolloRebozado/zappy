@@ -22,14 +22,14 @@ set(GLFW_BUILD_X11 ON CACHE BOOL "" FORCE) # disable x11 on linux (switch these 
 FetchContent_Declare(
         raylib
         GIT_REPOSITORY "https://github.com/raysan5/raylib.git"
-        GIT_TAG "5.5"
+        GIT_TAG "6.0"
         GIT_PROGRESS TRUE
 )
 
 FetchContent_Declare(
     raylib-cpp
     GIT_REPOSITORY https://github.com/RobLoach/raylib-cpp.git
-    GIT_TAG v5.5.0
+    GIT_TAG v6.0.0
 )
 
 FetchContent_MakeAvailable(raylib raylib-cpp)
