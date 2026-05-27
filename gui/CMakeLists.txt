@@ -17,16 +17,22 @@ set(FETCHCONTENT_QUIET FALSE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE) # don't build the supplied example games
 set(GLFW_BUILD_WAYLAND ON CACHE BOOL "" FORCE) # enable wayland on linux
-set(GLFW_BUILD_X11 OFF CACHE BOOL "" FORCE) # disable x11 on linux (switch these settings around as you please)
+set(GLFW_BUILD_X11 ON CACHE BOOL "" FORCE) # disable x11 on linux (switch these settings around as you please)
 
 FetchContent_Declare(
         raylib
         GIT_REPOSITORY "https://github.com/raysan5/raylib.git"
-        GIT_TAG "6.0"
+        GIT_TAG "5.5"
         GIT_PROGRESS TRUE
 )
 
-FetchContent_MakeAvailable(raylib)
+FetchContent_Declare(
+    raylib-cpp
+    GIT_REPOSITORY https://github.com/RobLoach/raylib-cpp.git
+    GIT_TAG v5.5.0
+)
+
+FetchContent_MakeAvailable(raylib raylib-cpp)
 
 if (APPLE)
     target_link_libraries(${PROJECT_NAME} "-framework IOKit")
@@ -39,7 +45,7 @@ set(SOURCES
 )
 
 add_executable(zappy_gui ${SOURCES} ${HEADERS})
-target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
+target_link_libraries(${PROJECT_NAME} PRIVATE raylib raylib_cpp)
 
 target_include_directories(zappy_gui PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
