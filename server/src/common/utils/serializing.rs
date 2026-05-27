@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io;
 use std::io::{Read, Write};
 
-pub fn write_length(file: &mut File, len: u64) -> io::Result<()>{
+pub fn write_length(file: &mut File, len: u64) -> io::Result<()> {
     file.write_all(&len.to_le_bytes())?;
     Ok(())
 }

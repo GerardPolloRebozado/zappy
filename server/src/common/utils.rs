@@ -12,12 +12,12 @@ pub fn random_bytes() -> [u8; 16] {
         state = 1;
     }
     let mut bytes: [u8; 16] = [0; 16];
-    for i in 0..16 {
-        state ^= state << 13; // Shift Left 13 XOR
-        state ^= state >> 17; // Shift Right 17 XOR
-        state ^= state << 5; // Shift Left 5 XOR
+    for byte in &mut bytes {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
 
-        bytes[i] = state as u8;
+        *byte = state as u8;
     }
     bytes
 }
@@ -73,84 +73,13 @@ pub fn unescape_str(s: &str) -> String {
 ///
 /// # Examples
 /// ```ignore
-/// use myteams::common::utils::parse_args;
+/// use zappy::common::utils::parse_args;
 /// let args = parse_args(r#"LOGIN "alex""#);
 /// assert_eq!(args, vec!["LOGIN", "alex"]);
 /// ```
 ///
 pub fn parse_args(input: &str) -> Vec<String> {
-    let mut args = Vec::new();
-    let mut current = String::new();
-    let mut in_quotes = false;
-    let mut in_arg = false;
-    let mut arg_quoted = false;
-    let mut escaped = false;
-    let mut it = input.chars().peekable();
-    while let Some(c) = it.next() {
-        if escaped {
-            current.push(c);
-            escaped = false;
-            continue;
-        }
-
-        if in_quotes {
-            if c == '\\' {
-                if let Some(&nc) = it.peek() {
-                    if nc == '"' || nc == '\\' {
-                        escaped = true;
-                        continue;
-                    }
-                }
-            }
-            if c == '"' {
-                in_quotes = false;
-                args.push(current.clone());
-                current.clear();
-                in_arg = false;
-                continue;
-            }
-            current.push(c);
-        } else {
-            if c.is_whitespace() {
-                if in_arg {
-                    if args.len() > 0 && !arg_quoted {
-                        return Vec::new();
-                    }
-                    args.push(current.clone());
-                    current.clear();
-                    in_arg = false;
-                }
-            } else if c == '"' {
-                if in_arg {
-                    return Vec::new();
-                }
-                in_quotes = true;
-                in_arg = true;
-                arg_quoted = true;
-            } else {
-                if !in_arg {
-                    in_arg = true;
-                    arg_quoted = false;
-                } else if arg_quoted {
-                    return Vec::new();
-                }
-                current.push(c);
-            }
-        }
-    }
-
-    if in_quotes {
-        return Vec::new();
-    }
-
-    if in_arg {
-        if args.len() > 0 && !arg_quoted {
-            return Vec::new();
-        }
-        args.push(current);
-    }
-
-    args
+    input.split_whitespace().map(|s| s.to_string()).collect()
 }
 
 #[cfg(test)]
@@ -182,18 +111,17 @@ mod tests {
 
     #[test]
     fn test_parse_args() {
-        // r# -> raw string literal
-        assert_eq!(parse_args(r#"LOGIN "alex""#), vec!["LOGIN", "alex"]);
-        assert_eq!(parse_args(r#"/login "alex""#), vec!["/login", "alex"]);
-        assert_eq!(parse_args(r#"/login alex"#), Vec::<String>::new());
-        assert_eq!(parse_args(r#"/login "alex"#), Vec::<String>::new());
+        assert_eq!(parse_args(r#"LOGIN "alex""#), vec!["LOGIN", "\"alex\""]);
+        assert_eq!(parse_args(r#"/login "alex""#), vec!["/login", "\"alex\""]);
+        assert_eq!(parse_args(r#"/login alex"#), vec!["/login", "alex"]);
+        assert_eq!(parse_args(r#"/login "alex"#), vec!["/login", "\"alex"]);
         assert_eq!(
             parse_args(r#"CREATE "team" "desc""#),
-            vec!["CREATE", "team", "desc"]
+            vec!["CREATE", "\"team\"", "\"desc\""]
         );
         assert_eq!(
             parse_args(r#"SEND "uuid" "hello \"world\"""#),
-            vec!["SEND", "uuid", "hello \"world\""]
+            vec!["SEND", "\"uuid\"", "\"hello", "\\\"world\\\"\""]
         );
     }
 }

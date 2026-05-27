@@ -4,11 +4,11 @@ use crate::common::utils::uuid_v4;
 use std::io::Read;
 use std::net::TcpStream;
 
-#[derive(Clone)]
-pub struct ClientContext {
-    pub team_uuid: Option<String>,
-    pub channel_uuid: Option<String>,
-    pub thread_uuid: Option<String>,
+#[derive(Clone, PartialEq, Eq)]
+pub enum ClientState {
+    WaitingForTeamName,
+    AuthenticatedAI,
+    AuthenticatedGUI,
 }
 
 pub struct Client {
@@ -17,7 +17,7 @@ pub struct Client {
     pub user: Option<String>,
     buffered_data: Option<String>,
     pub pending_responses: Vec<Response>,
-    pub client_ctx: ClientContext,
+    pub state: ClientState,
 }
 
 impl Client {
@@ -28,11 +28,7 @@ impl Client {
             user: None,
             buffered_data: None,
             pending_responses: Vec::new(),
-            client_ctx: ClientContext {
-                team_uuid: None,
-                channel_uuid: None,
-                thread_uuid: None,
-            },
+            state: ClientState::WaitingForTeamName,
         }
     }
 

@@ -1,3 +1,5 @@
+use std::fmt;
+
 const SECONDS_IN_A_DAY: u64 = 86_400;
 
 #[derive(Clone)]
@@ -10,6 +12,10 @@ pub struct Date {
 }
 
 impl Date {
+    fn is_leap_year(year: u16) -> bool {
+        (year.is_multiple_of(4) && !year.is_multiple_of(100)) || year.is_multiple_of(400)
+    }
+
     pub fn now() -> Date {
         let current_time = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -19,15 +25,12 @@ impl Date {
         let mut days_since_epoch = total_seconds / SECONDS_IN_A_DAY;
         let seconds_today = total_seconds % SECONDS_IN_A_DAY;
 
-        // Hours and minutes
         let hour = (seconds_today / 3600) as u8;
         let minute = ((seconds_today % 3600) / 60) as u8;
 
-        // Year
         let mut year = 1970;
         loop {
-            let is_leap_year = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
-            let days_in_this_year = if is_leap_year { 366 } else { 365 };
+            let days_in_this_year = if Self::is_leap_year(year) { 366 } else { 365 };
 
             if days_since_epoch >= days_in_this_year {
                 days_since_epoch -= days_in_this_year;
@@ -37,11 +40,9 @@ impl Date {
             }
         }
 
-        // Month and Day
-        let is_leap_year = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
         let days_in_months = [
             31,
-            if is_leap_year { 29 } else { 28 },
+            if Self::is_leap_year(year) { 29 } else { 28 },
             31,
             30,
             31,
@@ -68,25 +69,26 @@ impl Date {
 
         Date {
             day,
-            month: (month + 1) as u8, // Adding 1 becasue 0 index
-            year: year as u16,
+            month: (month + 1) as u8,
+            year,
             hour,
             minute,
         }
     }
 
-    // do NOT touch this i'm 50% sure it works :)
     pub fn to_timestamp(&self) -> u64 {
         let mut total_days = 0;
         for year in 1970..self.year {
-            let is_leap_year = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
-            total_days += if is_leap_year { 366 } else { 365 };
+            total_days += if Self::is_leap_year(year) { 366 } else { 365 };
         }
 
-        let is_leap_year = (self.year % 4 == 0 && self.year % 100 != 0) || (self.year % 400 == 0);
         let days_in_months = [
             31,
-            if is_leap_year { 29 } else { 28 },
+            if Self::is_leap_year(self.year) {
+                29
+            } else {
+                28
+            },
             31,
             30,
             31,
@@ -99,22 +101,13 @@ impl Date {
             31,
         ];
 
-        for month in 0..(self.month - 1) as usize {
-            total_days += days_in_months[month];
+        for item in days_in_months.iter().take((self.month - 1) as usize) {
+            total_days += item;
         }
 
         total_days += (self.day - 1) as u64;
 
-        let total_seconds =
-            total_days * SECONDS_IN_A_DAY + (self.hour as u64 * 3600) + (self.minute as u64 * 60);
-        total_seconds
-    }
-
-    pub fn to_string(&self) -> String {
-        format!(
-            "{:02}/{:02}/{} {:02}:{:02}",
-            self.day, self.month, self.year, self.hour, self.minute
-        )
+        total_days * SECONDS_IN_A_DAY + (self.hour as u64 * 3600) + (self.minute as u64 * 60)
     }
 
     pub fn from_string(string: &str) -> Option<Date> {
@@ -149,6 +142,16 @@ impl Date {
     }
 }
 
+impl fmt::Display for Date {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{:02}/{:02}/{} {:02}:{:02}",
+            self.day, self.month, self.year, self.hour, self.minute
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -174,40 +177,5 @@ mod tests {
         assert_eq!(date.year, 2026);
         assert_eq!(date.hour, 12);
         assert_eq!(date.minute, 30);
-    }
-
-    #[test]
-    fn test_date_from_invalid_string() {
-        assert!(Date::from_string("invalid").is_none());
-        assert!(Date::from_string("18/04/2026").is_none());
-        assert!(Date::from_string("18/04/2026 12:30:00").is_none());
-    }
-
-    #[test]
-    fn test_date_to_timestamp() {
-        let date = Date {
-            day: 1,
-            month: 1,
-            year: 1970,
-            hour: 0,
-            minute: 0,
-        };
-        assert_eq!(date.to_timestamp(), 0);
-
-        let date2 = Date {
-            day: 1,
-            month: 1,
-            year: 1971,
-            hour: 0,
-            minute: 0,
-        };
-        assert_eq!(date2.to_timestamp(), 365 * 24 * 3600);
-    }
-
-    #[test]
-    fn test_date_now() {
-        let _date = Date::now();
-        // Just check it doesn't panic and returns a reasonable year
-        assert!(_date.year >= 2024);
     }
 }

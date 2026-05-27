@@ -8,15 +8,6 @@ pub enum ResponseCode {
     Event(EventCode),
 }
 
-impl ResponseCode {
-    pub fn to_u32(&self) -> u32 {
-        match self {
-            ResponseCode::Status(s) => *s as u32,
-            ResponseCode::Event(e) => *e as u32,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Response {
     pub code: ResponseCode,
@@ -30,90 +21,88 @@ impl Response {
 }
 
 impl FromStr for Response {
-    // TODO: Use a custom ProtocolError enum here to differentiate between
-    // "Not a number" and "Unknown status code" during server response parsing.
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split_whitespace().collect();
-        if parts.is_empty() {
+        let s = s.trim();
+        if s.is_empty() {
             return Err(());
         }
 
-        let code_u32 = parts[0].parse::<u32>().map_err(|_| ())?;
-        let code = match code_u32 {
-            200 => ResponseCode::Status(StatusCode::Ok),
-            201 => ResponseCode::Status(StatusCode::Created),
-            400 => ResponseCode::Status(StatusCode::BadRequest),
-            401 => ResponseCode::Status(StatusCode::Unauthorized),
-            403 => ResponseCode::Status(StatusCode::Forbidden),
-            404 => ResponseCode::Status(StatusCode::NotFound),
-            409 => ResponseCode::Status(StatusCode::Conflict),
-            442 => ResponseCode::Status(StatusCode::ImACoffeePot),
-            500 => ResponseCode::Status(StatusCode::InternalServerError),
-            600 => ResponseCode::Event(EventCode::LoggedIn),
-            601 => ResponseCode::Event(EventCode::LoggedOut),
-            602 => ResponseCode::Event(EventCode::MessageReceived),
-            603 => ResponseCode::Event(EventCode::ThreadCreated),
-            604 => ResponseCode::Event(EventCode::CommentCreated),
-            605 => ResponseCode::Event(EventCode::TeamCreated),
-            606 => ResponseCode::Event(EventCode::ChannelCreated),
-            _ => return Err(()),
-        };
-
-        let data = if parts.len() > 1 {
-            Some(parts[1..].join(" "))
-        } else {
-            None
-        };
-
-        Ok(Response { code, data })
-    }
-}
-
-impl ToString for Response {
-    fn to_string(&self) -> String {
-        let mut s = format!("{}", self.code.to_u32());
-        if let Some(ref data) = self.data {
-            s.push_str(" ");
-            s.push_str(data);
+        if s == "ok" {
+            return Ok(Response {
+                code: ResponseCode::Status(StatusCode::Ok),
+                data: None,
+            });
         }
-        s.push_str("\n");
-        s
+        if s == "ko" {
+            return Ok(Response {
+                code: ResponseCode::Status(StatusCode::Ko),
+                data: None,
+            });
+        }
+
+        let parts: Vec<&str> = s.split_whitespace().collect();
+        let prefix = parts[0];
+
+        let event = match prefix {
+            "message" => Some(EventCode::Message),
+            "eject:" => Some(EventCode::Eject),
+            "dead" => Some(EventCode::Dead),
+            "pnw" => Some(EventCode::Pnw),
+            "pdi" => Some(EventCode::Pdi),
+            "ppo" => Some(EventCode::Ppo),
+            "pie" => Some(EventCode::Pie),
+            "seg" => Some(EventCode::Seg),
+            _ => None,
+        };
+
+        if let Some(e) = event {
+            return Ok(Response {
+                code: ResponseCode::Event(e),
+                data: if parts.len() > 1 {
+                    Some(parts[1..].join(" "))
+                } else {
+                    None
+                },
+            });
+        }
+
+        Ok(Response {
+            code: ResponseCode::Status(StatusCode::Ok),
+            data: Some(s.to_string()),
+        })
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::common::protocol::status::StatusCode;
-
-    #[test]
-    fn test_response_to_string() {
-        let resp = Response {
-            code: ResponseCode::Status(StatusCode::Ok),
-            data: Some("Hello".to_string()),
-        };
-        assert_eq!(resp.to_string(), "200 Hello\n");
-    }
-
-    #[test]
-    fn test_response_from_str() {
-        let resp = Response::from_str("200 Hello").unwrap();
-        assert_eq!(resp.code, ResponseCode::Status(StatusCode::Ok));
-        assert_eq!(resp.data, Some("Hello".to_string()));
-    }
-
-    #[test]
-    fn test_response_from_str_no_data() {
-        let resp = Response::from_str("200").unwrap();
-        assert_eq!(resp.code, ResponseCode::Status(StatusCode::Ok));
-        assert_eq!(resp.data, None);
-    }
-
-    #[test]
-    fn test_response_from_str_invalid() {
-        assert!(Response::from_str("999").is_err());
-        assert!(Response::from_str("abc").is_err());
+impl std::fmt::Display for Response {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.code {
+            ResponseCode::Status(StatusCode::Ok) => {
+                if let Some(ref data) = self.data {
+                    writeln!(f, "{}", data)
+                } else {
+                    writeln!(f, "ok")
+                }
+            }
+            ResponseCode::Status(StatusCode::Ko) => writeln!(f, "ko"),
+            ResponseCode::Event(e) => {
+                let prefix = match e {
+                    EventCode::Message => "message",
+                    EventCode::Eject => "eject:",
+                    EventCode::Dead => "dead",
+                    EventCode::Pnw => "pnw",
+                    EventCode::Pdi => "pdi",
+                    EventCode::Ppo => "ppo",
+                    EventCode::Pie => "pie",
+                    EventCode::Seg => "seg",
+                };
+                if let Some(ref data) = self.data {
+                    writeln!(f, "{} {}", prefix, data)
+                } else {
+                    writeln!(f, "{}", prefix)
+                }
+            }
+        }
     }
 }
