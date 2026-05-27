@@ -1,7 +1,8 @@
+#!/usr/bin/env python3
+
 import sys
 import socket
 import argparse
-
 
 def connect(port, name, ip):
     """
