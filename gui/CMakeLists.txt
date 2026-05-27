@@ -11,7 +11,14 @@ endif ()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-#Raylib
+set(SOURCES
+        src/main.cpp
+)
+
+# 1. Create the target first
+add_executable(zappy_gui ${SOURCES})
+
+# Raylib FetchContent
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
@@ -28,23 +35,21 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(raylib)
 
+# 2. Link libraries using the KEYWORD signature (PRIVATE) for EVERYTHING
 if (APPLE)
-    target_link_libraries(${PROJECT_NAME} "-framework IOKit")
-    target_link_libraries(${PROJECT_NAME} "-framework Cocoa")
-    target_link_libraries(${PROJECT_NAME} "-framework OpenGL")
+    target_link_libraries(zappy_gui PRIVATE
+            "-framework IOKit"
+            "-framework Cocoa"
+            "-framework OpenGL"
+    )
 endif()
 
-set(SOURCES
-        src/main.cpp
-)
+target_link_libraries(zappy_gui PRIVATE raylib)
 
-add_executable(zappy_gui ${SOURCES} ${HEADERS})
-target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
-
+# 3. Include directories
 target_include_directories(zappy_gui PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-
 
 if(ipo_supported)
     set_property(TARGET zappy_gui PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)

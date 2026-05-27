@@ -1,5 +1,5 @@
-use zappy::common::protocol::{Response, ResponseCode, event::EventCode};
-use zappy::common::{Team, User};
+use zappy_server::common::protocol::{Response, ResponseCode, event::EventCode};
+use zappy_server::common::{Team, User};
 
 #[test]
 fn test_server_event_serialization_feature() {

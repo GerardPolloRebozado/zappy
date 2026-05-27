@@ -1,5 +1,5 @@
-use zappy::common::{Team, User};
 use std::fs::{File, remove_file};
+use zappy_server::common::{Team, User};
 
 #[test]
 fn test_feature_save_load() {
@@ -23,8 +23,8 @@ fn test_feature_save_load() {
 
 #[test]
 fn test_feature_protocol_roundtrip() {
-    use zappy::common::protocol::{Command, Request, Response, ResponseCode, StatusCode};
     use std::str::FromStr;
+    use zappy_server::common::protocol::{Command, Request, Response, ResponseCode, StatusCode};
 
     // Login -> Response
     let login_raw = "LOGIN \"user\"\n";
