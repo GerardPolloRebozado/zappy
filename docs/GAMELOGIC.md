@@ -1,4 +1,4 @@
-# Game lab
+# Game Logic
 ## Resources
 
 The following resources are available, the resource should be evenly distributed

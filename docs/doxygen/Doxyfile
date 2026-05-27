@@ -1033,6 +1033,7 @@ INPUT                  = ai \
                          gui \
                          server \
                          README.md \
+                         docs/GAMELOGIC.md \
                          docs/doxygen/groups.dox
 
 # This tag can be used to specify the character encoding of the source files
