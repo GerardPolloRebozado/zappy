@@ -85,7 +85,7 @@ OUTPUT_DIRECTORY       = docs/doxygen/doxy-docs
 # control the number of sub-directories.
 # The default value is: NO.
 
-CREATE_SUBDIRS         = YES
+CREATE_SUBDIRS         = NO
 
 # Controls the number of sub-directories that will be created when
 # CREATE_SUBDIRS tag is set to YES. Level 0 represents 16 directories, and every
@@ -874,7 +874,7 @@ FILE_VERSION_FILTER    =
 # DoxygenLayout.xml, Doxygen will parse it automatically even if the LAYOUT_FILE
 # tag is left empty.
 
-LAYOUT_FILE            = DoxygenLayout.xml
+LAYOUT_FILE            = docs/doxygen/DoxygenLayout.xml
 
 # The CITE_BIB_FILES tag can be used to specify one or more bib files containing
 # the reference definitions. This must be a list of .bib files. The .bib
@@ -1033,6 +1033,7 @@ INPUT                  = ai \
                          gui \
                          server \
                          README.md \
+                         docs/game \
                          docs/doxygen/groups.dox
 
 # This tag can be used to specify the character encoding of the source files

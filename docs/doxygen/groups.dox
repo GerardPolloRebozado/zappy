@@ -1,6 +1,10 @@
 /**
  * @defgroup ai_module AI Component
  * @brief All code related to the AI client.
+ *
+ * Welcome to the AI documentation. This component handles the autonomous behavior
+ * of the Zappy players.
+ *
  * @{
  *   @dir ai
  *   @brief Root directory for the AI component.
@@ -10,6 +14,10 @@
 /**
  * @defgroup gui_module GUI Component
  * @brief All code related to the Graphical User Interface.
+ *
+ * Welcome to the GUI documentation. This component provides the visual representation
+ * of the Zappy world.
+ *
  * @{
  *   @dir gui
  *   @brief Root directory for the GUI component.
@@ -19,6 +27,10 @@
 /**
  * @defgroup server_module Server Component
  * @brief All code related to the Zappy Server.
+ *
+ * Welcome to the Server documentation. This component is the heart of the Zappy game,
+ * managing the world, players, and resources.
+ *
  * @{
  *   @dir server
  *   @brief Root directory for the Server component.
@@ -33,31 +45,13 @@
  */
 
 /**
- * @page ai AI
- * @brief AI Component Overview
- * 
- * Welcome to the AI documentation. This component handles the autonomous behavior
- * of the Zappy players.
+ * @page game_rules_page Game
+ * @brief Logic and rules of the Zappy game.
  *
- * For technical details, see the @ref ai_module "AI Module".
- */
-
-/**
- * @page gui GUI
- * @brief GUI Component Overview
- * 
- * Welcome to the GUI documentation. This component provides the visual representation
- * of the Zappy world.
+ * This section covers the game mechanics, resource distribution, and leveling rules
+ * that govern the Zappy world.
  *
- * For technical details, see the @ref gui_module "GUI Module".
- */
-
-/**
- * @page server Server
- * @brief Server Component Overview
- * 
- * Welcome to the Server documentation. This component is the heart of the Zappy game,
- * managing the world, players, and resources.
- *
- * For technical details, see the @ref server_module "Server Module".
+ * For more details, see:
+ * - @ref md_docs_2game_2index "Game Logic Overview"
+ * - @ref md_docs_2game_2resources "Resource Distribution"
  */
