@@ -8,25 +8,17 @@
 #define ZAPPY_GUI_COMPONENTBOT_HPP
 #include <string>
 
+struct BotData {
+    int id;
+    int level;
+    int orientation;
+    std::string team_name;
+    int vision_range;
+};
+
 struct Race {
     enum Type { ELF, DWARF, OGRE, TRANTORIAN };
     Type current_race;
-};
-
-struct Position3D {
-    double x;
-    double y;
-    double z;
-};
-
-struct ComponentBot {
-    int id;
-    int level;
-    Position3D pos3d;
-    std::string team;
-    int orientation;
-    int vision_range;
-    Race race;
 };
 
 #endif //ZAPPY_GUI_COMPONENTBOT_HPP

@@ -14,19 +14,9 @@ struct TerrainModifiers {
     double soundMul;
 };
 
-struct Position {
-    int x;
-    int y;
-};
-
-struct Terrain {
+struct TerrainType {
     enum Type { PLAIN, MOUNTAIN, LAKE };
     Type current_type;
-    int x;
-    int y;
-    TerrainModifiers modifiers;
-    Position pos;
 };
-
 
 #endif //ZAPPY_GUI_COMPONENTTILE_HPP

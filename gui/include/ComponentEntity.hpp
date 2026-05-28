@@ -7,6 +7,13 @@
 #ifndef ZAPPY_GUI_COMPONENTENTITY_HPP
 #define ZAPPY_GUI_COMPONENTENTITY_HPP
 
+// https://github.com/skypjack/entt/discussions/651 ??
+
+struct TileTag {};
+struct BotTag {};
+struct EggTag {};
+
+
 struct ComponentEntity {
     int _id;
 };
