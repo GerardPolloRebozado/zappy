@@ -256,3 +256,51 @@ impl World {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::ecs::storage::World;
+    use std::any::TypeId;
+
+    #[test]
+    fn create_entity() {
+        let mut world = World::new();
+        let new_ent = world.spawn();
+        assert_eq!(new_ent.id, 0);
+    }
+
+    #[test]
+    fn add_component() {
+        struct TestComponent {
+            value: i32,
+        };
+        let mut world = World::new();
+        let ent = world.spawn();
+
+        world.register_component::<TestComponent>();
+        world.add_component(ent, TestComponent { value: 42 });
+
+        let archetype = &world.archetypes[world.entity_locations[&ent].archetype_id];
+        assert!(archetype.types.contains(&TypeId::of::<TestComponent>()));
+    }
+
+    #[test]
+    fn archetype_transition() {
+        struct ComponentA;
+        struct ComponentB;
+
+        let mut world = World::new();
+        let ent = world.spawn();
+
+        world.register_component::<ComponentA>();
+        world.register_component::<ComponentB>();
+
+        world.add_component(ent, ComponentA);
+        let arch_id_a = world.entity_locations[&ent].archetype_id;
+
+        world.add_component(ent, ComponentB);
+        let arch_id_b = world.entity_locations[&ent].archetype_id;
+
+        assert_ne!(arch_id_a, arch_id_b);
+    }
+}
