@@ -11,13 +11,20 @@ endif ()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-#Raylib
+set(SOURCES
+        src/main.cpp
+)
+
+# 1. Create the target first
+add_executable(zappy_gui ${SOURCES})
+
+# Raylib FetchContent
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE) # don't build the supplied example games
 set(GLFW_BUILD_WAYLAND ON CACHE BOOL "" FORCE) # enable wayland on linux
-set(GLFW_BUILD_X11 OFF CACHE BOOL "" FORCE) # disable x11 on linux (switch these settings around as you please)
+set(GLFW_BUILD_X11 ON CACHE BOOL "" FORCE) # disable x11 on linux (switch these settings around as you please)
 
 FetchContent_Declare(
         raylib
@@ -26,25 +33,30 @@ FetchContent_Declare(
         GIT_PROGRESS TRUE
 )
 
-FetchContent_MakeAvailable(raylib)
-
-if (APPLE)
-    target_link_libraries(${PROJECT_NAME} "-framework IOKit")
-    target_link_libraries(${PROJECT_NAME} "-framework Cocoa")
-    target_link_libraries(${PROJECT_NAME} "-framework OpenGL")
-endif()
-
-set(SOURCES
-        src/main.cpp
+FetchContent_Declare(
+    raylib-cpp
+    GIT_REPOSITORY https://github.com/RobLoach/raylib-cpp.git
+    GIT_TAG v6.0.0
 )
 
-add_executable(zappy_gui ${SOURCES} ${HEADERS})
-target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
+FetchContent_MakeAvailable(raylib raylib-cpp)
 
+# 2. Link libraries using the KEYWORD signature (PRIVATE) for EVERYTHING
+if (APPLE)
+    target_link_libraries(zappy_gui PRIVATE
+            "-framework IOKit"
+            "-framework Cocoa"
+            "-framework OpenGL"
+    )
+endif()
+
+add_executable(zappy_gui ${SOURCES} ${HEADERS})
+target_link_libraries(${PROJECT_NAME} PRIVATE raylib raylib_cpp)
+
+# 3. Include directories
 target_include_directories(zappy_gui PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-
 
 if(ipo_supported)
     set_property(TARGET zappy_gui PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
