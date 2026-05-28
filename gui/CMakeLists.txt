@@ -50,7 +50,6 @@ if (APPLE)
     )
 endif()
 
-add_executable(zappy_gui ${SOURCES} ${HEADERS})
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib raylib_cpp)
 
 # 3. Include directories
