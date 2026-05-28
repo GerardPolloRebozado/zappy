@@ -45,6 +45,7 @@ set(SOURCES
         include/IElement.hpp
         include/AElement.hpp
         src/AElement.cpp
+        include/Components/ComponentShared.hpp
 )
 
 add_executable(zappy_gui ${SOURCES} ${HEADERS})
