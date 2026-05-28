@@ -1,0 +1,33 @@
+cmake_minimum_required(VERSION 3.10)
+project(ZappyAI)
+
+# Find Python 3
+find_package(Python3 REQUIRED)
+
+# "Compile" the AI: Copy the script and make it executable, then symlink to root
+add_custom_target(zappy_ai ALL
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/client.py" "${CMAKE_CURRENT_BINARY_DIR}/zappy_ai"
+    COMMAND chmod +x "${CMAKE_CURRENT_BINARY_DIR}/zappy_ai"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_BINARY_DIR}/zappy_ai" "${CMAKE_CURRENT_SOURCE_DIR}/zappy_ai"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/client.py"
+    COMMENT "Creating zappy_ai executable and symlink"
+)
+
+# Testing configuration
+option(BUILD_TESTING "Enable tests" ON)
+
+if(BUILD_TESTING)
+    enable_testing()
+
+    # Find all test files matching test_*.py in tests/
+    file(GLOB_RECURSE TEST_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_*.py")
+
+    foreach(test_file ${TEST_FILES})
+        get_filename_component(test_name ${test_file} NAME_WE)
+        add_test(
+            NAME ${test_name}
+            COMMAND ${Python3_EXECUTABLE} -m unittest ${test_file}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+    endforeach()
+endif()
