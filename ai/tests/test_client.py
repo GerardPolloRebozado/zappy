@@ -3,11 +3,12 @@ from unittest.mock import patch, MagicMock
 import io
 import sys
 import socket
-from client import ZappyAiClient, main
+from src.client.ai_client import ZappyAiClient
+from src.main import main
 
 class TestClient(unittest.TestCase):
 
-    @patch('socket.socket')
+    @patch('src.network.connection.socket.socket')
     @patch('sys.stdout', new_callable=io.StringIO)
     def test_connect_success(self, mock_stdout, mock_socket):
         # Setup mock
@@ -34,7 +35,7 @@ class TestClient(unittest.TestCase):
         # Verify team name was sent
         mock_socket_instance.sendall.assert_any_call(b"team1\n")
 
-    @patch('socket.socket')
+    @patch('src.network.connection.socket.socket')
     @patch('sys.stdout', new_callable=io.StringIO)
     def test_connect_refused(self, mock_stdout, mock_socket):
         # Setup mock to raise ConnectionRefusedError
@@ -49,41 +50,40 @@ class TestClient(unittest.TestCase):
         self.assertEqual(result, 84)
         self.assertIn("Could not connect to server at 127.0.0.1:4242", mock_stdout.getvalue())
 
-    @patch('sys.argv', ['client.py', '-h'])
+    @patch('sys.argv', ['main.py', '-h'])
     @patch('sys.stdout', new_callable=io.StringIO)
     def test_main_help(self, mock_stdout):
         result = main()
         self.assertEqual(result, 0)
 
-    @patch('sys.argv', ['client.py'])
+    @patch('sys.argv', ['main.py'])
     @patch('sys.stdout', new_callable=io.StringIO)
     def test_main_no_args(self, mock_stdout):
         result = main()
         self.assertEqual(result, 84)
         self.assertIn("USAGE: ./zappy_ai -p port -n name -ip ip address", mock_stdout.getvalue())
 
-    @patch('sys.argv', ['client.py', '-p', '4242', '-n', 'team1', '-ip', '127.0.0.1'])
-    @patch('client.ZappyAiClient')
-    def test_main_valid_args(self, mock_zappy_client):
+    @patch('sys.argv', ['main.py', '-p', '4242', '-n', 'team1', '-ip', '127.0.0.1'])
+    @patch('src.main.ZappyAiClient')
+    @patch('src.main.run_client')
+    def test_main_valid_args(self, mock_run_client, mock_zappy_client):
         # Setup mock client
         mock_instance = mock_zappy_client.return_value
         mock_instance.connect.return_value = 0
-        
-        # Mock run to avoid infinite loop
-        mock_instance.run.return_value = None
         
         result = main()
         
         self.assertEqual(result, 0)
         mock_zappy_client.assert_called_with(4242, 'team1', '127.0.0.1')
         mock_instance.connect.assert_called_once()
-        mock_instance.run.assert_called_once()
+        mock_run_client.assert_called_once()
 
     def test_receive_line_buffered(self):
         # Test the buffered reading logic specifically
         mock_socket = MagicMock()
-        client = ZappyAiClient(4242, "team1", "127.0.0.1")
-        client.socket = mock_socket
+        from src.network.connection import Connection
+        conn = Connection("127.0.0.1", 4242)
+        conn.socket = mock_socket
         
         # Scenario: Multiple lines in one recv, then partial line
         mock_socket.recv.side_effect = [
@@ -91,9 +91,9 @@ class TestClient(unittest.TestCase):
             b"ial\n"
         ]
         
-        self.assertEqual(client.receive_line(), "line1")
-        self.assertEqual(client.receive_line(), "line2")
-        self.assertEqual(client.receive_line(), "partial")
+        self.assertEqual(conn.receive_line(), "line1")
+        self.assertEqual(conn.receive_line(), "line2")
+        self.assertEqual(conn.receive_line(), "partial")
 
 if __name__ == '__main__':
     unittest.main()
