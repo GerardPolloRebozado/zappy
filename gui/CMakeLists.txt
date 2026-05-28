@@ -42,6 +42,8 @@ endif()
 
 set(SOURCES
         src/main.cpp
+        src/NetworkManager.cpp
+        src/Network/TcpSocket.cpp
         include/IElement.hpp
         include/AElement.hpp
         src/AElement.cpp
@@ -77,4 +79,5 @@ add_custom_target(fclean
 )
 
 enable_testing()
-#add_subdirectory(tests) remove later when tests are added
+add_subdirectory(tests)
+

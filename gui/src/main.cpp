@@ -1,3 +1,4 @@
+#include "NetworkManager.hpp"
 #include "raylib-cpp.hpp"
 #include <iostream>
 #include <string>
@@ -11,7 +12,7 @@ void print_usage() {
 }
 
 int main(int argc, char** argv) {
-    std::string port;
+    std::string portStr;
     std::string machine;
 
     for (int i = 1; i < argc; ++i) {
@@ -20,7 +21,7 @@ int main(int argc, char** argv) {
             print_usage();
             return 0;
         } else if (arg == "-p" && i + 1 < argc) {
-            port = argv[++i];
+            portStr = argv[++i];
         } else if (arg == "-h" && i + 1 < argc) {
             machine = argv[++i];
         } else {
@@ -29,25 +30,43 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (port.empty() || machine.empty()) {
+    if (portStr.empty() || machine.empty()) {
         print_usage();
         return 84;
     }
 
-    std::cout << "Port: " << port << std::endl;
-    std::cout << "Machine: " << machine << std::endl;
+    int port = std::stoi(portStr);
+    zappy::NetworkManager network;
+
+    if (!network.connect(machine, port)) {
+        std::cerr << "Failed to connect to " << machine << ":" << port << std::endl;
+    } else {
+        std::cout << "Connected to " << machine << ":" << port << std::endl;
+    }
 
     try {
         raylib::Window window(1280, 720, "Zappy GUI");
         SetTargetFPS(60);
 
         while (!window.ShouldClose()) {
+            network.update();
+
             BeginDrawing();
             window.ClearBackground(BLACK);
+
+            if (!network.isConnected()) {
+                DrawText("Disconnected from server", 10, 10, 20, RED);
+            } else {
+                DrawText("Connected to server", 10, 10, 20, GREEN);
+            }
+
             EndDrawing();
         }
     } catch (const raylib::RaylibException& e) {
         std::cerr << "Raylib error: " << e.what() << std::endl;
+        return 84;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
         return 84;
     }
 
