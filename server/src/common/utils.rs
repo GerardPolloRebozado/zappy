@@ -73,7 +73,7 @@ pub fn unescape_str(s: &str) -> String {
 ///
 /// # Examples
 /// ```ignore
-/// use zappy::common::utils::parse_args;
+/// use zappy_server::common::utils::parse_args;
 /// let args = parse_args(r#"LOGIN "alex""#);
 /// assert_eq!(args, vec!["LOGIN", "alex"]);
 /// ```

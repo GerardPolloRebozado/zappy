@@ -55,7 +55,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zappy"
+name = "zappy_server"
 version = "0.1.0"
 dependencies = [
  "nix",
