@@ -6,10 +6,10 @@ find_package(Python3 REQUIRED)
 
 # "Compile" the AI: Copy the script and make it executable, then symlink to root
 add_custom_target(zappy_ai ALL
-    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/client.py" "${CMAKE_CURRENT_BINARY_DIR}/zappy_ai"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/src/main.py" "${CMAKE_CURRENT_BINARY_DIR}/zappy_ai"
     COMMAND chmod +x "${CMAKE_CURRENT_BINARY_DIR}/zappy_ai"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_BINARY_DIR}/zappy_ai" "${CMAKE_CURRENT_SOURCE_DIR}/zappy_ai"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/client.py"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/main.py"
     COMMENT "Creating zappy_ai executable and symlink"
 )
 
