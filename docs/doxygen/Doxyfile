@@ -349,7 +349,7 @@ OPTIMIZE_OUTPUT_SLICE  = NO
 #
 # Note see also the list of default file extension mappings.
 
-EXTENSION_MAPPING      = rs=C++
+EXTENSION_MAPPING      =
 
 # If the MARKDOWN_SUPPORT tag is enabled then Doxygen pre-processes all comments
 # according to the Markdown format, which allows for more readable
@@ -1031,7 +1031,6 @@ WARN_LOGFILE           =
 ## HTML output for each project inside its own subfolder (ai/, gui/, server/).
 INPUT                  = ai \
                          gui \
-                         server \
                          README.md \
                          docs/game \
                          docs/doxygen/groups.dox
