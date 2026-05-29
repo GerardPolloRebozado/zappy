@@ -1,4 +1,4 @@
-use crate::common::protocol::status::StatusCode;
+use crate::protocol::StatusCode;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

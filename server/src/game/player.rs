@@ -17,7 +17,7 @@ impl Player {
     /// # Examples
     ///
     /// ```
-    /// use zappy_server::common::Player;
+    /// use zappy_server::game::Player;
     ///
     /// let player = Player::new(1, 5, 5, 1);
     /// assert_eq!(player.id, 1);

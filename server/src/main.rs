@@ -1,10 +1,7 @@
-use crate::server::Server;
-use crate::signal::{SIGNAL_RECEIVED, install_sigint_handler};
 use std::io;
 use zappy_server::ecs::storage::World;
-
-mod server;
-pub mod signal;
+use zappy_server::server::Server;
+use zappy_server::server::signal::{SIGNAL_RECEIVED, install_sigint_handler};
 
 fn main() -> io::Result<()> {
     let _ = World::new();
