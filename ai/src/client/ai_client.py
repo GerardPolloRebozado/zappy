@@ -1,5 +1,6 @@
 import socket
 from src.network import Connection
+from . import commands
 
 class ZappyAiClient:
     def __init__(self, port, name, ip):
@@ -49,6 +50,15 @@ class ZappyAiClient:
 
     def receive_line(self):
         return self.connection.receive_line()
+
+    def forward(self):
+        commands.forward(self)
+
+    def right(self):
+        commands.right(self)
+
+    def left(self):
+        commands.left(self)
 
     def close(self):
         self.connection.close()
