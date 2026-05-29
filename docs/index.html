@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multis - Zappy Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            color: #58a6ff;
+            margin-bottom: 2rem;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            max-width: 900px;
+            width: 100%;
+            padding: 2rem;
+        }
+        .card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: transform 0.2s, border-color 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: #8b949e;
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #58a6ff;
+        }
+        .card p {
+            color: #8b949e;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Multix - Zappy Documentation</h1>
+    <div class="container">
+        <a href="gui/html/index.html" class="card">
+            <h2>GUI & Game Rules</h2>
+            <p>Doxygen documentation for the C++ GUI and general game mechanics.</p>
+        </a>
+        <a href="server/zappy_server/index.html" class="card">
+            <h2>Server</h2>
+            <p>Rustdoc documentation for the Zappy server module.</p>
+        </a>
+        <a href="ai/index.html" class="card">
+            <h2>AI</h2>
+            <p>Documentation for the Python AI clients (coming soon).</p>
+        </a>
+    </div>
+</body>
+</html>

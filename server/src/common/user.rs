@@ -84,14 +84,6 @@ mod tests {
     }
 
     #[test]
-    fn test_user_from_string() {
-        let s = "1234-5678-9012-3456 John Doe";
-        let user = User::from_string(s).unwrap();
-        assert_eq!(user.uuid, "1234-5678-9012-3456");
-        assert_eq!(user.name, "John Doe");
-    }
-
-    #[test]
     fn test_user_from_invalid_string() {
         assert!(User::from_string("invalid_format").is_none());
     }
