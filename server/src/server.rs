@@ -1,11 +1,14 @@
+pub mod client;
+pub mod signal;
+
+use crate::game::*;
+use crate::protocol::{Command, Request, Response, ResponseCode, ServerEvent, StatusCode};
+use crate::server::client::{Client, ClientState};
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
 use std::net::TcpListener;
 use std::os::fd::AsFd;
-use zappy_server::common::client::{Client, ClientState};
-use zappy_server::common::protocol::{ResponseCode, ServerEvent, StatusCode};
-use zappy_server::common::*;
 
 pub struct Map {
     pub width: u32,
@@ -20,6 +23,12 @@ pub struct Server {
     pub map: Map,
     pub _freq: u32,
     // TODO: Add a task scheduler for time management (action / f delay)
+}
+
+impl Default for Server {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Server {

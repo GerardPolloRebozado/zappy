@@ -1,5 +1,5 @@
-use crate::common::protocol::command::Command;
-use crate::common::utils::parse_args;
+use crate::protocol::Command;
+use crate::utils::parse_args;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq)]

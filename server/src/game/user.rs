@@ -1,9 +1,9 @@
-use crate::common::utils::serializing::{read_str, write_str};
-use crate::common::utils::uuid_v4;
+use crate::utils::serializing::{read_str, write_str};
+use crate::utils::uuid_v4;
 use std::fmt;
 use std::fs::File;
 
-use crate::common::Resource;
+use crate::game::Resource;
 use std::collections::HashMap;
 
 #[derive(Clone)]
