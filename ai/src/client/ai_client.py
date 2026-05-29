@@ -1,5 +1,5 @@
 import socket
-from src.network.connection import Connection
+from src.network import Connection
 
 class ZappyAiClient:
     def __init__(self, port, name, ip):
