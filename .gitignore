@@ -46,3 +46,8 @@ __pycache__/
 
 #CMake
 build
+_deps/
+CMakeCache.txt
+CMakeFiles/
+corrosion/
+build/

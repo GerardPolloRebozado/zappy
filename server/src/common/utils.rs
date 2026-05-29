@@ -1,4 +1,5 @@
 pub mod constants;
+pub mod direction;
 pub mod serializing;
 
 use std::time::UNIX_EPOCH;
