@@ -1,6 +1,6 @@
-use crate::common::Response;
-use crate::common::utils::constants::MAX_BODY_LENGTH;
-use crate::common::utils::uuid_v4;
+use crate::protocol::Response;
+use crate::utils::constants::MAX_BODY_LENGTH;
+use crate::utils::uuid_v4;
 use std::io::Read;
 use std::net::TcpStream;
 

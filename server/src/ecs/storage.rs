@@ -193,18 +193,26 @@ impl World {
 
     /// Gets a component from an entity
     pub fn get_component<T: 'static>(&self, entity: Entity) -> Option<&T> {
-        self.storages
-            .get(&TypeId::of::<T>())
-            .and_then(|s| s.as_any().downcast_ref::<ComponentMap<T>>())?
-            .get(entity)
+        self.get_storage::<T>()?.get(entity)
     }
 
     /// Gets a mutable component from an entity
     pub fn get_component_mut<T: 'static>(&mut self, entity: Entity) -> Option<&mut T> {
+        self.get_storage_mut::<T>()?.get_mut(entity)
+    }
+
+    /// Returns a reference to the storage for a component type
+    pub fn get_storage<T: 'static>(&self) -> Option<&ComponentMap<T>> {
+        self.storages
+            .get(&TypeId::of::<T>())
+            .and_then(|s| s.as_any().downcast_ref::<ComponentMap<T>>())
+    }
+
+    /// Returns a mutable reference to the storage for a component type
+    pub fn get_storage_mut<T: 'static>(&mut self) -> Option<&mut ComponentMap<T>> {
         self.storages
             .get_mut(&TypeId::of::<T>())
-            .and_then(|s| s.as_any_mut().downcast_mut::<ComponentMap<T>>())?
-            .get_mut(entity)
+            .and_then(|s| s.as_any_mut().downcast_mut::<ComponentMap<T>>())
     }
 
     /// Removes a component from an entity.
@@ -229,11 +237,7 @@ impl World {
 
     /// Checks if an entity is alive
     pub fn is_alive(&self, entity: Entity) -> bool {
-        let found = self.entity_generations.get(entity.id as usize);
-        if found.is_none() {
-            return false;
-        }
-        true
+        self.entity_generations.get(entity.id as usize) == Some(&entity.generation)
     }
 }
 
