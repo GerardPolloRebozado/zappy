@@ -23,13 +23,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Doxygen
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y doxygen graphviz
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+          pip install pdoc
 
-      - name: Generate Documentation
+      - name: Create Public Directory
+        run: mkdir -p public/gui public/server public/ai
+
+      - name: Generate Doxygen (GUI & AI)
         run: doxygen docs/doxygen/Doxyfile
+        # This will output to docs/doxygen/doxy-docs/html
+
+      - name: Generate Rustdoc (Server)
+        run: |
+          source $HOME/.cargo/env
+          cd server
+          cargo doc --no-deps
+        # This will output to server/target/doc
+
+      - name: Organize Documentation
+        run: |
+          # Copy Doxygen output
+          cp -r docs/doxygen/doxy-docs/html public/gui/
+          # Copy Rustdoc output
+          cp -r server/target/doc/* public/server/
+          # Copy landing page
+          cp docs/index.html public/
+          # Create placeholder for AI if no files yet
+          echo "Documentation coming soon..." > public/ai/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -37,7 +62,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'docs/doxygen/doxy-docs/html'
+          path: 'public'
 
   deploy:
     environment:
