@@ -4,7 +4,7 @@ use std::io::Write;
 use std::net::TcpListener;
 use std::os::fd::AsFd;
 use zappy_server::common::client::{Client, ClientState};
-use zappy_server::common::protocol::ResponseCode;
+use zappy_server::common::protocol::{ResponseCode, ServerEvent, StatusCode};
 use zappy_server::common::*;
 
 pub struct Map {
@@ -144,14 +144,8 @@ impl Server {
         }
 
         for uuid in disconnected {
-            if let Some(client) = self.clients.remove(&uuid)
-                && let Some(user_uuid) = &client.user
-            {
-                let event_resp = Response {
-                    code: ResponseCode::Event(protocol::event::EventCode::Pdi),
-                    data: Some(user_uuid.clone()),
-                };
-                self.broadcast_global(event_resp);
+            if let Some(_client) = self.clients.remove(&uuid) {
+                // TODO: decide what to do when a user disconnects
             }
         }
     }
@@ -267,14 +261,21 @@ impl Server {
         let _ = client.socket.write_all(response.to_string().as_ref());
     }
 
-    // TODO: Separate `broadcast_global` into a system that accepts `ServerEvent`.
-    // The broadcaster should check `client.state`:
-    // - If `AuthenticatedAI`: send `event.to_ai_string()`
-    // - If `AuthenticatedGUI`: send `event.to_gui_string()`
-    pub fn broadcast_global(&mut self, event: Response) {
+    //TODO event.to_ai_string
+    //It is missing bc we have to decide what to do with the users and players
+    pub fn broadcast_global(&mut self, event: ServerEvent) {
         for client in self.clients.values_mut() {
-            if client.user.is_some() {
-                client.pending_responses.push(event.clone());
+            let formatted = match &client.state {
+                ClientState::AuthenticatedGUI => event.to_gui_string(),
+                ClientState::AuthenticatedAI(_) => None,
+                ClientState::WaitingForTeamName => None,
+            };
+
+            if let Some(data) = formatted {
+                client.pending_responses.push(Response::new(
+                    ResponseCode::Status(StatusCode::Ok),
+                    Some(data),
+                ));
             }
         }
     }
