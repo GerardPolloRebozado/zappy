@@ -3,7 +3,7 @@
 //! AI clients receive events such as `message k, text` and `eject: k`, where
 //! `k` is a direction relative to the receiving player's orientation.
 
-use crate::common::Player;
+use crate::game::Player;
 
 const RELATIVE_DIRECTION_OFFSETS: [(i32, i32, u32); 8] = [
     (0, -1, 1),
@@ -54,7 +54,7 @@ fn shortest_delta(from: u32, to: u32, size: i32) -> i32 {
 /// # Examples
 ///
 /// ```
-/// use zappy_server::common::{Player, utils::direction::calc_k};
+/// use zappy_server::game::Player; use zappy_server::utils::direction::calc_k;
 ///
 /// let player = Player::new(1, 5, 5, 1);
 /// assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
@@ -68,7 +68,13 @@ fn shortest_delta(from: u32, to: u32, size: i32) -> i32 {
 // We could have a simple way of doing it without the diagonals,
 // meaning that we can do straight paths (its not perfect but enough)
 // or implement the fully working version with diagonals for messages because the math part is pretty hard
-pub fn calc_k(from_x: u32, from_y: u32, for_player: &Player, map_width: u32, map_height: u32) -> u32 {
+pub fn calc_k(
+    from_x: u32,
+    from_y: u32,
+    for_player: &Player,
+    map_width: u32,
+    map_height: u32,
+) -> u32 {
     let dx = shortest_delta(for_player.x, from_x, map_width as i32);
     let dy = shortest_delta(for_player.y, from_y, map_height as i32);
 
@@ -76,7 +82,8 @@ pub fn calc_k(from_x: u32, from_y: u32, for_player: &Player, map_width: u32, map
         return 0;
     }
     for (relative_x, relative_y, direction_k) in RELATIVE_DIRECTION_OFFSETS {
-        let (world_delta_x, world_delta_y) = relative_offset_to_world_delta(for_player.orientation, relative_x, relative_y);
+        let (world_delta_x, world_delta_y) =
+            relative_offset_to_world_delta(for_player.orientation, relative_x, relative_y);
         if world_delta_x == dx && world_delta_y == dy {
             return direction_k;
         }

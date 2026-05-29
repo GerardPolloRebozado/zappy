@@ -1,0 +1,414 @@
+//! Server-side game events and their protocol formatting.
+//!
+//! A [`ServerEvent`] represents something that happened in the game world.
+//! The same logical event is serialized differently depending on the client:
+//!
+//! - GUI clients receive lines such as `pbc #n message\n` via [`ServerEvent::to_gui_string`].
+//! - AI clients receive lines such as `message k, text\n` via [`ServerEvent::to_ai_string`].
+
+use crate::game::Player;
+use crate::utils::direction::calc_k;
+
+/// A logical game occurrence broadcast by the server.
+///
+/// Variants mirror the Zappy protocol notifications (`pbc`, `pex`, `pnw`, …).
+/// Use the constructor helpers (e.g. [`ServerEvent::message`]) when building
+/// events from live [`Player`] state.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ServerEvent {
+    /// Player broadcast: GUI `pbc #n M`, AI `message k, M`.
+    Message {
+        player_id: u32,
+        message: String,
+        x: u32,
+        y: u32,
+    },
+    /// Player ejected from a tile: GUI `pex #n`, AI `eject: k`.
+    Eject { player_id: u32, x: u32, y: u32 },
+    /// Player death: GUI `pdi #n`, AI `dead`.
+    Dead { player_id: u32 },
+
+    /// New player spawn: GUI `pnw #n X Y O L N`.
+    NewPlayer {
+        player_id: u32,
+        x: u32,
+        y: u32,
+        orientation: u8,
+        level: u8,
+        team: String,
+    },
+    /// Incantation started: GUI `pic X Y L #n ...`.
+    StartIncantation {
+        x: u32,
+        y: u32,
+        level: u8,
+        player_ids: Vec<u32>,
+    },
+    /// Incantation finished: GUI `pie X Y R`.
+    EndIncantation { x: u32, y: u32, result: u8 },
+    /// Player fork request: GUI `pfk #n`.
+    EggLay { player_id: u32 },
+    /// Resource dropped: GUI `pdr #n i`.
+    ResourceDrop { player_id: u32, resource: u8 },
+    /// Resource collected: GUI `pgt #n i`.
+    ResourceCollect { player_id: u32, resource: u8 },
+    /// Egg laid on the map: GUI `enw #e #n X Y`.
+    EggLaid {
+        egg_id: u32,
+        player_id: u32,
+        x: u32,
+        y: u32,
+    },
+    /// Egg connection: GUI `ebo #e`.
+    EggConnect { egg_id: u32 },
+    /// Egg death: GUI `edi #e`.
+    EggDeath { egg_id: u32 },
+    /// Team victory: GUI `seg N`.
+    EndOfGame { team: String },
+    /// Server info message: GUI `smg M`.
+    ServerMessage { message: String },
+}
+
+impl ServerEvent {
+    // Builder functions
+    pub fn message(broadcaster: &Player, message: impl Into<String>) -> Self {
+        Self::Message {
+            player_id: broadcaster.id,
+            message: message.into(),
+            x: broadcaster.x,
+            y: broadcaster.y,
+        }
+    }
+    pub fn eject(victim: &Player, source: &Player) -> Self {
+        Self::Eject {
+            player_id: victim.id,
+            x: source.x,
+            y: source.y,
+        }
+    }
+    pub fn death(player: &Player) -> Self {
+        Self::Dead {
+            player_id: player.id,
+        }
+    }
+    pub fn new_player(player: &Player, level: u8, team: impl Into<String>) -> Self {
+        Self::NewPlayer {
+            player_id: player.id,
+            x: player.x,
+            y: player.y,
+            orientation: player.orientation,
+            level,
+            team: team.into(),
+        }
+    }
+    pub fn start_incantation(x: u32, y: u32, level: u8, player_ids: Vec<u32>) -> Self {
+        Self::StartIncantation {
+            x,
+            y,
+            level,
+            player_ids,
+        }
+    }
+    pub fn egg_lay(player: &Player) -> Self {
+        Self::EggLay {
+            player_id: player.id,
+        }
+    }
+    pub fn resource_drop(player: &Player, resource: u8) -> Self {
+        Self::ResourceDrop {
+            player_id: player.id,
+            resource,
+        }
+    }
+    pub fn resource_collect(player: &Player, resource: u8) -> Self {
+        Self::ResourceCollect {
+            player_id: player.id,
+            resource,
+        }
+    }
+    pub fn egg_laid(egg_id: u32, player: &Player) -> Self {
+        Self::EggLaid {
+            egg_id,
+            player_id: player.id,
+            x: player.x,
+            y: player.y,
+        }
+    }
+
+    /// Formats this event for GUI clients.
+    ///
+    /// Returns `None` only when the variant has no GUI representation
+    /// (currently all variants produce a GUI line).
+    pub fn to_gui_string(&self) -> Option<String> {
+        match self {
+            ServerEvent::Message {
+                player_id, message, ..
+            } => Some(format!("pbc #{player_id} {message}\n")),
+            ServerEvent::Eject { player_id, .. } => Some(format!("pex #{player_id}\n")),
+            ServerEvent::Dead { player_id } => Some(format!("pdi #{player_id}\n")),
+            ServerEvent::NewPlayer {
+                player_id,
+                x,
+                y,
+                orientation,
+                level,
+                team,
+            } => Some(format!(
+                "pnw #{player_id} {x} {y} {orientation} {level} {team}\n"
+            )),
+            ServerEvent::StartIncantation {
+                x,
+                y,
+                level,
+                player_ids,
+            } => {
+                let players = player_ids
+                    .iter()
+                    .map(|id| format!("#{id}"))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                Some(format!("pic {x} {y} {level} {players}\n"))
+            }
+            ServerEvent::EndIncantation { x, y, result } => Some(format!("pie {x} {y} {result}\n")),
+            ServerEvent::EggLay { player_id } => Some(format!("pfk #{player_id}\n")),
+            ServerEvent::ResourceDrop {
+                player_id,
+                resource,
+            } => Some(format!("pdr #{player_id} {resource}\n")),
+            ServerEvent::ResourceCollect {
+                player_id,
+                resource,
+            } => Some(format!("pgt #{player_id} {resource}\n")),
+            ServerEvent::EggLaid {
+                egg_id,
+                player_id,
+                x,
+                y,
+            } => Some(format!("enw #{egg_id} #{player_id} {x} {y}\n")),
+            ServerEvent::EggConnect { egg_id } => Some(format!("ebo #{egg_id}\n")),
+            ServerEvent::EggDeath { egg_id } => Some(format!("edi #{egg_id}\n")),
+            ServerEvent::EndOfGame { team } => Some(format!("seg {team}\n")),
+            ServerEvent::ServerMessage { message } => Some(format!("smg {message}\n")),
+        }
+    }
+
+    /// Formats this event for a specific AI client.
+    ///
+    /// Returns `None` when the event is not relevant to `for_player`, or when
+    /// the variant is GUI-only (e.g. [`ServerEvent::NewPlayer`]).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zappy_server::game::Player; use zappy_server::protocol::ServerEvent;
+    ///
+    /// let player = Player::new(5, 0, 0, 1);
+    /// let event = ServerEvent::Dead { player_id: 5 };
+    /// assert_eq!(event.to_ai_string(Some(&player), 10, 10), Some("dead\n".to_string()));
+    /// ```
+    pub fn to_ai_string(
+        &self,
+        for_player: Option<&Player>,
+        map_width: u32,
+        map_height: u32,
+    ) -> Option<String> {
+        match self {
+            ServerEvent::Dead { player_id } => {
+                if let Some(p) = for_player {
+                    if p.id == *player_id {
+                        Some("dead\n".to_string())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            ServerEvent::Eject { player_id, x, y } => {
+                let for_player = for_player?;
+                if for_player.id != *player_id {
+                    return None;
+                }
+                let k = calc_k(*x, *y, for_player, map_width, map_height);
+                Some(format!("eject: {k}\n"))
+            }
+            ServerEvent::Message { x, y, message, .. } => {
+                let for_player = for_player?;
+                let k = calc_k(*x, *y, for_player, map_width, map_height);
+                Some(format!("message {k}, {message}\n"))
+            }
+            ServerEvent::NewPlayer { .. }
+            | ServerEvent::StartIncantation { .. }
+            | ServerEvent::EndIncantation { .. }
+            | ServerEvent::EggLay { .. }
+            | ServerEvent::ResourceDrop { .. }
+            | ServerEvent::ResourceCollect { .. }
+            | ServerEvent::EggLaid { .. }
+            | ServerEvent::EggConnect { .. }
+            | ServerEvent::EggDeath { .. }
+            | ServerEvent::EndOfGame { .. }
+            | ServerEvent::ServerMessage { .. } => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dead_formats() {
+        let event = ServerEvent::Dead { player_id: 5 };
+        assert_eq!(event.to_gui_string(), Some("pdi #5\n".to_string()));
+
+        let for_player = Player::new(5, 0, 0, 1);
+        assert_eq!(
+            event.to_ai_string(Some(&for_player), 10, 10),
+            Some("dead\n".to_string())
+        );
+    }
+
+    #[test]
+    fn test_eject_and_broadcast_gui() {
+        let eject = ServerEvent::Eject {
+            player_id: 3,
+            x: 1,
+            y: 2,
+        };
+        assert_eq!(eject.to_gui_string(), Some("pex #3\n".to_string()));
+
+        let message = ServerEvent::Message {
+            player_id: 2,
+            message: "hello".to_string(),
+            x: 4,
+            y: 5,
+        };
+        assert_eq!(message.to_gui_string(), Some("pbc #2 hello\n".to_string()));
+    }
+
+    #[test]
+    fn test_eject_k_relative_to_orientation() {
+        let event = ServerEvent::Eject {
+            player_id: 1,
+            x: 5,
+            y: 4,
+        };
+
+        let facing_north = Player::new(1, 5, 5, 1);
+        assert_eq!(
+            event.to_ai_string(Some(&facing_north), 10, 10),
+            Some("eject: 1\n".to_string())
+        );
+
+        let facing_east = Player::new(1, 5, 5, 2);
+        assert_eq!(
+            event.to_ai_string(Some(&facing_east), 10, 10),
+            Some("eject: 3\n".to_string())
+        );
+    }
+
+    #[test]
+    fn test_constructors_use_player_fields() {
+        let broadcaster = Player::new(7, 2, 3, 1);
+        let event = ServerEvent::message(&broadcaster, "hi");
+        assert!(
+            matches!(event, ServerEvent::Message { player_id: 7, message, x: 2, y: 3, } if message == "hi")
+        );
+    }
+
+    #[test]
+    fn test_gui_event_formats() {
+        assert_eq!(
+            ServerEvent::NewPlayer {
+                player_id: 1,
+                x: 3,
+                y: 4,
+                orientation: 2,
+                level: 5,
+                team: "TeamA".to_string()
+            }
+            .to_gui_string(),
+            Some("pnw #1 3 4 2 5 TeamA\n".to_string())
+        );
+
+        assert_eq!(
+            ServerEvent::StartIncantation {
+                x: 1,
+                y: 2,
+                level: 3,
+                player_ids: vec![4, 5]
+            }
+            .to_gui_string(),
+            Some("pic 1 2 3 #4 #5\n".to_string())
+        );
+
+        assert_eq!(
+            ServerEvent::EndIncantation {
+                x: 1,
+                y: 2,
+                result: 1
+            }
+            .to_gui_string(),
+            Some("pie 1 2 1\n".to_string())
+        );
+
+        assert_eq!(
+            ServerEvent::EggLay { player_id: 2 }.to_gui_string(),
+            Some("pfk #2\n".to_string())
+        );
+
+        assert_eq!(
+            ServerEvent::ResourceDrop {
+                player_id: 1,
+                resource: 3
+            }
+            .to_gui_string(),
+            Some("pdr #1 3\n".to_string())
+        );
+
+        assert_eq!(
+            ServerEvent::ResourceCollect {
+                player_id: 1,
+                resource: 0
+            }
+            .to_gui_string(),
+            Some("pgt #1 0\n".to_string())
+        );
+
+        assert_eq!(
+            ServerEvent::EggLaid {
+                egg_id: 10,
+                player_id: 2,
+                x: 5,
+                y: 6
+            }
+            .to_gui_string(),
+            Some("enw #10 #2 5 6\n".to_string())
+        );
+
+        assert_eq!(
+            ServerEvent::EggConnect { egg_id: 7 }.to_gui_string(),
+            Some("ebo #7\n".to_string())
+        );
+        assert_eq!(
+            ServerEvent::EggDeath { egg_id: 8 }.to_gui_string(),
+            Some("edi #8\n".to_string())
+        );
+
+        assert_eq!(
+            ServerEvent::EndOfGame {
+                team: "TeamA".to_string()
+            }
+            .to_gui_string(),
+            Some("seg TeamA\n".to_string())
+        );
+
+        assert_eq!(
+            ServerEvent::ServerMessage {
+                message: "server info".to_string()
+            }
+            .to_gui_string(),
+            Some("smg server info\n".to_string())
+        );
+    }
+}
