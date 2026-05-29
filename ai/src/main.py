@@ -7,29 +7,8 @@ import argparse
 # Add the project root to the python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')))
 
-from src.client.ai_client import ZappyAiClient
-
-
-def run_client(client):
-    """
-    Loop to handle server communication
-    :return:
-    """
-    try:
-        while True:
-            line = client.receive_line()
-            if line is None:
-                print("Server closed the connection.")
-                break
-            if line == "dead":
-                print("You died.")
-                break
-            print(f"Received: {line}")
-            # here we will have the logic of using the AI
-    except KeyboardInterrupt:
-        pass
-    finally:
-        client.close()
+from src.client import ZappyAiClient
+from src.strategy import run_client
 
 def main():
     """
