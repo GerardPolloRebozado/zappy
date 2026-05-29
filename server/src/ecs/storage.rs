@@ -13,23 +13,32 @@
 //!
 //! let mut world = World::new();
 //!
-//! // 1. Register components
+//! // Register components
 //! world.register_component::<Position>();
 //! world.register_component::<Velocity>();
 //!
-//! // 2. Spawn an entity
+//! // Spawn an entity
 //! let player = world.spawn();
 //!
-//! // 3. Add components
+//! // Add components
 //! world.add_component(player, Position { x: 0.0, y: 0.0 });
 //! world.add_component(player, Velocity { dx: 1.0, dy: 1.0 });
 //!
-//! // 4. Access components
+//! // Access components
 //! if let Some(pos) = world.get_component_mut::<Position>(player) {
 //!     pos.x += 10.0;
 //! }
 //!
-//! // 5. Despawn when done
+//! // Query entities with both Position AND Velocity:
+//! if let (Some(pos_storage), Some(vel_storage)) = (world.get_storage::<Position>(), world.get_storage::<Velocity>()) {
+//!     for (entity, pos) in pos_storage.iter() {
+//!         if let Some(vel) = vel_storage.get(*entity) {
+//!             println!("Entity {:?} is at ({}, {}) moving by ({}, {})", entity, pos.x, pos.y, vel.dx, vel.dy);
+//!         }
+//!     }
+//! }
+//!
+//! // despawn when done
 //! world.despawn(player);
 //! ```
 
