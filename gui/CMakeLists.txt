@@ -44,10 +44,12 @@ set(SOURCES
         src/main.cpp
         src/NetworkManager.cpp
         src/Network/TcpSocket.cpp
-        include/IElement.hpp
-        include/AElement.hpp
-        src/AElement.cpp
         include/Components/ComponentShared.hpp
+        include/Components/ComponentBot.hpp
+        include/Components/ComponentTile.hpp
+        include/Systems/RenderSystem.hpp
+        include/Graphics/AssetManager.hpp
+        include/ECS/Register.hpp
 )
 
 add_executable(zappy_gui ${SOURCES} ${HEADERS})
