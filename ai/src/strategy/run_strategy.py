@@ -1,3 +1,5 @@
+import time
+
 def run_client(client):
     """
     Loop to handle server communication
@@ -6,15 +8,19 @@ def run_client(client):
     """
     try:
         while True:
+            # test forward
+            # client.forward()
+
             line = client.receive_line()
             if line is None:
                 print("Server closed the connection.")
                 break
+            print(f"Received: {line}")
             if line == "dead":
                 print("You died.")
                 break
-            print(f"Received: {line}")
-            # here we will have the logic of using the AI
+            # This is here for now to avoid spamming the server with the forward command
+            # time.sleep(1)
     except KeyboardInterrupt:
         pass
     finally:
