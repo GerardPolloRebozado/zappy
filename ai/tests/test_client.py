@@ -3,7 +3,8 @@ from unittest.mock import patch, MagicMock
 import io
 import sys
 import socket
-from src.client.ai_client import ZappyAiClient
+from src.client import ZappyAiClient
+from src.network import Connection
 from src.main import main
 
 class TestClient(unittest.TestCase):
@@ -81,7 +82,6 @@ class TestClient(unittest.TestCase):
     def test_receive_line_buffered(self):
         # Test the buffered reading logic specifically
         mock_socket = MagicMock()
-        from src.network.connection import Connection
         conn = Connection("127.0.0.1", 4242)
         conn.socket = mock_socket
         
