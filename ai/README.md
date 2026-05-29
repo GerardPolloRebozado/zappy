@@ -2,6 +2,15 @@
 
 This is the AI project for the Multis - Zappy repository.
 
+## Project Structure
+
+The source code is organized into a layered architecture:
+
+- **`src/network/`**: The communication layer. Handles TCP sockets and ensures reliable line-by-line data exchange with the server.
+- **`src/client/`**: The protocol layer. Defines the `ZappyAiClient` class and maps high-level actions to the specific command strings expected by the server.
+- **`src/strategy/`**: The logic layer. This is where the AI's "brain" resides, containing the main loop and decision making algorithms.
+- **`src/main.py`**: The entry point. Manages command-line argument parsing and initializes the client connection.
+
 ## Compile
 ### Prepare the build directory (recomended)
 ```bash
