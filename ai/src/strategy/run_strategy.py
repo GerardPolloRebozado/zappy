@@ -8,7 +8,7 @@ def run_client(client):
     """
     try:
         while True:
-            # test forward
+            # -- test forward
             # client.forward()
 
             line = client.receive_line()
@@ -19,7 +19,7 @@ def run_client(client):
             if line == "dead":
                 print("You died.")
                 break
-            # This is here for now to avoid spamming the server with the forward command
+            # -- this is here for now to avoid spamming the server with the forward command
             # time.sleep(1)
     except KeyboardInterrupt:
         pass
