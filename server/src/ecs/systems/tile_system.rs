@@ -9,7 +9,7 @@ pub fn spawn_tile(world: &mut World, x: u32, y: u32, terrain: TerrainType) -> En
     world.add_component(entity, Tile);
     world.add_component(entity, Position { x, y });
     world.add_component(entity, terrain);
-    world.add_component(entity, Inventory::new());
+    world.add_component(entity, Inventory::default());
     entity
 }
 
