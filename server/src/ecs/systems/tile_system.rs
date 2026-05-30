@@ -4,6 +4,7 @@ use crate::ecs::components::terrain_type::TerrainType;
 use crate::ecs::components::tile::Tile;
 use crate::ecs::storage::{Entity, World};
 
+/// Spawns a single tile entity with the required components.
 pub fn spawn_tile(world: &mut World, x: u32, y: u32, terrain: TerrainType) -> Entity {
     let entity = world.spawn();
     world.add_component(entity, Tile);
@@ -13,6 +14,7 @@ pub fn spawn_tile(world: &mut World, x: u32, y: u32, terrain: TerrainType) -> En
     entity
 }
 
+/// Initializes the game map by registering components and spawning a grid of tiles.
 pub fn setup_map(world: &mut World, width: u32, height: u32) {
     world.register_component::<Tile>();
     world.register_component::<Position>();
