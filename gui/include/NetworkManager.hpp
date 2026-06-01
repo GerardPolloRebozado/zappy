@@ -72,6 +72,16 @@ class NetworkManager {
      */
     bool isConnected() const;
 
+  void requestMapSize();
+  void requestMapContent();
+  void requestTeamNames();
+  void requestTimeUpdate(int newTime);
+
+  void requestPlayerPosition(int playerId);
+  void requestPlayerLevel(int playerId);
+  void requestPlayerInventory(int playerId);
+  void requestTileContent(int x, int y);
+
   private:
     TcpSocket _socket;     /**< The underlying TCP socket. */
     bool _isHandshakeDone; /**< Flag indicating if the Zappy handshake is complete. */
