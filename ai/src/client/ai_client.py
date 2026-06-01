@@ -1,6 +1,6 @@
 import socket
 from src.network import Connection
-from src.utils import parse_look
+from src.utils import parse_look, Inventory
 from . import commands
 
 class ZappyAiClient:
@@ -93,6 +93,11 @@ class ZappyAiClient:
         commands.look(self)
         resp = self.wait_for_response()
         return parse_look(resp) if resp and resp.startswith("[") else resp
+
+    def inventory(self):
+        commands.inventory(self)
+        resp = self.wait_for_response()
+        return Inventory.from_string(resp) if resp and resp.startswith("[") else resp
 
     def close(self):
         self.connection.close()
