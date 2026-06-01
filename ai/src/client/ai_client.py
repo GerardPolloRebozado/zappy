@@ -1,5 +1,6 @@
 import socket
 from src.network import Connection
+from src.utils import parse_look
 from . import commands
 
 class ZappyAiClient:
@@ -14,6 +15,8 @@ class ZappyAiClient:
         self.name = name
         self.ip = ip
         self.connection = Connection(ip, port)
+        self.messages = []
+        self.is_dead = False
 
     def connect(self):
         """
@@ -51,14 +54,45 @@ class ZappyAiClient:
     def receive_line(self):
         return self.connection.receive_line()
 
+    def wait_for_response(self):
+        """
+        Wait for a response while catching broadcasts and death.
+        Returns:
+            - The response string (ok, [tile1...], etc.)
+            - None if the connection is closed.
+        """
+        while True:
+            line = self.connection.receive_line()
+            match line:
+                case None:
+                    return None
+                case "":
+                    continue
+                case "dead":
+                    self.is_dead = True
+                    return "dead"
+                case s if s.startswith("message"):
+                    self.messages.append(s)
+                    continue
+                case _:
+                    return line
+
     def forward(self):
         commands.forward(self)
+        return self.wait_for_response()
 
     def right(self):
         commands.right(self)
+        return self.wait_for_response()
 
     def left(self):
         commands.left(self)
+        return self.wait_for_response()
+
+    def look(self):
+        commands.look(self)
+        resp = self.wait_for_response()
+        return parse_look(resp) if resp and resp.startswith("[") else resp
 
     def close(self):
         self.connection.close()

@@ -21,3 +21,11 @@ def left(client):
     Response: ok
     """
     client.connection.send_line("Left")
+
+def look(client):
+    """
+    Look at the tiles in front of the player.
+    Time limit: 7/f
+    Response: [tile1, tile2, ...]
+    """
+    client.connection.send_line("Look")

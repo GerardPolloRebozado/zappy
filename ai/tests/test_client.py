@@ -1,13 +1,31 @@
 import unittest
+import sys
+import os
 from unittest.mock import patch, MagicMock
 import io
-import sys
 import socket
+import selectors
+
+# Add the project root to the python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from src.client import ZappyAiClient
 from src.network import Connection
 from src.main import main
 
 class TestClient(unittest.TestCase):
+
+    def setUp(self):
+        # Patch selectors to prevent hanging with mock sockets
+        self.patcher = patch('selectors.DefaultSelector')
+        self.mock_selector_class = self.patcher.start()
+        self.mock_selector = self.mock_selector_class.return_value
+        
+        # Make select() return that the socket is ready
+        self.mock_selector.select.return_value = [(MagicMock(), selectors.EVENT_READ | selectors.EVENT_WRITE)]
+
+    def tearDown(self):
+        self.patcher.stop()
 
     @patch('src.network.connection.socket.socket')
     @patch('sys.stdout', new_callable=io.StringIO)
@@ -15,6 +33,9 @@ class TestClient(unittest.TestCase):
         # Setup mock
         mock_socket_instance = MagicMock()
         mock_socket.return_value = mock_socket_instance
+        
+        # Mock send to return number of bytes "sent"
+        mock_socket_instance.send.side_effect = lambda x: len(x)
         
         # Sequence of responses for handshake: WELCOME, slots, dimensions
         mock_socket_instance.recv.side_effect = [
@@ -34,7 +55,7 @@ class TestClient(unittest.TestCase):
         self.assertIn("Map dimensions: 20 20", mock_stdout.getvalue())
         
         # Verify team name was sent
-        mock_socket_instance.sendall.assert_any_call(b"team1\n")
+        mock_socket_instance.send.assert_any_call(b"team1\n")
 
     @patch('src.network.connection.socket.socket')
     @patch('sys.stdout', new_callable=io.StringIO)
@@ -79,7 +100,8 @@ class TestClient(unittest.TestCase):
         mock_instance.connect.assert_called_once()
         mock_run_client.assert_called_once()
 
-    def test_receive_line_buffered(self):
+    @patch('src.network.connection.socket.socket')
+    def test_receive_line_buffered(self, mock_socket_class):
         # Test the buffered reading logic specifically
         mock_socket = MagicMock()
         conn = Connection("127.0.0.1", 4242)
@@ -94,6 +116,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(conn.receive_line(), "line1")
         self.assertEqual(conn.receive_line(), "line2")
         self.assertEqual(conn.receive_line(), "partial")
+        conn.close()
 
 if __name__ == '__main__':
     unittest.main()
