@@ -12,6 +12,8 @@
 #include "Components/ComponentBot.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
+#include "Components/ComponentTags.hpp"
+
 
 namespace zappy {
     class Register {
@@ -23,6 +25,10 @@ namespace zappy {
         std::unordered_map<int, TerrainType> _terrainTypes;
         std::unordered_map<int, BotData> _bots;
         std::unordered_map<int, Race> _races;
+
+        std::unordered_map<int, TileTag> _tileTags;
+        std::unordered_map<int, BotTag> _botTags;
+        std::unordered_map<int, EggTag> _eggTags;
 
         int createEntity() {
             if (!_deadEntities.empty()) {
@@ -41,6 +47,11 @@ namespace zappy {
             _terrainTypes.erase(entity);
             _bots.erase(entity);
             _races.erase(entity);
+
+            _tileTags.erase(entity);
+            _botTags.erase(entity);
+            _eggTags.erase(entity);
+
 
             _deadEntities.push(entity);
         }
