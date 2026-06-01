@@ -9,6 +9,7 @@
 
 #include "../ECS/Register.hpp"
 #include <raylib-cpp.hpp>
+#include <raymath.h>
 
 namespace zappy {
 class RenderSystem {
@@ -27,13 +28,97 @@ class RenderSystem {
                                             (float)height + 10.0f};
     }
 
+    void handleInput() {
+        float dt = GetFrameTime();
+        float moveSpeed = 20.0f * dt;
+        float rotateSpeed = 2.0f * dt;
+
+        if (IsKeyDown(KEY_Q)) {
+            raylib::Vector3 relPos =
+                (raylib::Vector3)camera.position - (raylib::Vector3)camera.target;
+            relPos = Vector3RotateByAxisAngle(relPos, {0, 1, 0}, rotateSpeed);
+            camera.position = (raylib::Vector3)camera.target + relPos;
+        }
+        if (IsKeyDown(KEY_E)) {
+            raylib::Vector3 relPos =
+                (raylib::Vector3)camera.position - (raylib::Vector3)camera.target;
+            relPos = Vector3RotateByAxisAngle(relPos, {0, 1, 0}, -rotateSpeed);
+            camera.position = (raylib::Vector3)camera.target + relPos;
+        }
+
+        raylib::Vector3 forward = (raylib::Vector3)camera.target - (raylib::Vector3)camera.position;
+        forward.y = 0;
+        forward = Vector3Normalize(forward);
+        raylib::Vector3 right = Vector3CrossProduct(forward, camera.up);
+
+        if (IsKeyDown(KEY_W)) {
+            camera.position = (raylib::Vector3)camera.position + forward * moveSpeed;
+            camera.target = (raylib::Vector3)camera.target + forward * moveSpeed;
+        }
+        if (IsKeyDown(KEY_S)) {
+            camera.position = (raylib::Vector3)camera.position - forward * moveSpeed;
+            camera.target = (raylib::Vector3)camera.target - forward * moveSpeed;
+        }
+        if (IsKeyDown(KEY_A)) {
+            camera.position = (raylib::Vector3)camera.position - right * moveSpeed;
+            camera.target = (raylib::Vector3)camera.target - right * moveSpeed;
+        }
+        if (IsKeyDown(KEY_D)) {
+            camera.position = (raylib::Vector3)camera.position + right * moveSpeed;
+            camera.target = (raylib::Vector3)camera.target + right * moveSpeed;
+        }
+
+        float wheel = GetMouseWheelMove();
+        if (wheel != 0) {
+            Ray ray = GetMouseRay(GetMousePosition(), camera);
+            float groundY = 1.0f;
+            if (ray.direction.y != 0) {
+                float t = (groundY - ray.position.y) / ray.direction.y;
+                if (t > 0) {
+                    raylib::Vector3 mousePoint =
+                        (raylib::Vector3)ray.position + (raylib::Vector3)ray.direction * t;
+                    raylib::Vector3 zoomVec =
+                        (mousePoint - (raylib::Vector3)camera.position) * (wheel * 0.1f);
+
+                    // Limit zoom
+                    float nextDist =
+                        Vector3Distance((raylib::Vector3)camera.position + zoomVec, mousePoint);
+                    if (wheel > 0 && nextDist < 2.0f) {
+                        return;
+                    }
+                    if (wheel < 0 && nextDist > 100.0f) {
+                        return;
+                    }
+
+                    camera.position = (raylib::Vector3)camera.position + zoomVec;
+                    camera.target = (raylib::Vector3)camera.target + zoomVec;
+                }
+            }
+        }
+    }
+
+    void drawMouseCursor() {
+        Ray ray = GetMouseRay(GetMousePosition(), camera);
+        float groundY = 1.0f;
+        if (ray.direction.y != 0) {
+            float t = (groundY - ray.position.y) / ray.direction.y;
+            if (t > 0) {
+                raylib::Vector3 mousePoint =
+                    (raylib::Vector3)ray.position + (raylib::Vector3)ray.direction * t;
+                DrawSphere(mousePoint, 0.2f, YELLOW);
+            }
+        }
+    }
+
     void update(Register& r) {
-        UpdateCamera(&camera, CAMERA_ORBITAL);
+        handleInput();
 
         camera.BeginMode();
 
         // Draw Grid for reference
-        DrawGrid(100, 1.0f);
+        //        DrawGrid(100, 1.0f);
+
+        drawMouseCursor();
 
         for (auto const& [entity, type] : r._terrainTypes) {
             if (r._positions.find(entity) != r._positions.end()) {
