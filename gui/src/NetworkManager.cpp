@@ -55,6 +55,47 @@ void NetworkManager::sendCommand(const std::string& cmd) { _socket.send(cmd + "\
 
 bool NetworkManager::isConnected() const { return _socket.isConnected(); }
 
+void NetworkManager::requestMapSize()
+{
+        sendCommand("msz");
+}
+
+void NetworkManager::requestMapContent()
+{
+        sendCommand("mct");
+}
+
+void NetworkManager::requestTeamNames()
+{
+        sendCommand("tna");
+}
+
+void NetworkManager::requestTimeUpdate(int newTime)
+{
+        sendCommand("sgt " + std::to_string(newTime));
+}
+
+void NetworkManager::requestPlayerPosition(int playerId)
+{
+    sendCommand("ppo " + std::to_string(playerId));
+}
+
+void NetworkManager::requestPlayerLevel(int playerId)
+{
+    sendCommand("plv " + std::to_string(playerId));
+}
+
+void NetworkManager::requestPlayerInventory(int playerId)
+{
+    sendCommand("pin " + std::to_string(playerId));
+}
+
+void NetworkManager::requestTileContent(int x, int y)
+{
+    sendCommand("bct " + std::to_string(x) + std::to_string(y));
+
+}
+
 void NetworkManager::_processHandshake(const std::string& message) {
     if (message == "WELCOME") {
         std::cout << "Received WELCOME, sending GRAPHIC" << std::endl;
