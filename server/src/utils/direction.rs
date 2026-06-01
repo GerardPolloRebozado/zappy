@@ -3,7 +3,33 @@
 //! AI clients receive events such as `message k, text` and `eject: k`, where
 //! `k` is a direction relative to the receiving player's orientation.
 
+use std::cmp::Ordering;
+
 use crate::game::Player;
+
+/// Direction from a listener to a source tile, relative to the listener's facing.
+///
+/// Values match the Zappy AI protocol `k` field in `message k, text` and `eject: k`.
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RelativeDirection {
+    SameTile = 0,
+    Forward = 1,
+    ForwardLeft = 2,
+    Left = 3,
+    BackLeft = 4,
+    Back = 5,
+    BackRight = 6,
+    Right = 7,
+    ForwardRight = 8,
+}
+
+impl RelativeDirection {
+    /// Returns the protocol `k` integer sent to AI clients.
+    pub fn as_protocol_k(self) -> u32 {
+        self as u32
+    }
+}
 
 /// Rotates a world-map delta into the listener's relative frame.
 ///
@@ -23,34 +49,34 @@ fn world_delta_to_relative_offset(orientation: u8, world_x: i32, world_y: i32) -
 ///
 /// Expects `(relative_x, relative_y)` already rotated into the listener's frame:
 /// forward is negative `y`, back is positive `y`, left is negative `x`, and right
-/// is positive `x`. Values `1`–`8` are numbered counter-clockwise from forward.
+/// is positive `x`.
 ///
 /// Compares `|relative_y|` and `|relative_x|` to pick the closest axis (forward/back
 /// or left/right). When both components are equal, the target lies on a 45°
-/// diagonal and the signs of `relative_x` and `relative_y` select `k` 2, 4, 6, or 8.
-fn classify_relative_direction(relative_x: i32, relative_y: i32) -> u32 {
+/// diagonal and the signs of `relative_x` and `relative_y` select the diagonal variants.
+fn classify_relative_direction(relative_x: i32, relative_y: i32) -> RelativeDirection {
     let ax = relative_x.abs();
     let ay = relative_y.abs();
 
     if ay > ax {
         if relative_y < 0 {
-            1
+            RelativeDirection::Forward
         } else {
-            5
+            RelativeDirection::Back
         }
     } else if ax > ay {
         if relative_x < 0 {
-            3
+            RelativeDirection::Left
         } else {
-            7
+            RelativeDirection::Right
         }
     } else {
         match (relative_x.cmp(&0), relative_y.cmp(&0)) {
-            (std::cmp::Ordering::Less, std::cmp::Ordering::Less) => 2,
-            (std::cmp::Ordering::Less, std::cmp::Ordering::Greater) => 4,
-            (std::cmp::Ordering::Greater, std::cmp::Ordering::Greater) => 6,
-            (std::cmp::Ordering::Greater, std::cmp::Ordering::Less) => 8,
-            _ => 1,
+            (Ordering::Less, Ordering::Less) => RelativeDirection::ForwardLeft,
+            (Ordering::Less, Ordering::Greater) => RelativeDirection::BackLeft,
+            (Ordering::Greater, Ordering::Greater) => RelativeDirection::BackRight,
+            (Ordering::Greater, Ordering::Less) => RelativeDirection::ForwardRight,
+            _ => RelativeDirection::Forward,
         }
     }
 }
@@ -95,15 +121,15 @@ pub fn calc_k(
     let dy = shortest_delta(for_player.y, from_y, map_height as i32);
 
     if dx == 0 && dy == 0 {
-        return 0;
+        return RelativeDirection::SameTile.as_protocol_k();
     }
 
     let (relative_x, relative_y) = world_delta_to_relative_offset(for_player.orientation, dx, dy);
     if relative_x == 0 && relative_y == 0 {
-        return 1;
+        return RelativeDirection::Forward.as_protocol_k();
     }
 
-    classify_relative_direction(relative_x, relative_y)
+    classify_relative_direction(relative_x, relative_y).as_protocol_k()
 }
 
 #[cfg(test)]
@@ -167,5 +193,18 @@ mod tests {
     fn invalid_orientation_falls_back_to_one() {
         let player = Player::new(1, 5, 5, 9);
         assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
+    }
+
+    #[test]
+    fn relative_direction_matches_protocol_k() {
+        assert_eq!(RelativeDirection::SameTile.as_protocol_k(), 0);
+        assert_eq!(RelativeDirection::Forward.as_protocol_k(), 1);
+        assert_eq!(RelativeDirection::ForwardLeft.as_protocol_k(), 2);
+        assert_eq!(RelativeDirection::Left.as_protocol_k(), 3);
+        assert_eq!(RelativeDirection::BackLeft.as_protocol_k(), 4);
+        assert_eq!(RelativeDirection::Back.as_protocol_k(), 5);
+        assert_eq!(RelativeDirection::BackRight.as_protocol_k(), 6);
+        assert_eq!(RelativeDirection::Right.as_protocol_k(), 7);
+        assert_eq!(RelativeDirection::ForwardRight.as_protocol_k(), 8);
     }
 }
