@@ -49,5 +49,41 @@ class TestCommands(unittest.TestCase):
         expected = [['player'], ['food'], [], ['linemate']]
         self.assertEqual(result, expected)
 
+    def test_inventory(self):
+        # Simulate a response from the server
+        self.mock_connection.receive_line.return_value = "[food 10, linemate 5, deraumere 0, sibur 1, mendiane 2, phiras 3, thystame 4]"
+        
+        result = self.client.inventory()
+        
+        # Verify the command sent
+        self.mock_connection.send_line.assert_called_with("Inventory")
+        
+        # Verify the parsing logic
+        self.assertEqual(result.food, 10)
+        self.assertEqual(result.linemate, 5)
+        self.assertEqual(result.deraumere, 0)
+        self.assertEqual(result.sibur, 1)
+        self.assertEqual(result.mendiane, 2)
+        self.assertEqual(result.phiras, 3)
+        self.assertEqual(result.thystame, 4)
+
+    def test_inventory_partial(self):
+        # Simulate a partial response from the server
+        self.mock_connection.receive_line.return_value = "[food 5, sibur 2]"
+        
+        result = self.client.inventory()
+        
+        # Verify the command sent
+        self.mock_connection.send_line.assert_called_with("Inventory")
+        
+        # Verify the parsing logic defaults missing items to 0
+        self.assertEqual(result.food, 5)
+        self.assertEqual(result.sibur, 2)
+        self.assertEqual(result.linemate, 0)
+        self.assertEqual(result.deraumere, 0)
+        self.assertEqual(result.mendiane, 0)
+        self.assertEqual(result.phiras, 0)
+        self.assertEqual(result.thystame, 0)
+
 if __name__ == '__main__':
     unittest.main()
