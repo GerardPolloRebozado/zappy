@@ -59,7 +59,7 @@ class Connection:
             while "\n" not in self.buffer:
                 events = self.selector.select(timeout)
                 if not events:
-                    return None
+                    return ""
                 
                 for key, mask in events:
                     if mask & selectors.EVENT_READ:

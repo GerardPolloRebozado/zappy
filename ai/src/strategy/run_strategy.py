@@ -8,15 +8,28 @@ def run_client(client):
     """
     try:
         while not client.is_dead:
+            # -- testing
+            # res = client.look()
+            
+            # -- if not testing just waits for server to say something
+            res = client.wait_for_response()
+
+            if res is None:
+                print("Server closed the connection.")
+                break
+
+            if client.is_dead or res == "dead":
+                print("The AI has died.")
+                break
+
+            print(f"Result: {res}")
+            
             while client.messages:
-                msg = client.messages.pop(0)
-                print(f"Broadcast: {msg}")
+                print(f"Broadcast: {client.messages.pop(0)}")
 
-            # result = client.look()
-            # print(f"Received: {result}")
-
-            time.sleep(1)
-
+            # -- testing command
+            # time.sleep(1)
+            
     except KeyboardInterrupt:
         pass
     finally:
