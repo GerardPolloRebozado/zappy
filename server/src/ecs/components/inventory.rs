@@ -6,3 +6,11 @@ use std::collections::HashMap;
 pub struct Inventory {
     pub items: HashMap<Resource, u32>,
 }
+
+impl Inventory {
+    pub fn new() -> Self {
+        Inventory {
+            items: HashMap::new(),
+        }
+    }
+}
