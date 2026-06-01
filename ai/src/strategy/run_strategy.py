@@ -9,7 +9,7 @@ def run_client(client):
     try:
         while not client.is_dead:
             # -- testing
-            # res = client.look()
+            #res = client.look()
             
             # -- if not testing just waits for server to say something
             res = client.wait_for_response()
@@ -28,7 +28,7 @@ def run_client(client):
                 print(f"Broadcast: {client.messages.pop(0)}")
 
             # -- testing command
-            # time.sleep(1)
+            #time.sleep(1)
             
     except KeyboardInterrupt:
         pass

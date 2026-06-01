@@ -63,17 +63,19 @@ class ZappyAiClient:
         """
         while True:
             line = self.connection.receive_line()
-            if line is None:
-                return None
-            if line == "":
-                continue
-            if line == "dead":
-                self.is_dead = True
-                return "dead"
-            if line.startswith("message"):
-                self.messages.append(line)
-                continue
-            return line
+            match line:
+                case None:
+                    return None
+                case "":
+                    continue
+                case "dead":
+                    self.is_dead = True
+                    return "dead"
+                case s if s.startswith("message"):
+                    self.messages.append(s)
+                    continue
+                case _:
+                    return line
 
     def forward(self):
         commands.forward(self)
