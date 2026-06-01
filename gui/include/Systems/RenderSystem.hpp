@@ -33,6 +33,10 @@ class RenderSystem {
         float moveSpeed = 20.0f * dt;
         float rotateSpeed = 2.0f * dt;
 
+        raylib::Vector3 forward = (raylib::Vector3)camera.target - (raylib::Vector3)camera.position;
+        raylib::Vector3 right = Vector3Normalize(Vector3CrossProduct(forward, camera.up));
+
+        // Rotation
         if (IsKeyDown(KEY_Q)) {
             raylib::Vector3 relPos =
                 (raylib::Vector3)camera.position - (raylib::Vector3)camera.target;
@@ -46,10 +50,30 @@ class RenderSystem {
             camera.position = (raylib::Vector3)camera.target + relPos;
         }
 
-        raylib::Vector3 forward = (raylib::Vector3)camera.target - (raylib::Vector3)camera.position;
+        if (IsKeyDown(KEY_R)) { // Tilt up (more top-down)
+            raylib::Vector3 relPos =
+                (raylib::Vector3)camera.position - (raylib::Vector3)camera.target;
+            raylib::Vector3 nextRelPos = Vector3RotateByAxisAngle(relPos, right, -rotateSpeed);
+            float angle = Vector3Angle(nextRelPos, {0, 1, 0});
+            if (angle > 0.1f && angle < 1.5f) {
+                camera.position = (raylib::Vector3)camera.target + nextRelPos;
+            }
+        }
+        if (IsKeyDown(KEY_F)) { // Tilt down (more horizontal)
+            raylib::Vector3 relPos =
+                (raylib::Vector3)camera.position - (raylib::Vector3)camera.target;
+            raylib::Vector3 nextRelPos = Vector3RotateByAxisAngle(relPos, right, rotateSpeed);
+            float angle = Vector3Angle(nextRelPos, {0, 1, 0});
+            if (angle > 0.1f && angle < 1.5f) {
+                camera.position = (raylib::Vector3)camera.target + nextRelPos;
+            }
+        }
+
+        // Movement
+        forward = (raylib::Vector3)camera.target - (raylib::Vector3)camera.position;
         forward.y = 0;
         forward = Vector3Normalize(forward);
-        raylib::Vector3 right = Vector3CrossProduct(forward, camera.up);
+        right = Vector3CrossProduct(forward, camera.up);
 
         if (IsKeyDown(KEY_W)) {
             camera.position = (raylib::Vector3)camera.position + forward * moveSpeed;
