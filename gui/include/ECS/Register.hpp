@@ -26,7 +26,7 @@ namespace zappy {
 
         int createEntity() {
             if (!_deadEntities.empty()) {
-                Entity id = _deadEntities.front();
+                int id = _deadEntities.front();
                 _deadEntities.pop();
                 return id;
             }
