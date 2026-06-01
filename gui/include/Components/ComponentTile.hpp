@@ -7,16 +7,28 @@
 #ifndef ZAPPY_GUI_COMPONENTTILE_HPP
 #define ZAPPY_GUI_COMPONENTTILE_HPP
 namespace zappy {
-    struct TerrainModifiers {
-        int visibility;
-        double speedMul;
-        double resourceMul;
-        double soundMul;
-    };
+struct TerrainModifiers {
+    int visibility;
+    double speedMul;
+    double resourceMul;
+    double soundMul;
+};
 
-    struct TerrainType {
-        enum Type { PLAIN, MOUNTAIN, LAKE };
-        Type current_type;
+struct TerrainType {
+    enum Type {
+        // Standard
+        GRASS,
+        MOUNTAIN,
+        WATER,
+        SAND,
+        FOREST,
+        // Trantor
+        OBSIDIAN_BARRENS,
+        LUMINOUS_ORCHARDS,
+        CRYSTAL_CANYONS,
+        MAGNETIC_TUNDRA
     };
-}
-#endif //ZAPPY_GUI_COMPONENTTILE_HPP
+    Type current_type;
+};
+} // namespace zappy
+#endif // ZAPPY_GUI_COMPONENTTILE_HPP
