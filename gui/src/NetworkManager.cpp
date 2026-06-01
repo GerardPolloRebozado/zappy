@@ -26,11 +26,13 @@ void NetworkManager::disconnect() {
     _isHandshakeDone = false;
 }
 
-void NetworkManager::update() {
+void NetworkManager::update(Register& registry) {
     if (!_socket.isConnected()) {
         return;
     }
 
+    // Use poll to check for activity without blocking the GUI unnecessarily.
+    // Even with blocking sockets, a 0 timeout poll allows us to skip read/send if not ready.
     if (_socket.pollSocket(0)) {
         if (_socket.canRead()) {
             _socket.receive();
@@ -40,7 +42,7 @@ void NetworkManager::update() {
                 if (!_isHandshakeDone) {
                     _processHandshake(line);
                 } else {
-                    _handleProtocolMessage(line);
+                    _handleProtocolMessage(line, registry);
                 }
             }
         }
@@ -54,46 +56,14 @@ void NetworkManager::sendCommand(const std::string& cmd) { _socket.send(cmd + "\
 
 bool NetworkManager::isConnected() const { return _socket.isConnected(); }
 
-void NetworkManager::requestMapSize()
-{
-        sendCommand("msz");
-}
-
-void NetworkManager::requestMapContent()
-{
-        sendCommand("mct");
-}
-
-void NetworkManager::requestTeamNames()
-{
-        sendCommand("tna");
-}
-
-void NetworkManager::requestTimeUpdate(int newTime)
-{
-        sendCommand("sgt " + std::to_string(newTime));
-}
-
-void NetworkManager::requestPlayerPosition(int playerId)
-{
-    sendCommand("ppo " + std::to_string(playerId));
-}
-
-void NetworkManager::requestPlayerLevel(int playerId)
-{
-    sendCommand("plv " + std::to_string(playerId));
-}
-
-void NetworkManager::requestPlayerInventory(int playerId)
-{
-    sendCommand("pin " + std::to_string(playerId));
-}
-
-void NetworkManager::requestTileContent(int x, int y)
-{
-    sendCommand("bct " + std::to_string(x) + std::to_string(y));
-
-}
+void NetworkManager::requestMapSize() { sendCommand("msz"); }
+void NetworkManager::requestMapContent() { sendCommand("mct"); }
+void NetworkManager::requestTeamNames() { sendCommand("tna"); }
+void NetworkManager::requestTimeUpdate(int newTime) { sendCommand("sst " + std::to_string(newTime)); }
+void NetworkManager::requestPlayerPosition(int playerId) { sendCommand("ppo #" + std::to_string(playerId)); }
+void NetworkManager::requestPlayerLevel(int playerId) { sendCommand("plv #" + std::to_string(playerId)); }
+void NetworkManager::requestPlayerInventory(int playerId) { sendCommand("pin #" + std::to_string(playerId)); }
+void NetworkManager::requestTileContent(int x, int y) { sendCommand("bct " + std::to_string(x) + " " + std::to_string(y)); }
 
 void NetworkManager::_processHandshake(const std::string& message) {
     if (message == "WELCOME") {
@@ -109,7 +79,8 @@ void NetworkManager::_processHandshake(const std::string& message) {
     }
 }
 
-void NetworkManager::_handleProtocolMessage(const std::string& message) {
+// should return info somewhere?
+void NetworkManager::_handleProtocolMessage(const std::string& message, Register& registry) {
     std::istringstream iss(message);
     std::string cmd;
     if (!(iss >> cmd)) {
@@ -117,13 +88,15 @@ void NetworkManager::_handleProtocolMessage(const std::string& message) {
     }
 
     if (cmd == "msz") {
-        _handleMapSize(message.substr(message.find(' ') + 1));
+        _handleMapSize(message.substr(4));
     } else if (cmd == "bct") {
-        _handleTileContent(message.substr(message.find(' ') + 1));
+        _handleTileContent(message.substr(4));
     } else if (cmd == "tna") {
-        _handleTeamNames(message.substr(message.find(' ') + 1));
+        _handleTeamNames(message.substr(4), registry);
     } else if (cmd == "pnw") {
-        _handlePlayerConnection(message.substr(message.find(' ') + 1));
+        _handlePlayerConnection(message.substr(4), registry);
+    } else {
+        // std::cout << "Unprocessed server command: " << cmd << std::endl;
     }
 }
 
@@ -165,11 +138,11 @@ void NetworkManager::_handleTileContent(const std::string& args) {
     }
 }
 
-void NetworkManager::_handleTeamNames(const std::string& args) {
+void NetworkManager::_handleTeamNames(const std::string& args, Register& registry) {
     std::cout << "Protocol: Team name: " << args << std::endl;
 }
 
-void NetworkManager::_handlePlayerConnection(const std::string& args) {
+void NetworkManager::_handlePlayerConnection(const std::string& args, Register& registry) {
     // Parse #n X Y O L N
 }
 
