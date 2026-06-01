@@ -37,3 +37,11 @@ def inventory(client):
     Response: [food x, linemate y, ...]
     """
     client.connection.send_line("Inventory")
+
+def broadcast(client, text):
+    """
+    Broadcast a message to all players.
+    Time limit: 7/f
+    Response: ok
+    """
+    client.connection.send_line(f"Broadcast {text}")

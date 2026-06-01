@@ -12,3 +12,16 @@ def parse_look(data):
         tiles.append(items)
     
     return tiles
+
+def parse_broadcast(data):
+    """
+    Parses broadcast string like "message K, text"
+    Returns a dictionary with 'direction' (int) and 'text' (str).
+    """
+    try:
+        parts = data.split(", ", 1)
+        direction = int(parts[0].split()[1])
+        text = parts[1]
+        return {"direction": direction, "text": text}
+    except (IndexError, ValueError):
+        return None
