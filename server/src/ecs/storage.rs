@@ -122,6 +122,11 @@ impl<T: 'static> ComponentMap<T> {
     pub fn iter(&self) -> std::collections::hash_map::Iter<'_, Entity, T> {
         self.entries.iter()
     }
+
+    /// Returns a mutable iterator over all entities and their components
+    pub fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, Entity, T> {
+        self.entries.iter_mut()
+    }
 }
 
 impl<T: 'static> ComponentStorage for ComponentMap<T> {
