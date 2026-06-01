@@ -140,6 +140,19 @@ class RenderSystem {
         }
         handleInput();
 
+        // Calculate hovered tile
+        Ray mouseRay = GetMouseRay(GetMousePosition(), camera);
+        int hX = -999999, hZ = -999999;
+        if (mouseRay.direction.y != 0) {
+            float t = (2.0f - mouseRay.position.y) / mouseRay.direction.y;
+            if (t > 0) {
+                raylib::Vector3 p =
+                    (raylib::Vector3)mouseRay.position + (raylib::Vector3)mouseRay.direction * t;
+                hX = (int)round(p.x);
+                hZ = (int)round(p.z);
+            }
+        }
+
         camera.BeginMode();
 
         for (auto const& [entity, type] : r._terrainTypes) {
@@ -180,6 +193,22 @@ class RenderSystem {
                 }
 
                 DrawCube(vpos, 1.0f, 1.0f, 1.0f, color);
+
+                // Draw hover border
+                if (pos.x == hX && pos.y == hZ) {
+                    raylib::Color hCol = raylib::Color::White();
+                    float wH = 0.15f; // Wall height
+                    float wT = 0.05f; // Wall thickness
+                    float yB = 2.0f;  // Top surface
+                    DrawCube({(float)pos.x, yB + wH / 2, (float)pos.y + 0.5f}, 1.0f + wT, wH, wT,
+                             hCol);
+                    DrawCube({(float)pos.x, yB + wH / 2, (float)pos.y - 0.5f}, 1.0f + wT, wH, wT,
+                             hCol);
+                    DrawCube({(float)pos.x + 0.5f, yB + wH / 2, (float)pos.y}, wT, wH, 1.0f + wT,
+                             hCol);
+                    DrawCube({(float)pos.x - 0.5f, yB + wH / 2, (float)pos.y}, wT, wH, 1.0f + wT,
+                             hCol);
+                }
             }
         }
         // Render inhabitants
