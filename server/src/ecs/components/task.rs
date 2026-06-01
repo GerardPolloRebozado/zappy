@@ -16,6 +16,7 @@ pub enum TaskType {
 }
 
 impl TaskType {
+    /// return the duration of the task in time units.  unit / freq = seconds
     pub fn duration(&self) -> u64 {
         match self {
             TaskType::Forward => 7,
@@ -34,6 +35,7 @@ impl TaskType {
 }
 
 #[derive(Clone)]
+/// Task type and whenn will it finish if started now, if finish_on = 0 then the task is not started yet
 pub struct Task {
     pub task_type: TaskType,
     pub finish_on: u64,

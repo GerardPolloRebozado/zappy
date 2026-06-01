@@ -3,6 +3,7 @@ use crate::{
     game::Date,
 };
 
+/// System that can be run on every game iteration to check if theres any task finished, if its finished it will remove it and start the next one
 pub fn any_finished_task(world: &mut World, freq: u32) {
     let task_lists = world.get_storage_mut::<TaskList>();
     if task_lists.is_none() {
@@ -18,6 +19,7 @@ pub fn any_finished_task(world: &mut World, freq: u32) {
         let first_task = first_task.unwrap();
 
         if first_task.is_finished() {
+            // TODO: Execute the task/command
             task_list.vector.remove(0);
             if let Some(first_task) = task_list.vector.first_mut() {
                 first_task.finish_on =
