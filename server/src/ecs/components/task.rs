@@ -1,5 +1,6 @@
 use crate::game::Date;
 
+#[derive(Clone)]
 pub enum TaskType {
     Forward,
     TurnRight,
@@ -32,6 +33,7 @@ impl TaskType {
     }
 }
 
+#[derive(Clone)]
 pub struct Task {
     pub task_type: TaskType,
     pub finish_on: u64,
@@ -43,7 +45,7 @@ impl Task {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct TaskList {
     pub vector: Vec<Task>,
 }
