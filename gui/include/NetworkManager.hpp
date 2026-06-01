@@ -18,7 +18,8 @@
 #include <map>
 #include <queue>
 #include <string>
-
+#include "ECS/Register.hpp"
+#include "Components/ComponentTags.hpp"
 namespace zappy {
 /**
  * @class NetworkManager
@@ -58,7 +59,7 @@ class NetworkManager {
      * This method should be called once per frame in the main application loop.
      * It performs polling, flushes outgoing data, and handles incoming commands.
      */
-    void update();
+    void update(Register& registry);
 
     /**
      * @brief Sends a protocol command to the server.
@@ -72,14 +73,58 @@ class NetworkManager {
      */
     bool isConnected() const;
 
+  /**
+           * @brief Requests the logical map size from the server.
+           * Sends the "msz" command. The server will respond asynchronously.
+           */
   void requestMapSize();
+
+  /**
+   * @brief Requests the content of all tiles on the map from the server.
+   * Sends the "mct" command. Useful for the initial world load.
+   */
   void requestMapContent();
+
+  /**
+   * @brief Requests the names of all participating teams from the server.
+   * Sends the "tna" command.
+   */
   void requestTeamNames();
+
+  /**
+   * @brief Requests to modify the server's time unit (frequency).
+   * Sends the "sst" command.
+   * @param newTime The new time unit to set.
+   */
   void requestTimeUpdate(int newTime);
 
+  /**
+   * @brief Requests the exact position of a specific player.
+   * Sends the "ppo" command.
+   * @param playerId The unique ID of the player (humanoid).
+   */
   void requestPlayerPosition(int playerId);
+
+  /**
+   * @brief Requests the current level of a specific player.
+   * Sends the "plv" command.
+   * @param playerId The unique ID of the player (humanoid).
+   */
   void requestPlayerLevel(int playerId);
+
+  /**
+   * @brief Requests the inventory content of a specific player.
+   * Sends the "pin" command. Useful when the user clicks on a humanoid.
+   * @param playerId The unique ID of the player (humanoid).
+   */
   void requestPlayerInventory(int playerId);
+
+  /**
+   * @brief Requests the resource content of a specific tile.
+   * Sends the "bct" command.
+   * @param x Horizontal coordinate of the tile.
+   * @param y Vertical coordinate of the tile.
+   */
   void requestTileContent(int x, int y);
 
   private:
@@ -90,7 +135,7 @@ class NetworkManager {
      * @brief Routes a received protocol message to the appropriate handler.
      * @param message The raw message string from the server.
      */
-    void _handleProtocolMessage(const std::string& message);
+    void _handleProtocolMessage(const std::string& message, Register& registry);
 
     /**
      * @brief Processes the initial "WELCOME" handshake.
@@ -100,10 +145,10 @@ class NetworkManager {
 
     /** @name Protocol Handlers */
     /** @{ */
-    void _handleMapSize(const std::string& args);
-    void _handleTileContent(const std::string& args);
-    void _handleTeamNames(const std::string& args);
-    void _handlePlayerConnection(const std::string& args);
+    void _handleMapSize(const std::string& args, Register& registry);
+    void _handleTileContent(const std::string& args, Register& registry);
+    void _handleTeamNames(const std::string& args, Register& registry);
+    void _handlePlayerConnection(const std::string& args, Register& registry);
     /** @} */
 };
 } // namespace zappy
