@@ -1,59 +1,127 @@
-# Game Logic
-## Resources
+# Game Design Document
 
-The following resources are available, the resource should be evenly distributed
-The amount of a specific resource can be calculated using: map_width * map_height * density
+## Definitions
 
-| Item | density |
-| :--- | :--- |
-| food | 0.5 |
-| linemate | 0.3 |
-| deraumere | 0.15 |
-| sibur | 0.1 |
-| mendiane | 0.1 |
-| phiras | 0.08 |
-| thystame | 0.05 |
+### Player
 
+A player is a physical person connected to the server.
+
+### Inhabitant
+
+An inhabitant is an in-game entity controlled by a set of instructions. This set of instructions can be handled at runtime by our own AIs, or by a player set of codeblocks.
+
+---
+
+# World
 
 ## Map
 
-## Leveling Up
+The game world consists of a flat two-dimensional map composed of tiles.
 
-| Level | NB players | linemate | deraumere | sibur | mendiane | phiras | thystame |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 4 | 2 | 2 | 0 | 1 | 0 | 2 | 0 |
-| 5 | 4 | 1 | 1 | 2 | 0 | 1 | 0 |
-| 6 | 4 | 1 | 2 | 1 | 3 | 0 | 0 |
-| 7 | 6 | 1 | 2 | 3 | 0 | 1 | 0 |
-| 8 | 6 | 2 | 2 | 2 | 2 | 2 | 1 |
+Multiple inhabitants may occupy the same tile simultaneously.
 
+The world contains a finite amount of resources distributed across its tiles.
 
-## General rules:
+Future map implementations may introduce terrain types and biome-specific resource distributions. Terrain information is available to inhabitants and AI agents.
 
-* map
-    * flat world to test, are we planning to add things (mountains, lakes, etc...) or not? 
-    * we need to take into account the material of the world for the RL and also if some materials are going to appear more in different terrains
-    * there is a limit of food and resources in the map. we are going to use the formula in the pdf.
-* abilities / user rules
-    * if something is blurry we need to change the vision ability of the players
-    * move and look are done in the same action. we can create a new command that does these two at the same time or make one call the other. 
-    * we need overlap because without it there is no eject
-    * we have to discuss if the broadcasting is going to be affected by the map
-    * food:
-        * when we eat food, we directly add to the lifetime of the player
-        * when we have more food, we could move faster or see more. 
-* we want to have a config file to setup different strategies
-* evolutions
-    * every inhabitant in a tile evolves if they have the prerequisites to do so. somebody can eject you and stop your evolution
-    * you have to drop on the tile all the ones that you need to evolve 
-    * when one starts the enchantation, all the other ones that are there freeze
-    * when you want to evolve, you want to be far away from people 
-    * you can't see other people's inventory. you can know this by broadcasting 
-    * you can only see the inventory of the people from your group 
-* no limit for the inventory
-* Definitions: 
-    * player: physical person that connects to the server 
-    * inhabitant: tiny thing that moves around
-* GUI
-    * gerard wants to do raylib
-    * do we want unity or smth like this? probably not, unless somebody wants to spend a lot of time learning it
+## Resources
+
+Resources are distributed evenly across the map.
+
+The total amount of each resource is determined by the following formula:
+
+```text
+resource_amount = map_width × map_height × density
+```
+
+### Resource Densities
+
+| Resource  | Density |
+| --------- | ------- |
+| Food      | 0.50    |
+| Linemate  | 0.30    |
+| Deraumere | 0.15    |
+| Sibur     | 0.10    |
+| Mendiane  | 0.10    |
+| Phiras    | 0.08    |
+| Thystame  | 0.05    |
+
+---
+
+# Inhabitants
+
+## Movement and Vision
+
+Movement updates the inhabitant's position and immediately refreshes its field of view.
+
+Vision range is configurable through the game configuration.
+
+## Inventory
+
+Inventory capacity is unlimited.
+
+An inhabitant cannot inspect the inventory of another inhabitant unless both belong to the same group.
+
+Inventory information may be shared through broadcasting.
+
+## Food
+
+Food represents the lifespan of an inhabitant.
+
+Consuming food immediately increases the inhabitant's remaining lifetime.
+
+Food reserves may provide additional bonuses, such as increased movement speed or increased vision range.
+
+## Broadcasting
+
+Inhabitants may broadcast messages to other inhabitants.
+
+Broadcast messages are used for coordination, communication, and sharing information.
+
+---
+
+# Evolution
+
+Evolution allows inhabitants to increase their level.
+
+To begin an evolution, all required resources must be present on the tile.
+
+All inhabitants on the tile that satisfy the participation requirements take part in the evolution.
+
+Once the evolution ritual begins:
+
+* All participating inhabitants become frozen.
+* Frozen inhabitants cannot move or perform actions.
+* The ritual continues until it succeeds or is interrupted.
+
+An evolution is interrupted if a required participant is removed from the tile, for example through ejection.
+
+Because evolution can be interrupted, inhabitants benefit from performing evolutions in isolated locations.
+
+## Evolution Requirements
+
+| Target Level | Players Required | Linemate | Deraumere | Sibur | Mendiane | Phiras | Thystame |
+| ------------ | ---------------- | -------- | --------- | ----- | -------- | ------ | -------- |
+| 4            | 2                | 2        | 0         | 1     | 0        | 2      | 0        |
+| 5            | 4                | 1        | 1         | 2     | 0        | 1      | 0        |
+| 6            | 4                | 1        | 2         | 1     | 3        | 0      | 0        |
+| 7            | 6                | 1        | 2         | 3     | 0        | 1      | 0        |
+| 8            | 6                | 2        | 2         | 2     | 2        | 2      | 1        |
+
+---
+
+# Configuration
+
+The game is configured through external configuration files.
+
+Configuration files define game parameters including:
+
+* Map dimensions
+* Resource densities
+* Vision parameters
+* Evolution parameters
+* AI strategies
+* Gameplay modifiers
+
+Different configuration files allow different game modes and balancing rules without modifying the game code.
+
