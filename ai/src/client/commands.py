@@ -29,3 +29,11 @@ def look(client):
     Response: [tile1, tile2, ...]
     """
     client.connection.send_line("Look")
+
+def inventory(client):
+    """
+    Get the player's inventory.
+    Time limit: 1/f
+    Response: [food x, linemate y, ...]
+    """
+    client.connection.send_line("Inventory")
