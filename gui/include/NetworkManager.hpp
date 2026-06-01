@@ -14,6 +14,7 @@
 #define NETWORK_MANAGER_HPP_
 
 #include "Network/TcpSocket.hpp"
+#include "Systems/RenderSystem.hpp"
 #include <functional>
 #include <map>
 #include <queue>
@@ -32,7 +33,7 @@ class NetworkManager {
     /**
      * @brief Default constructor.
      */
-    NetworkManager();
+    NetworkManager(Register& registry, RenderSystem& renderSystem);
 
     /**
      * @brief Destructor. Ensures disconnection.
@@ -75,6 +76,8 @@ class NetworkManager {
   private:
     TcpSocket _socket;     /**< The underlying TCP socket. */
     bool _isHandshakeDone; /**< Flag indicating if the Zappy handshake is complete. */
+    Register& _registry;
+    RenderSystem& _renderSystem;
 
     /**
      * @brief Routes a received protocol message to the appropriate handler.

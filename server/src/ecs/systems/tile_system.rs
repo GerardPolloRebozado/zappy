@@ -62,10 +62,11 @@ pub fn setup_map(world: &mut World, width: u32, height: u32) {
 
     let mut rng = rng();
     let seed = rng.random();
+    //    println!("Map Generation: Seed = {}", seed);
     let perlin_elevation = Perlin::new(seed);
     let perlin_moisture = Perlin::new(seed.wrapping_add(1));
 
-    let scale = 0.15;
+    let scale = 0.08; // Increased scale for more varied biomes
 
     for y in 0..height {
         for x in 0..width {

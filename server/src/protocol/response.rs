@@ -52,7 +52,7 @@ impl std::fmt::Display for Response {
         match self.code {
             ResponseCode::Status(StatusCode::Ok) => {
                 if let Some(ref data) = self.data {
-                    write!(f, "{}", data)
+                    writeln!(f, "{}", data)
                 } else {
                     writeln!(f, "ok")
                 }
