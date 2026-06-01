@@ -7,20 +7,16 @@ def run_client(client):
     :return: None
     """
     try:
-        while True:
-            # -- test forward
-            # client.forward()
+        while not client.is_dead:
+            while client.messages:
+                msg = client.messages.pop(0)
+                print(f"Broadcast: {msg}")
 
-            line = client.receive_line()
-            if line is None:
-                print("Server closed the connection.")
-                break
-            print(f"Received: {line}")
-            if line == "dead":
-                print("You died.")
-                break
-            # -- this is here for now to avoid spamming the server with the forward command
-            # time.sleep(1)
+            # result = client.look()
+            # print(f"Received: {result}")
+
+            time.sleep(1)
+
     except KeyboardInterrupt:
         pass
     finally:
