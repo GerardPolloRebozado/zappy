@@ -1,3 +1,4 @@
+use crate::ecs::storage::Entity;
 use crate::protocol::Response;
 use crate::utils::constants::MAX_BODY_LENGTH;
 use crate::utils::uuid_v4;
@@ -18,6 +19,7 @@ pub struct Client {
     buffered_data: Option<String>,
     pub pending_responses: Vec<Response>,
     pub state: ClientState,
+    pub entity: Option<Entity>,
 }
 
 impl Client {
@@ -29,6 +31,7 @@ impl Client {
             buffered_data: None,
             pending_responses: Vec::new(),
             state: ClientState::WaitingForTeamName,
+            entity: None,
         }
     }
 
