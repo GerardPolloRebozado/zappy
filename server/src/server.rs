@@ -1,6 +1,8 @@
 pub mod client;
 pub mod signal;
 
+use crate::ecs::builders::inhabitants::build_inhabitant;
+use crate::ecs::storage::World;
 use crate::game::*;
 use crate::protocol::{Command, Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::server::client::{Client, ClientState};
@@ -22,6 +24,8 @@ pub struct Server {
     pub _teams: HashMap<String, Team>,
     pub map: Map,
     pub _freq: u32,
+    pub game_start: u64,
+    pub world: World,
     // TODO: Add a task scheduler for time management (action / f delay)
 }
 
@@ -44,6 +48,8 @@ impl Server {
                 height: 10,
             },
             _freq: 100,
+            game_start: Date::now().to_timestamp(),
+            world: World::new(),
         }
     }
 
@@ -179,6 +185,8 @@ impl Server {
                             ResponseCode::Status(StatusCode::Ok),
                             Some("1".to_string()),
                         ));
+
+                        build_inhabitant(&mut self.world);
 
                         client.pending_responses.push(Response::new(
                             ResponseCode::Status(StatusCode::Ok),
