@@ -5,6 +5,11 @@
 ** RenderSystem.cpp
 */
 
+/**
+ * @file RenderSystem.cpp
+ * @brief Implementation of the RenderSystem class.
+ */
+
 #include "Systems/RenderSystem.hpp"
 #include <algorithm>
 #include <cmath>
