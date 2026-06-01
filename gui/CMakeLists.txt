@@ -88,4 +88,4 @@ add_custom_target(fclean
 )
 
 enable_testing()
-#add_subdirectory(tests) remove later when tests are added
+add_subdirectory(tests)
