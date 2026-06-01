@@ -56,20 +56,22 @@ class ZappyAiClient:
 
     def wait_for_response(self):
         """
-        Wait for a command response while handling async messages.
+        Wait for a response while catching broadcasts and death.
+        Returns:
+            - The response string (ok, [tile1...], etc.)
+            - None if the connection is closed.
         """
         while True:
             line = self.connection.receive_line()
             if line is None:
                 return None
+            if line == "":
+                continue
             if line == "dead":
                 self.is_dead = True
                 return "dead"
             if line.startswith("message"):
                 self.messages.append(line)
-                continue
-            if line.startswith("eject:"):
-                # Could handle ejection state here
                 continue
             return line
 
