@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from src.client import ZappyAiClient
 
-class TestCommands(unittest.TestCase):
+class TestInventory(unittest.TestCase):
 
     def setUp(self):
         # Patching Connection to avoid real network calls
@@ -23,31 +23,6 @@ class TestCommands(unittest.TestCase):
 
     def tearDown(self):
         self.patcher.stop()
-
-    def test_forward(self):
-        self.client.forward()
-        self.mock_connection.send_line.assert_called_with("Forward")
-
-    def test_right(self):
-        self.client.right()
-        self.mock_connection.send_line.assert_called_with("Right")
-
-    def test_left(self):
-        self.client.left()
-        self.mock_connection.send_line.assert_called_with("Left")
-
-    def test_look(self):
-        # Simulate a response from the server
-        self.mock_connection.receive_line.return_value = "[player, food, , linemate]"
-        
-        result = self.client.look()
-        
-        # Verify the command sent
-        self.mock_connection.send_line.assert_called_with("Look")
-        
-        # Verify the parsing logic
-        expected = [['player'], ['food'], [], ['linemate']]
-        self.assertEqual(result, expected)
 
     def test_inventory(self):
         # Simulate a response from the server
