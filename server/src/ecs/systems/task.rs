@@ -37,7 +37,7 @@ mod tests {
     fn add_task() {
         let mut world = World::new();
         world.register_component::<TaskList>();
-        let mut entity = world.spawn();
+        let entity = world.spawn();
         world.add_component(entity, TaskList::default());
 
         let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
