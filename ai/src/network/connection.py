@@ -40,14 +40,20 @@ class Connection:
                             raise RuntimeError("Socket connection broken")
                         total_sent += sent
         finally:
-            self.selector.unregister(self.socket)
+            try:
+                self.selector.unregister(self.socket)
+            except KeyError:
+                pass
 
     def receive_line(self, timeout=None):
         """
         Reads from the socket until a newline is found and returns the line.
         Uses selectors to handle non-blocking read.
         """
-        self.selector.register(self.socket, selectors.EVENT_READ)
+        try:
+            self.selector.register(self.socket, selectors.EVENT_READ)
+        except (FileExistsError, KeyError):
+            pass
         
         try:
             while "\n" not in self.buffer:
@@ -65,7 +71,10 @@ class Connection:
             line, self.buffer = self.buffer.split("\n", 1)
             return line.strip()
         finally:
-            self.selector.unregister(self.socket)
+            try:
+                self.selector.unregister(self.socket)
+            except KeyError:
+                pass
 
     def close(self):
         """
