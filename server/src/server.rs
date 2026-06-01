@@ -298,5 +298,11 @@ impl Server {
     }
 
     pub fn save(&mut self) {}
-    pub fn load(&mut self) {}
+    pub fn load(&mut self) {
+        crate::ecs::systems::tile_system::setup_map(
+            &mut self.world,
+            self.map.width,
+            self.map.height,
+        );
+    }
 }
