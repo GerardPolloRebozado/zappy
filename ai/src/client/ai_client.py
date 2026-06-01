@@ -1,6 +1,6 @@
 import socket
 from src.network import Connection
-from src.utils import parse_look, Inventory
+from src.utils import parse_look, parse_broadcast, Inventory
 from . import commands
 
 class ZappyAiClient:
@@ -72,7 +72,9 @@ class ZappyAiClient:
                     self.is_dead = True
                     return "dead"
                 case s if s.startswith("message"):
-                    self.messages.append(s)
+                    parsed = parse_broadcast(s)
+                    if parsed:
+                        self.messages.append(parsed)
                     continue
                 case _:
                     return line
@@ -98,6 +100,10 @@ class ZappyAiClient:
         commands.inventory(self)
         resp = self.wait_for_response()
         return Inventory.from_string(resp) if resp and resp.startswith("[") else resp
+
+    def broadcast(self, text):
+        commands.broadcast(self, text)
+        return self.wait_for_response()
 
     def close(self):
         self.connection.close()

@@ -9,7 +9,7 @@ def run_client(client):
     try:
         while not client.is_dead:
             # -- testing
-            #res = client.inventory()
+            #res = client.broadcast("hello")
             
             # -- if not testing just waits for server to say something
             res = client.wait_for_response()
@@ -25,7 +25,8 @@ def run_client(client):
             print(f"Result: {res}")
             
             while client.messages:
-                print(f"Broadcast: {client.messages.pop(0)}")
+                msg = client.messages.pop(0)
+                print(f"Broadcast from {msg['direction']}: {msg['text']}")
 
             # -- testing command
             #time.sleep(1)
