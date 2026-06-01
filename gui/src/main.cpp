@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
 
         while (!window.ShouldClose()) {
 
-            network.update();
+            network.update(registry);
 
             window.BeginDrawing();
             window.ClearBackground(BLACK);
