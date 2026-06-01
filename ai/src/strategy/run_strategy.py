@@ -9,7 +9,7 @@ def run_client(client):
     try:
         while not client.is_dead:
             # -- testing
-            #res = client.look()
+            #res = client.inventory()
             
             # -- if not testing just waits for server to say something
             res = client.wait_for_response()
