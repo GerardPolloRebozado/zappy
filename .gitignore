@@ -32,3 +32,17 @@ node_modules
 *.so
 *.dylib
 doxy-docs
+
+zappy.txt
+
+# Server
+zappy_server
+zappy_cli
+
+# AI
+.venv
+zappy_ai
+__pycache__/
+
+#CMake
+build

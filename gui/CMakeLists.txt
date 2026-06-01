@@ -27,18 +27,12 @@ FetchContent_Declare(
 )
 
 FetchContent_Declare(
-    raylib-cpp
-    GIT_REPOSITORY https://github.com/RobLoach/raylib-cpp.git
-    GIT_TAG v6.0.0
+        raylib-cpp
+        GIT_REPOSITORY https://github.com/RobLoach/raylib-cpp.git
+        GIT_TAG v6.0.0
 )
 
 FetchContent_MakeAvailable(raylib raylib-cpp)
-
-if (APPLE)
-    target_link_libraries(${PROJECT_NAME} "-framework IOKit")
-    target_link_libraries(${PROJECT_NAME} "-framework Cocoa")
-    target_link_libraries(${PROJECT_NAME} "-framework OpenGL")
-endif()
 
 set(SOURCES
         src/main.cpp
@@ -52,16 +46,28 @@ set(SOURCES
         include/ECS/Register.hpp
 )
 
-add_executable(zappy_gui ${SOURCES} ${HEADERS})
-target_link_libraries(${PROJECT_NAME} PRIVATE raylib raylib_cpp)
+add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_include_directories(zappy_gui PRIVATE
+target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${raylib-cpp_SOURCE_DIR}/include
 )
 
+target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
+
+if (APPLE)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+            "-framework IOKit"
+            "-framework Cocoa"
+            "-framework OpenGL"
+    )
+endif()
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported OUTPUT error)
 
 if(ipo_supported)
-    set_property(TARGET zappy_gui PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 add_custom_target(fclean
@@ -74,12 +80,11 @@ add_custom_target(fclean
         "${CMAKE_BINARY_DIR}/.ninja_deps"
         "${CMAKE_BINARY_DIR}/.ninja_log"
         "${CMAKE_BINARY_DIR}/compile_commands.json"
-        "${CMAKE_BINARY_DIR}/zappy_gui"
+        "${CMAKE_BINARY_DIR}/${PROJECT_NAME}"
         "${CMAKE_BINARY_DIR}/tests/unit_tests"
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Wiping CMake cache, build files, and main executable..."
 )
 
 enable_testing()
-add_subdirectory(tests)
-
+#add_subdirectory(tests) remove later when tests are added
