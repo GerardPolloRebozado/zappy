@@ -122,27 +122,25 @@ class RenderSystem {
     }
 
     void drawMouseCursor() {
-        Ray ray = GetMouseRay(GetMousePosition(), camera);
-        float groundY = 1.0f;
-        if (ray.direction.y != 0) {
-            float t = (groundY - ray.position.y) / ray.direction.y;
-            if (t > 0) {
-                raylib::Vector3 mousePoint =
-                    (raylib::Vector3)ray.position + (raylib::Vector3)ray.direction * t;
-                DrawSphere(mousePoint, 0.2f, YELLOW);
-            }
+        raylib::Texture2D& tex = IsMouseButtonDown(MOUSE_BUTTON_LEFT) ? mousePressedTex : mouseTex;
+        if (tex.id != 0) {
+            DrawTextureEx(tex, {(float)GetMouseX(), (float)GetMouseY()}, 0.0f, 3.0f, WHITE);
         }
     }
 
     void update(Register& r) {
+        if (mouseTex.id == 0) {
+            try {
+                mouseTex.Load("assets/mouse.png");
+                mousePressedTex.Load("assets/mouse_pressed.png");
+                HideCursor();
+            } catch (const raylib::RaylibException& e) {
+                // Assets might be missing, fallback is handled in drawMouseCursor
+            }
+        }
         handleInput();
 
         camera.BeginMode();
-
-        // Draw Grid for reference
-        //        DrawGrid(100, 1.0f);
-
-        drawMouseCursor();
 
         for (auto const& [entity, type] : r._terrainTypes) {
             if (r._positions.find(entity) != r._positions.end()) {
@@ -182,7 +180,6 @@ class RenderSystem {
                 }
 
                 DrawCube(vpos, 1.0f, 1.0f, 1.0f, color);
-                DrawCubeWires(vpos, 1.0f, 1.0f, 1.0f, raylib::Color::LightGray());
             }
         }
         // Render inhabitants
@@ -195,9 +192,12 @@ class RenderSystem {
         }
 
         camera.EndMode();
+        drawMouseCursor();
     }
 
     raylib::Camera3D camera;
+    raylib::Texture2D mouseTex;
+    raylib::Texture2D mousePressedTex;
 };
 } // namespace zappy
 
