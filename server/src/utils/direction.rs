@@ -5,28 +5,53 @@
 
 use crate::game::Player;
 
-const RELATIVE_DIRECTION_OFFSETS: [(i32, i32, u32); 8] = [
-    (0, -1, 1),
-    (-1, -1, 2),
-    (-1, 0, 3),
-    (-1, 1, 4),
-    (0, 1, 5),
-    (1, 1, 6),
-    (1, 0, 7),
-    (1, -1, 8),
-];
-
-/// Rotates a relative `(x, y)` offset into world-map deltas for `orientation`.
+/// Rotates a world-map delta into the listener's relative frame.
 ///
 /// Orientation `1`–`4` are north, east, south, and west. Invalid orientations
 /// return `(0, 0)`.
-fn relative_offset_to_world_delta(orientation: u8, relative_x: i32, relative_y: i32) -> (i32, i32) {
+fn world_delta_to_relative_offset(orientation: u8, world_x: i32, world_y: i32) -> (i32, i32) {
     match orientation {
-        1 => (relative_x, relative_y),
-        2 => (-relative_y, relative_x),
-        3 => (-relative_x, -relative_y),
-        4 => (relative_y, -relative_x),
+        1 => (world_x, world_y),
+        2 => (world_y, -world_x),
+        3 => (-world_x, -world_y),
+        4 => (-world_y, world_x),
         _ => (0, 0),
+    }
+}
+
+/// Classifies a listener-relative delta into protocol direction `k` (`1`–`8`).
+///
+/// Expects `(relative_x, relative_y)` already rotated into the listener's frame:
+/// forward is negative `y`, back is positive `y`, left is negative `x`, and right
+/// is positive `x`. Values `1`–`8` are numbered counter-clockwise from forward.
+///
+/// Compares `|relative_y|` and `|relative_x|` to pick the closest axis (forward/back
+/// or left/right). When both components are equal, the target lies on a 45°
+/// diagonal and the signs of `relative_x` and `relative_y` select `k` 2, 4, 6, or 8.
+fn classify_relative_direction(relative_x: i32, relative_y: i32) -> u32 {
+    let ax = relative_x.abs();
+    let ay = relative_y.abs();
+
+    if ay > ax {
+        if relative_y < 0 {
+            1
+        } else {
+            5
+        }
+    } else if ax > ay {
+        if relative_x < 0 {
+            3
+        } else {
+            7
+        }
+    } else {
+        match (relative_x.cmp(&0), relative_y.cmp(&0)) {
+            (std::cmp::Ordering::Less, std::cmp::Ordering::Less) => 2,
+            (std::cmp::Ordering::Less, std::cmp::Ordering::Greater) => 4,
+            (std::cmp::Ordering::Greater, std::cmp::Ordering::Greater) => 6,
+            (std::cmp::Ordering::Greater, std::cmp::Ordering::Less) => 8,
+            _ => 1,
+        }
     }
 }
 
@@ -59,15 +84,6 @@ fn shortest_delta(from: u32, to: u32, size: i32) -> i32 {
 /// let player = Player::new(1, 5, 5, 1);
 /// assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
 /// ```
-///
-/// # Note
-///
-/// Diagonal targets more than one tile away are not fully handled yet;
-/// the function currently falls back to `1` in those cases.
-// TODO: Handle edge cases when source is more than one tile away on diagonals
-// We could have a simple way of doing it without the diagonals,
-// meaning that we can do straight paths (its not perfect but enough)
-// or implement the fully working version with diagonals for messages because the math part is pretty hard
 pub fn calc_k(
     from_x: u32,
     from_y: u32,
@@ -81,12 +97,75 @@ pub fn calc_k(
     if dx == 0 && dy == 0 {
         return 0;
     }
-    for (relative_x, relative_y, direction_k) in RELATIVE_DIRECTION_OFFSETS {
-        let (world_delta_x, world_delta_y) =
-            relative_offset_to_world_delta(for_player.orientation, relative_x, relative_y);
-        if world_delta_x == dx && world_delta_y == dy {
-            return direction_k;
-        }
+
+    let (relative_x, relative_y) = world_delta_to_relative_offset(for_player.orientation, dx, dy);
+    if relative_x == 0 && relative_y == 0 {
+        return 1;
     }
-    1
+
+    classify_relative_direction(relative_x, relative_y)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::Player;
+
+    #[test]
+    fn same_tile_returns_zero() {
+        let player = Player::new(1, 5, 5, 1);
+        assert_eq!(calc_k(5, 5, &player, 10, 10), 0);
+    }
+
+    #[test]
+    fn forward_adjacent_when_facing_north() {
+        let player = Player::new(1, 5, 5, 1);
+        assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
+    }
+
+    #[test]
+    fn left_when_facing_east() {
+        let player = Player::new(1, 5, 5, 2);
+        assert_eq!(calc_k(5, 4, &player, 10, 10), 3);
+    }
+
+    #[test]
+    fn distant_target_on_cardinal() {
+        let player = Player::new(1, 5, 5, 1);
+        assert_eq!(calc_k(5, 0, &player, 10, 10), 1);
+        assert_eq!(calc_k(9, 5, &player, 10, 10), 7);
+    }
+
+    #[test]
+    fn distant_target_on_diagonal() {
+        let player = Player::new(1, 5, 5, 1);
+        assert_eq!(calc_k(9, 1, &player, 10, 10), 8);
+        assert_eq!(calc_k(1, 1, &player, 10, 10), 2);
+    }
+
+    #[test]
+    fn toroidal_shortest_path() {
+        let player = Player::new(1, 9, 5, 1);
+        assert_eq!(calc_k(0, 5, &player, 10, 10), 7);
+        assert_eq!(calc_k(9, 0, &player, 10, 10), 1);
+    }
+
+    #[test]
+    fn all_eight_directions_facing_north() {
+        let player = Player::new(1, 5, 5, 1);
+        assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
+        assert_eq!(calc_k(4, 4, &player, 10, 10), 2);
+        assert_eq!(calc_k(4, 5, &player, 10, 10), 3);
+        assert_eq!(calc_k(4, 6, &player, 10, 10), 4);
+        assert_eq!(calc_k(5, 6, &player, 10, 10), 5);
+        assert_eq!(calc_k(6, 6, &player, 10, 10), 6);
+        assert_eq!(calc_k(6, 5, &player, 10, 10), 7);
+        assert_eq!(calc_k(6, 4, &player, 10, 10), 8);
+    }
+
+    #[test]
+    fn invalid_orientation_falls_back_to_one() {
+        let player = Player::new(1, 5, 5, 9);
+        assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
+    }
 }
