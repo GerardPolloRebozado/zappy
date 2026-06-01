@@ -4,9 +4,9 @@ use crate::ecs::{
 };
 
 pub fn build_inhabitant(world: &mut World) -> Entity {
-    let new_player = world.spawn();
-    world.add_component(new_player, TaskList::default());
-    world.add_component(new_player, Position::new());
-    world.add_component(new_player, Inventory::new());
-    new_player
+    let new_inhabitant = world.spawn();
+    world.add_component(new_inhabitant, TaskList::default());
+    world.add_component(new_inhabitant, Position::new());
+    world.add_component(new_inhabitant, Inventory::new());
+    new_inhabitant
 }
