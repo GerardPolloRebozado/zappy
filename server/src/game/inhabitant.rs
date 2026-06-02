@@ -1,6 +1,6 @@
-use crate::ecs::components::orientation::Orientation;
 use crate::ecs::components::position::Position;
 use crate::ecs::storage::{Entity, World};
+use crate::utils::orientation::RelativeOrientation;
 
 /// A read-only snapshot of a player's state on the game map.
 ///
@@ -9,17 +9,17 @@ use crate::ecs::storage::{Entity, World};
 /// Fields are private to prevent accidental local modifications that
 /// wouldn't be reflected in the "real" data.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Player {
+pub struct Inhabitant {
     id: u32,
     x: u32,
     y: u32,
     /// Facing direction on the map (`1` = north, `2` = east, `3` = south, `4` = west).
-    orientation: u8,
+    orientation: RelativeOrientation,
 }
 
-impl Player {
+impl Inhabitant {
     /// Creates a player snapshot at the given position and orientation.
-    pub fn new(id: u32, x: u32, y: u32, orientation: u8) -> Self {
+    pub fn new(id: u32, x: u32, y: u32, orientation: RelativeOrientation) -> Self {
         Self {
             id,
             x,
@@ -33,13 +33,13 @@ impl Player {
     /// Returns `None` if the entity is missing required components.
     pub fn get(entity: Entity, world: &World) -> Option<Self> {
         let pos = world.get_component::<Position>(entity)?;
-        let ori = world.get_component::<Orientation>(entity)?;
+        let ori = world.get_component::<RelativeOrientation>(entity)?;
 
         Some(Self {
             id: entity.id(),
             x: pos.x,
             y: pos.y,
-            orientation: ori.orientation,
+            orientation: *ori,
         })
     }
 
@@ -59,7 +59,7 @@ impl Player {
     }
 
     /// Returns the player's facing direction.
-    pub fn orientation(&self) -> u8 {
+    pub fn orientation(&self) -> RelativeOrientation {
         self.orientation
     }
 }

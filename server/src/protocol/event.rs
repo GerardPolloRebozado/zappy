@@ -6,8 +6,10 @@
 //! - GUI clients receive lines such as `pbc #n message\n` via [`ServerEvent::to_gui_string`].
 //! - AI clients receive lines such as `message k, text\n` via [`ServerEvent::to_ai_string`].
 
-use crate::game::Player;
-use crate::utils::direction::calc_k;
+use crate::{
+    game::Inhabitant,
+    utils::orientation::{RelativeOrientation, calc_k},
+};
 
 /// A logical game occurrence broadcast by the server.
 ///
@@ -33,7 +35,7 @@ pub enum ServerEvent {
         player_id: u32,
         x: u32,
         y: u32,
-        orientation: u8,
+        orientation: RelativeOrientation,
         level: u8,
         team: String,
     },
@@ -71,7 +73,7 @@ pub enum ServerEvent {
 
 impl ServerEvent {
     // Builder functions
-    pub fn message(broadcaster: &Player, message: impl Into<String>) -> Self {
+    pub fn message(broadcaster: &Inhabitant, message: impl Into<String>) -> Self {
         Self::Message {
             player_id: broadcaster.id(),
             message: message.into(),
@@ -79,19 +81,19 @@ impl ServerEvent {
             y: broadcaster.y(),
         }
     }
-    pub fn eject(victim: &Player, source: &Player) -> Self {
+    pub fn eject(victim: &Inhabitant, source: &Inhabitant) -> Self {
         Self::Eject {
             player_id: victim.id(),
             x: source.x(),
             y: source.y(),
         }
     }
-    pub fn death(player: &Player) -> Self {
+    pub fn death(player: &Inhabitant) -> Self {
         Self::Dead {
             player_id: player.id(),
         }
     }
-    pub fn new_player(player: &Player, level: u8, team: impl Into<String>) -> Self {
+    pub fn new_player(player: &Inhabitant, level: u8, team: impl Into<String>) -> Self {
         Self::NewPlayer {
             player_id: player.id(),
             x: player.x(),
@@ -109,24 +111,24 @@ impl ServerEvent {
             player_ids,
         }
     }
-    pub fn egg_lay(player: &Player) -> Self {
+    pub fn egg_lay(player: &Inhabitant) -> Self {
         Self::EggLay {
             player_id: player.id(),
         }
     }
-    pub fn resource_drop(player: &Player, resource: u8) -> Self {
+    pub fn resource_drop(player: &Inhabitant, resource: u8) -> Self {
         Self::ResourceDrop {
             player_id: player.id(),
             resource,
         }
     }
-    pub fn resource_collect(player: &Player, resource: u8) -> Self {
+    pub fn resource_collect(player: &Inhabitant, resource: u8) -> Self {
         Self::ResourceCollect {
             player_id: player.id(),
             resource,
         }
     }
-    pub fn egg_laid(egg_id: u32, player: &Player) -> Self {
+    pub fn egg_laid(egg_id: u32, player: &Inhabitant) -> Self {
         Self::EggLaid {
             egg_id,
             player_id: player.id(),
@@ -154,7 +156,8 @@ impl ServerEvent {
                 level,
                 team,
             } => Some(format!(
-                "pnw #{player_id} {x} {y} {orientation} {level} {team}\n"
+                "pnw #{player_id} {x} {y} {} {level} {team}\n",
+                orientation.as_protocol_k()
             )),
             ServerEvent::StartIncantation {
                 x,
@@ -208,7 +211,7 @@ impl ServerEvent {
     /// ```
     pub fn to_ai_string(
         &self,
-        for_player: Option<&Player>,
+        for_player: Option<&Inhabitant>,
         map_width: u32,
         map_height: u32,
     ) -> Option<String> {
@@ -261,7 +264,7 @@ mod tests {
         let event = ServerEvent::Dead { player_id: 5 };
         assert_eq!(event.to_gui_string(), Some("pdi #5\n".to_string()));
 
-        let for_player = Player::new(5, 0, 0, 1);
+        let for_player = Inhabitant::new(5, 0, 0, RelativeOrientation::Forward);
         assert_eq!(
             event.to_ai_string(Some(&for_player), 10, 10),
             Some("dead\n".to_string())
@@ -294,13 +297,13 @@ mod tests {
             y: 4,
         };
 
-        let facing_north = Player::new(1, 5, 5, 1);
+        let facing_north = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
         assert_eq!(
             event.to_ai_string(Some(&facing_north), 10, 10),
             Some("eject: 1\n".to_string())
         );
 
-        let facing_east = Player::new(1, 5, 5, 2);
+        let facing_east = Inhabitant::new(1, 5, 5, RelativeOrientation::ForwardLeft);
         assert_eq!(
             event.to_ai_string(Some(&facing_east), 10, 10),
             Some("eject: 3\n".to_string())
@@ -309,7 +312,7 @@ mod tests {
 
     #[test]
     fn test_constructors_use_player_fields() {
-        let broadcaster = Player::new(7, 2, 3, 1);
+        let broadcaster = Inhabitant::new(7, 2, 3, RelativeOrientation::Forward);
         let event = ServerEvent::message(&broadcaster, "hi");
         assert!(
             matches!(event, ServerEvent::Message { player_id: 7, message, x: 2, y: 3, } if message == "hi")
@@ -323,7 +326,7 @@ mod tests {
                 player_id: 1,
                 x: 3,
                 y: 4,
-                orientation: 2,
+                orientation: RelativeOrientation::ForwardLeft,
                 level: 5,
                 team: "TeamA".to_string()
             }
