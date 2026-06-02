@@ -44,6 +44,17 @@ set(SOURCES
         include/Systems/RenderSystem.hpp
         include/Graphics/AssetManager.hpp
         include/ECS/Register.hpp
+        include/Commands/ACommand.hpp
+        include/Commands/FactoryCommands.hpp
+        include/Commands/CommandTimeUpdate.hpp
+        include/Commands/CommandTileContent.hpp
+        include/Commands/CommandTeamNames.hpp
+        include/Commands/CommandPlayerPosition.hpp
+        include/Commands/CommandPlayerLevel.hpp
+        include/Commands/CommandPlayerInventory.hpp
+        include/Commands/CommandMapSize.hpp
+        include/Commands/CommandMapContent.hpp
+        include/Commands/FactoryCommands.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

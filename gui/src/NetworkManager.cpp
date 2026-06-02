@@ -8,6 +8,8 @@
 #include "NetworkManager.hpp"
 #include <iostream>
 #include <sstream>
+#include "Commands/FactoryCommands.hpp"
+
 
 namespace zappy {
 
@@ -84,43 +86,14 @@ void NetworkManager::_handleProtocolMessage(const std::string& message, Register
     std::string cmd;
     iss >> cmd;
 
-    if (cmd == "msz") {
-        _handleMapSize(message.substr(4), registry);
-    } else if (cmd == "bct") {
-        _handleTileContent(message.substr(4), registry);
-    } else if (cmd == "tna") {
-        _handleTeamNames(message.substr(4), registry);
-    } else if (cmd == "pnw") {
-        _handlePlayerConnection(message.substr(4), registry);
+    std::unique_ptr<ACommand> command = FactoryCommands::createCommand(cmd);
+
+    if (command) {
+        std::string args = message.substr(cmd.length() + 1);
+        command->execute(args, registry);
     } else {
-        // std::cout << "Unprocessed server command: " << cmd << std::endl;
+        std::cout << "Wrong command: " << cmd << std::endl;
     }
-}
-
-void NetworkManager::_handleMapSize(const std::string& args, Register& registry) {
-    std::istringstream iss(args);
-    int width, height;
-
-    if (iss >> width >> height) {
-        std::cout << "Protocol: Map size update " << width << "x" << height << std::endl;
-    }
-}
-
-void NetworkManager::_handleTileContent(const std::string& args, Register& registry) {
-    std::istringstream iss(args);
-    int x, y, q0, q1, q2, q3, q4, q5, q6;
-
-    if (iss >> x >> y >> q0 >> q1 >> q2 >> q3 >> q4 >> q5 >> q6) {
-        int tileEntity = registry.createEntity();
-        registry._tileTags[tileEntity] = TileTag{};
-        registry._positions[tileEntity] = Position{x, y};
-        registry._inventories[tileEntity] = Inventory{q0, q1, q2, q3, q4, q5, q6};
-        std::cout << "Tile created at (" << x << "," << y << ") with " << q0 << " food." << std::endl;
-    }
-}
-
-void NetworkManager::_handleTeamNames(const std::string& args, Register& registry) {
-    std::cout << "Protocol: Team name: " << args << std::endl;
 }
 
 void NetworkManager::_handlePlayerConnection(const std::string& args, Register& registry) {

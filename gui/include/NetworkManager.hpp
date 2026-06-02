@@ -145,8 +145,6 @@ class NetworkManager {
 
     /** @name Protocol Handlers */
     /** @{ */
-    void _handleMapSize(const std::string& args, Register& registry);
-    void _handleTileContent(const std::string& args, Register& registry);
     void _handleTeamNames(const std::string& args, Register& registry);
     void _handlePlayerConnection(const std::string& args, Register& registry);
     /** @} */
