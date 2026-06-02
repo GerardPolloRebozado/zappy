@@ -203,9 +203,10 @@ impl ServerEvent {
     /// # Examples
     ///
     /// ```
-    /// use zappy_server::game::Player; use zappy_server::protocol::ServerEvent;
+    /// use zappy_server::game::Inhabitant; use zappy_server::protocol::ServerEvent;
+    /// use zappy_server::utils::orientation::RelativeOrientation;
     ///
-    /// let player = Player::new(5, 0, 0, 1);
+    /// let player = Inhabitant::new(5, 0, 0, RelativeOrientation::Forward);
     /// let event = ServerEvent::Dead { player_id: 5 };
     /// assert_eq!(event.to_ai_string(Some(&player), 10, 10), Some("dead\n".to_string()));
     /// ```
