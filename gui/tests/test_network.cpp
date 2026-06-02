@@ -12,7 +12,9 @@ Test(tcp_socket, connection_failure) {
 }
 
 Test(network_manager, connection_failure) {
-    zappy::NetworkManager network;
+    zappy::Register reg;
+    zappy::RenderSystem rs;
+    zappy::NetworkManager network(reg, rs);
     // Connecting to a likely closed port on localhost
     cr_assert_neq(network.connect("127.0.0.1", 12345), true,
                   "NetworkManager should not connect to a closed port");
@@ -25,6 +27,8 @@ Test(tcp_socket, initial_state) {
 }
 
 Test(network_manager, initial_state) {
-    zappy::NetworkManager network;
+    zappy::Register reg;
+    zappy::RenderSystem rs;
+    zappy::NetworkManager network(reg, rs);
     cr_assert_eq(network.isConnected(), false, "NetworkManager should be initially disconnected");
 }

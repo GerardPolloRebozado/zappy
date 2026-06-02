@@ -44,8 +44,8 @@ impl Server {
             _users: HashMap::new(),
             _teams: HashMap::new(),
             map: Map {
-                width: 10,
-                height: 10,
+                width: 100,
+                height: 100,
             },
             _freq: 100,
             game_start: Date::now().to_timestamp(),
@@ -116,25 +116,7 @@ impl Server {
             {
                 match client.read_data() {
                     Some(msg) => {
-                        let trimmed = msg.trim();
-                        if trimmed == "/disconnect" {
-                            disconnected.push(uuid);
-                            continue;
-                        } else {
-                            match trimmed.parse::<Request>() {
-                                Ok(req) => {
-                                    requests_to_read.push((uuid.clone(), req));
-                                }
-                                Err(_) => {
-                                    if let Some(client) = self.clients.get_mut(&uuid) {
-                                        client.pending_responses.push(Response {
-                                            code: ResponseCode::Status(StatusCode::Ko),
-                                            data: None,
-                                        });
-                                    }
-                                }
-                            }
-                        }
+                        requests_to_read.push((uuid.clone(), msg));
                     }
                     None => disconnected.push(uuid.clone()),
                 }
@@ -144,8 +126,26 @@ impl Server {
             }
         }
 
-        for (uuid, req) in requests_to_read {
-            self.handle_request(&uuid, req);
+        for (uuid, msg) in requests_to_read {
+            for line in msg.split('\n') {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                match trimmed.parse::<Request>() {
+                    Ok(req) => {
+                        self.handle_request(&uuid, req);
+                    }
+                    Err(_) => {
+                        if let Some(client) = self.clients.get_mut(&uuid) {
+                            client.pending_responses.push(Response {
+                                code: ResponseCode::Status(StatusCode::Ko),
+                                data: None,
+                            });
+                        }
+                    }
+                }
+            }
         }
 
         for uuid in requests_to_write {
@@ -255,6 +255,36 @@ impl Server {
                 }
             }
 
+            Command::Bct(x, y) => {
+                if let Some(data) = self.get_tile_content(x, y)
+                    && let Some(client) = self.clients.get_mut(client_uuid)
+                {
+                    client.pending_responses.push(Response::new(
+                        ResponseCode::Status(StatusCode::Ok),
+                        Some(data),
+                    ));
+                }
+            }
+
+            Command::Mct => {
+                println!("Protocol: Received mct from {}", client_uuid);
+                let mut responses = Vec::new();
+                for y in 0..self.map.height {
+                    for x in 0..self.map.width {
+                        if let Some(data) = self.get_tile_content(x, y) {
+                            responses.push(data);
+                        }
+                    }
+                }
+                if let Some(client) = self.clients.get_mut(client_uuid) {
+                    for r in responses {
+                        client
+                            .pending_responses
+                            .push(Response::new(ResponseCode::Status(StatusCode::Ok), Some(r)));
+                    }
+                }
+            }
+
             Command::Unknown(_) => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
                     client.pending_responses.push(Response {
@@ -298,5 +328,59 @@ impl Server {
     }
 
     pub fn save(&mut self) {}
-    pub fn load(&mut self) {}
+    pub fn load(&mut self) {
+        crate::ecs::systems::tile_system::setup_map(
+            &mut self.world,
+            self.map.width,
+            self.map.height,
+        );
+    }
+
+    fn get_tile_content(&self, x: u32, y: u32) -> Option<String> {
+        use crate::ecs::components::inventory::Inventory;
+        use crate::ecs::components::position::Position;
+        use crate::ecs::components::terrain_type::TerrainType;
+        use crate::ecs::components::tile::Tile;
+
+        let tiles = self.world.get_storage::<Tile>()?;
+        let positions = self.world.get_storage::<Position>()?;
+        let inventories = self.world.get_storage::<Inventory>()?;
+        let terrains = self.world.get_storage::<TerrainType>()?;
+
+        for (ent, _tile) in tiles.iter() {
+            if let Some(pos) = positions.get(*ent)
+                && pos.x == x
+                && pos.y == y
+            {
+                let inv = inventories.get(*ent)?;
+                let terrain = terrains.get(*ent)?;
+
+                let food = inv.items.get(&Resource::Food).unwrap_or(&0);
+                let linemate = inv.items.get(&Resource::Linemate).unwrap_or(&0);
+                let deraumere = inv.items.get(&Resource::Deraumere).unwrap_or(&0);
+                let sibur = inv.items.get(&Resource::Sibur).unwrap_or(&0);
+                let mendiane = inv.items.get(&Resource::Mendiane).unwrap_or(&0);
+                let phiras = inv.items.get(&Resource::Phiras).unwrap_or(&0);
+                let thystame = inv.items.get(&Resource::Thystame).unwrap_or(&0);
+
+                let t_type = match terrain {
+                    TerrainType::Grass => 0,
+                    TerrainType::Mountain => 1,
+                    TerrainType::Water => 2,
+                    TerrainType::Sand => 3,
+                    TerrainType::Forest => 4,
+                    TerrainType::ObsidianBarrens => 5,
+                    TerrainType::LuminousOrchards => 6,
+                    TerrainType::CrystalCanyons => 7,
+                    TerrainType::MagneticTundra => 8,
+                };
+
+                return Some(format!(
+                    "bct {} {} {} {} {} {} {} {} {} {}",
+                    x, y, food, linemate, deraumere, sibur, mendiane, phiras, thystame, t_type
+                ));
+            }
+        }
+        None
+    }
 }

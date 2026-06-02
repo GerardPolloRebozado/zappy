@@ -1,10 +1,10 @@
+#include "ECS/Register.hpp"
 #include "NetworkManager.hpp"
+#include "Systems/RenderSystem.hpp"
 #include "raylib-cpp.hpp"
 #include <iostream>
 #include <string>
 #include <vector>
-#include "ECS/Register.hpp"
-#include "Systems/RenderSystem.hpp"
 
 void print_usage() {
     std::cout << "USAGE: ./zappy_gui -p port -h machine\n\n";
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 
     try {
         int port = std::stoi(portStr);
-        zappy::NetworkManager network;
+        zappy::NetworkManager network(registry, renderSys);
 
         if (!network.connect(machine, port)) {
             std::cerr << "Failed to connect to " << machine << ":" << port << "\n";
@@ -52,9 +52,8 @@ int main(int argc, char** argv) {
         raylib::Window window(1280, 720, "Zappy GUI");
         SetTargetFPS(60);
 
-        int testEntity = registry.createEntity();
-        registry._positions[testEntity] = {640, 360};
-        registry._bots[testEntity] = {1, 1, 1, "TeamA"};
+        // Map will be populated via network (mct command)
+        // renderSys.camera position will be adjusted once msz is received
 
         while (!window.ShouldClose()) {
 

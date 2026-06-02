@@ -38,6 +38,7 @@ set(SOURCES
         src/main.cpp
         src/NetworkManager.cpp
         src/Network/TcpSocket.cpp
+        src/Systems/RenderSystem.cpp
         include/Components/ComponentShared.hpp
         include/Components/ComponentBot.hpp
         include/Components/ComponentTile.hpp
@@ -87,4 +88,4 @@ add_custom_target(fclean
 )
 
 enable_testing()
-#add_subdirectory(tests) remove later when tests are added
+add_subdirectory(tests)
