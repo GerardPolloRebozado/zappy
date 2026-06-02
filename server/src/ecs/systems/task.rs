@@ -17,23 +17,33 @@ pub fn any_finished_task(world: &mut World, freq: u32) -> Vec<(String, Response)
     let task_lists = task_lists.unwrap();
 
     for (_, task_list) in task_lists.iter_mut() {
-        if let Some(first_task) = task_list.vector.first_mut() {
-            if first_task.finish_on == TASK_NOT_STARTED {
-                first_task.finish_on = Date::now().to_timestamp()
-                    + (first_task.task_type.duration() / u64::from(freq));
-            } else if first_task.is_finished() {
-                if let Some(uuid) = &task_list.client_uuid {
-                    responses.push((
-                        uuid.clone(),
-                        Response::new(ResponseCode::Status(StatusCode::Ok), None),
-                    ));
-                }
-                task_list.vector.remove(0);
-                if let Some(new_first_task) = task_list.vector.first_mut() {
-                    new_first_task.finish_on = Date::now().to_timestamp()
-                        + (new_first_task.task_type.duration() / u64::from(freq))
-                }
-            }
+        let first_task = match task_list.vector.first_mut() {
+            Some(t) => t,
+            None => continue,
+        };
+
+        if first_task.finish_on == TASK_NOT_STARTED {
+            first_task.finish_on =
+                Date::now().to_timestamp() + (first_task.task_type.duration() / u64::from(freq));
+            continue;
+        }
+
+        if !first_task.is_finished() {
+            continue;
+        }
+
+        if let Some(uuid) = &task_list.client_uuid {
+            responses.push((
+                uuid.clone(),
+                Response::new(ResponseCode::Status(StatusCode::Ok), None),
+            ));
+        }
+
+        task_list.vector.remove(0);
+
+        if let Some(new_first_task) = task_list.vector.first_mut() {
+            new_first_task.finish_on =
+                Date::now().to_timestamp() + (new_first_task.task_type.duration() / u64::from(freq))
         }
     }
     responses
