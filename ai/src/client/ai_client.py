@@ -105,5 +105,13 @@ class ZappyAiClient:
         commands.broadcast(self, text)
         return self.wait_for_response()
 
+    def connect_nbr(self):
+        commands.connect_nbr(self)
+        resp = self.wait_for_response()
+        try:
+            return int(resp) if resp else None
+        except ValueError:
+            return resp
+
     def close(self):
         self.connection.close()
