@@ -112,8 +112,9 @@ class RenderSystem {
     raylib::Texture2D _mouseTex;        ///< Standard mouse cursor texture.
     raylib::Texture2D _mousePressedTex; ///< Pressed state mouse cursor texture.
 
-    int _hoveredX = -999999; ///< Current hovered tile X coordinate.
-    int _hoveredZ = -999999; ///< Current hovered tile Z coordinate.
+    static constexpr int InvalidTileCoord = std::numeric_limits<int>::min();
+    int _hoveredX = InvalidTileCoord;
+    int _hoveredZ = InvalidTileCoord;
 };
 } // namespace zappy
 
