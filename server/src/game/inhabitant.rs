@@ -2,10 +2,10 @@ use crate::ecs::components::position::Position;
 use crate::ecs::storage::{Entity, World};
 use crate::utils::orientation::RelativeOrientation;
 
-/// A read-only snapshot of a player's state on the game map.
+/// A read-only snapshot of an inhabitant's state on the game map.
 ///
 /// This struct provides a view of an entity's components.
-/// Modifying a `Player` instance does not affect the ECS storage.
+/// Modifying an `Inhabitant` instance does not affect the ECS storage.
 /// Fields are private to prevent accidental local modifications that
 /// wouldn't be reflected in the "real" data.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -18,7 +18,7 @@ pub struct Inhabitant {
 }
 
 impl Inhabitant {
-    /// Creates a player snapshot at the given position and orientation.
+    /// Creates an inhabitant snapshot at the given position and orientation.
     pub fn new(id: u32, x: u32, y: u32, orientation: RelativeOrientation) -> Self {
         Self {
             id,
@@ -28,7 +28,7 @@ impl Inhabitant {
         }
     }
 
-    /// Fetches a player's state from the ECS world as a read-only snapshot.
+    /// Fetches an inhabitant's state from the ECS world as a read-only snapshot.
     ///
     /// Returns `None` if the entity is missing required components.
     pub fn get(entity: Entity, world: &World) -> Option<Self> {
