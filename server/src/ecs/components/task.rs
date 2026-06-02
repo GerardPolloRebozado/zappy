@@ -34,6 +34,8 @@ impl TaskType {
     }
 }
 
+pub const TASK_NOT_STARTED: u64 = 0;
+
 #[derive(Clone)]
 /// Task type and whenn will it finish if started now, if finish_on = 0 then the task is not started yet
 pub struct Task {
@@ -43,7 +45,7 @@ pub struct Task {
 
 impl Task {
     pub fn is_finished(&self) -> bool {
-        self.finish_on != 0 && self.finish_on <= Date::now().to_timestamp()
+        self.finish_on != TASK_NOT_STARTED && self.finish_on <= Date::now().to_timestamp()
     }
 }
 
