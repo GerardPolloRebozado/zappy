@@ -84,8 +84,8 @@ class RenderSystem {
     void _renderTerrain(Register& r);
 
     /**
-     * @brief Renders the inhabitants (bots) in the world.
-     * @param r The registry to fetch bot data from.
+     * @brief Renders the inhabitants in the world.
+     * @param r The registry to fetch inhabitant data from.
      */
     void _renderInhabitants(Register& r);
 
