@@ -25,10 +25,12 @@ namespace zappy {
         std::unordered_map<int, TerrainType> _terrainTypes;
         std::unordered_map<int, BotData> _bots;
         std::unordered_map<int, Race> _races;
+        std::unordered_map<int, Size> _sizes;
 
         std::unordered_map<int, TileTag> _tileTags;
-        std::unordered_map<int, BotTag> _botTags;
+        std::unordered_map<int, InhabitantTag> _botTags;
         std::unordered_map<int, EggTag> _eggTags;
+        std::unordered_map<int, EggTag> _mapTags;
 
         int createEntity() {
             if (!_deadEntities.empty()) {
@@ -47,10 +49,12 @@ namespace zappy {
             _terrainTypes.erase(entity);
             _bots.erase(entity);
             _races.erase(entity);
+            _sizes.erase(entity);
 
             _tileTags.erase(entity);
             _botTags.erase(entity);
             _eggTags.erase(entity);
+            _mapTags.erase(entity);
 
 
             _deadEntities.push(entity);

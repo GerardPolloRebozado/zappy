@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 
     try {
         int port = std::stoi(portStr);
-        zappy::NetworkManager network(registry, renderSys);
+        zappy::NetworkManager network(registry);
 
         if (!network.connect(machine, port)) {
             std::cerr << "Failed to connect to " << machine << ":" << port << "\n";
