@@ -113,5 +113,9 @@ class ZappyAiClient:
         except ValueError:
             return resp
 
+    def fork(self):
+        commands.fork(self)
+        return self.wait_for_response()
+
     def close(self):
         self.connection.close()
