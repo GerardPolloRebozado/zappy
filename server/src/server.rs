@@ -29,19 +29,23 @@ pub struct Server {
 
 impl Default for Server {
     fn default() -> Self {
-        Self::new()
+        Self::new(Config::default())
     }
 }
 
 impl Server {
-    pub fn new() -> Server {
+    pub fn new(config: Config) -> Server {
         Server {
-            listener: TcpListener::bind("0.0.0.0:8080")
-                .expect("Error starting server on port 8080"),
+            listener: TcpListener::bind(format!("0.0.0.0:{}", config.port))
+                .expect("Error starting server"),
             clients: HashMap::new(),
             _users: HashMap::new(),
             _teams: HashMap::new(),
-            _freq: 100,
+            map: Map {
+                width: config.width,
+                height: config.height,
+            },
+            _freq: config.freq,
             game_start: Date::now().to_timestamp(),
             world: World::new(),
         }
