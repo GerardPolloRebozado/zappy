@@ -55,7 +55,7 @@ mod tests {
         let name = "Test Team".to_string();
         let team = Team::new(name.clone());
         assert_eq!(team.name, name);
-        assert!(team.uuid.len() > 0);
+        assert!(!team.uuid.is_empty());
         assert!(team.users_uuid.is_empty());
     }
 
