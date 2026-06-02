@@ -166,7 +166,7 @@ class ZappyAiClient:
     def take(self, object):
         """
         Calls command take
-        :param object: object to take
+        :param object: Object to take
         :return: ok/ko
         """
         commands.take(self, object)
