@@ -7,10 +7,16 @@
 #ifndef ZAPPY_GUI_COMPONENTSHARED_HPP
 #define ZAPPY_GUI_COMPONENTSHARED_HPP
 #include "raylib-cpp.hpp"
+
 namespace zappy {
     struct Position {
         int x;
         int y;
+    };
+
+    struct Size {
+        int width;
+        int height;
     };
 
     struct Inventory {

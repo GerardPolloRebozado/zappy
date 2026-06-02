@@ -9,6 +9,7 @@
 #include "ECS/Register.hpp"
 #include <sstream>
 #include <iostream>
+
 namespace zappy {
     class ACommand {
     public:
