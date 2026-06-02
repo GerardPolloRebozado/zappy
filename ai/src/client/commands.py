@@ -85,3 +85,11 @@ def set(client, object):
     Response: ok/ko
     """
     client.connection.send_line(f"Set {object}")
+    
+def incantation(client):
+    """
+    Start incantation
+    Time limit: 300/f
+    Response: Elevation underway/Current level: k/ko
+    """
+    client.connection.send_line("Incantation")
