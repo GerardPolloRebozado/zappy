@@ -83,6 +83,96 @@ pub fn parse_args(input: &str) -> Vec<String> {
     input.split_whitespace().map(|s| s.to_string()).collect()
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            port: 8080,
+            width: 100,
+            height: 100,
+            names: vec!["team".to_string()],
+            clients_nb: 1,
+            freq: 100
+        }
+    }
+}
+pub struct Config {
+    pub port: u16,
+    pub width: u32,
+    pub height: u32,
+    pub names: Vec<String>,
+    pub clients_nb: u32,
+    pub freq: u32,
+}
+
+pub fn parse_server_args(args: &[String]) -> Result<Config, String> {
+let mut port: Option<u16> = None;
+let mut width: Option<u32> = None;
+let mut height: Option<u32> = None;
+let mut names: Option<Vec<String>> = None;
+let mut clients_nb: Option<u32> = None;
+let mut freq: Option<u32> = None;
+let mut i = 1;
+
+while i < args.len() {
+    match args[i].as_str() {
+        "-p" => {
+            i += 1;
+            let value = args.get(i).ok_or("Missing value for -p")?;
+            port = Some(value.parse::<u16>().map_err(|_| "Invalid value for -p")?);
+        }
+        "-x" => {
+            i += 1;
+            let value = args.get(i).ok_or("Missing value for -x")?;
+            width = Some(value.parse::<u32>().map_err(|_| "Invalid value for -x")?);
+        }
+        "-y" => {
+            i += 1;
+            let value = args.get(i).ok_or("Missing value for -y")?;
+            height = Some(value.parse::<u32>().map_err(|_| "Invalid value for -y")?);
+        }
+        "-c" => {
+            i += 1;
+            let value = args.get(i).ok_or("Missing value for -c")?;
+            clients_nb = Some(value.parse::<u32>().map_err(|_| "Invalid value for -c")?);
+        }
+        "-f" => {
+            i += 1;
+            let value = args.get(i).ok_or("Missing value for -f")?;
+            freq = Some(value.parse::<u32>().map_err(|_| "Invalid value for -f")?);
+        }
+        "-n" => {
+            i += 1;
+            let mut team_names = Vec::new();
+
+            while i < args.len() && !args[i].starts_with('-') {
+                team_names.push(args[i].clone());
+                i += 1;
+            }
+
+            if team_names.is_empty() {
+                return Err ("Missing team names after -n".into());
+            }
+
+            names = Some(team_names);
+            continue;
+        }
+        unknown => {
+            return Err(format!("Unknown option: {unknown}"));
+        }
+    }
+    i += 1;
+}
+
+    Ok(Config {
+        port: port.ok_or("Missing -p")?,
+        width: width.unwrap_or(100),
+        height: height.unwrap_or(100),
+        clients_nb: clients_nb.ok_or("Missing -c")?,
+        names: names.unwrap_or_else(|| vec!["team".to_string()]),
+        freq: freq.unwrap_or(100),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
