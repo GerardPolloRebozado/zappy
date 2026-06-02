@@ -2,7 +2,9 @@ pub mod client;
 pub mod signal;
 
 use crate::ecs::builders::inhabitants::build_inhabitant;
+use crate::ecs::components::task::{Task, TaskList, TaskType};
 use crate::ecs::storage::World;
+use crate::ecs::systems::task::any_finished_task;
 use crate::game::*;
 use crate::protocol::{Command, Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::server::client::{Client, ClientState};
@@ -89,6 +91,13 @@ impl Server {
         }
 
         self.process_client_events(client_revents, client_keys);
+
+        let finished_tasks = any_finished_task(&mut self.world, self._freq);
+        for (uuid, response) in finished_tasks {
+            if let Some(client) = self.clients.get_mut(&uuid) {
+                client.pending_responses.push(response);
+            }
+        }
     }
 
     pub fn accept_connections(&mut self) {
@@ -165,6 +174,27 @@ impl Server {
         }
     }
 
+    fn queue_task(&mut self, client_uuid: &str, task_type: TaskType) {
+        let client = self.clients.get(client_uuid).unwrap();
+
+        let Some(entity) = client.entity else {
+            return;
+        };
+
+        let Some(task_list) = self.world.get_component_mut::<TaskList>(entity) else {
+            return;
+        };
+
+        if task_list.vector.len() >= 10 {
+            return;
+        }
+
+        task_list.vector.push(Task {
+            task_type,
+            finish_on: 0,
+        });
+    }
+
     pub fn handle_request(&mut self, client_uuid: &str, request: Request) {
         let client_state = {
             let client = self.clients.get(client_uuid).unwrap();
@@ -186,7 +216,11 @@ impl Server {
                             Some("1".to_string()),
                         ));
 
-                        build_inhabitant(&mut self.world);
+                        let entity = build_inhabitant(&mut self.world);
+                        client.entity = Some(entity);
+                        if let Some(task_list) = self.world.get_component_mut::<TaskList>(entity) {
+                            task_list.client_uuid = Some(client_uuid.to_string());
+                        }
 
                         client.pending_responses.push(Response::new(
                             ResponseCode::Status(StatusCode::Ok),
@@ -208,43 +242,25 @@ impl Server {
         }
 
         match request.command {
-            Command::Forward => {
-                if let Some(client) = self.clients.get_mut(client_uuid) {
-                    client
-                        .pending_responses
-                        .push(Response::new(ResponseCode::Status(StatusCode::Ok), None));
-                }
-            }
-
-            // TODO: Implement Look command logic
-            Command::Look => {
+            Command::Forward => self.queue_task(client_uuid, TaskType::Forward),
+            Command::Right => self.queue_task(client_uuid, TaskType::TurnRight),
+            Command::Left => self.queue_task(client_uuid, TaskType::TurnLeft),
+            Command::Look => self.queue_task(client_uuid, TaskType::Look),
+            Command::Inventory => self.queue_task(client_uuid, TaskType::Inventory),
+            Command::Broadcast(_) => self.queue_task(client_uuid, TaskType::BroadcastText),
+            Command::ConnectNbr => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
                     client.pending_responses.push(Response::new(
                         ResponseCode::Status(StatusCode::Ok),
-                        Some("[player, food, ...]".to_string()),
+                        Some("1".to_string()),
                     ));
                 }
             }
-
-            // TODO: Implement Inventory command logic
-            Command::Inventory => {
-                if let Some(client) = self.clients.get_mut(client_uuid) {
-                    client.pending_responses.push(Response::new(
-                        ResponseCode::Status(StatusCode::Ok),
-                        Some("[food 10, linemate 0, ...]".to_string()),
-                    ));
-                }
-            }
-
-            // TODO: Implement Incantation command logic
-            Command::Incantation => {
-                if let Some(client) = self.clients.get_mut(client_uuid) {
-                    client.pending_responses.push(Response::new(
-                        ResponseCode::Status(StatusCode::Ok),
-                        Some("Elevation underway".to_string()),
-                    ));
-                }
-            }
+            Command::Fork => self.queue_task(client_uuid, TaskType::Fork),
+            Command::Eject => self.queue_task(client_uuid, TaskType::Eject),
+            Command::Take(_) => self.queue_task(client_uuid, TaskType::Take),
+            Command::Set(_) => self.queue_task(client_uuid, TaskType::Drop),
+            Command::Incantation => self.queue_task(client_uuid, TaskType::Incantation),
 
             Command::Msz => {
                 if let Some(client) = self.clients.get_mut(client_uuid) {
@@ -382,5 +398,51 @@ impl Server {
             }
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::TcpListener;
+
+    #[test]
+    fn test_queue_task_limit() {
+        use crate::ecs::components::inventory::Inventory;
+        use crate::ecs::components::position::Position;
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+
+        let mut server = Server {
+            listener,
+            clients: HashMap::new(),
+            _users: HashMap::new(),
+            _teams: HashMap::new(),
+            map: Map {
+                width: 10,
+                height: 10,
+            },
+            _freq: 100,
+            game_start: 0,
+            world: World::new(),
+        };
+        server.world.register_component::<TaskList>();
+        server.world.register_component::<Position>();
+        server.world.register_component::<Inventory>();
+
+        let client_socket = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+        let mut client = Client::new(client_socket);
+        let entity = build_inhabitant(&mut server.world);
+        client.entity = Some(entity);
+        let uuid = client.uuid.clone();
+        server.clients.insert(uuid.clone(), client);
+
+        for _ in 0..15 {
+            server.queue_task(&uuid, TaskType::Forward);
+        }
+
+        let task_list = server.world.get_component::<TaskList>(entity).unwrap();
+        assert_eq!(task_list.vector.len(), 10);
     }
 }
