@@ -8,11 +8,12 @@ def run_client(client):
     """
     try:
         while not client.is_dead:
-            # -- testing
-            #res = client.eject()
+            # -- testing either take or set
+            #res = client.take("deraumere")
+            #res = client.set("deraumere")
             
             # -- if not testing just waits for server to say something
-            res = client.wait_for_response()
+            #res = client.wait_for_response()
 
             if res is None:
                 print("Server closed the connection.")

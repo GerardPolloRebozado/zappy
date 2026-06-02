@@ -69,3 +69,19 @@ def eject(client):
     Response: ok/ko
     """
     client.connection.send_line("Eject")
+
+def take(client, object):
+    """
+    Take an object from the tile.
+    Time limit: 7/f
+    Response: ok/ko
+    """
+    client.connection.send_line(f"Take {object}")
+
+def set(client, object):
+    """
+    Sets an object on the tile.
+    Time limit: 7/f
+    Response: ok/ko
+    """
+    client.connection.send_line(f"Set {object}")
