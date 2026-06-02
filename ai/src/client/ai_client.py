@@ -165,7 +165,7 @@ class ZappyAiClient:
 
     def incantation(self):
         """
-        Calls command incantation
+        Calls command incantation, if the incantation starts updates the level of the player
         :return: When the incantation is underway -> current level / ko
         """
         commands.incantation(self)
