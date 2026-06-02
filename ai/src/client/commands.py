@@ -53,3 +53,11 @@ def connect_nbr(client):
     Response: value
     """
     client.connection.send_line("Connect_nbr")
+
+def fork(client):
+    """
+    Forks a player
+    Time limit: 42/f
+    Response: ok
+    """
+    client.connection.send_line("Fork")
