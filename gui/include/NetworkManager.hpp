@@ -14,7 +14,6 @@
 #define NETWORK_MANAGER_HPP_
 
 #include "Network/TcpSocket.hpp"
-#include "Systems/RenderSystem.hpp"
 #include <functional>
 #include <map>
 #include <queue>
@@ -34,7 +33,7 @@ class NetworkManager {
     /**
      * @brief Default constructor.
      */
-    NetworkManager(Register& registry, RenderSystem& renderSystem);
+    NetworkManager(Register& registry);
 
     /**
      * @brief Destructor. Ensures disconnection.
@@ -132,7 +131,6 @@ class NetworkManager {
     TcpSocket _socket;           /**< The underlying TCP socket. */
     bool _isHandshakeDone;       /**< Flag indicating if the Zappy handshake is complete. */
     Register& _registry;         /**< The ECS registry for managing game entities and components. */
-    RenderSystem& _renderSystem; /**< Rendering system for updating visual state (camera, etc.) */
 
     /**
      * @brief Routes a received protocol message to the appropriate handler.
@@ -148,12 +146,6 @@ class NetworkManager {
 
     /** @name Protocol Handlers */
     /** @{ */
-    /** @brief Handles map size update (msz). */
-    void _handleMapSize(const std::string& args);
-    /** @brief Handles tile content update (bct). */
-    void _handleTileContent(const std::string& args);
-    /** @brief Handles team names list (tna). */
-    void _handleTeamNames(const std::string& args, Register& registry);
     /** @brief Handles new player connection (pnw). */
     void _handlePlayerConnection(const std::string& args, Register& registry);
     /** @} */
