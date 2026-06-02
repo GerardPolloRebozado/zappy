@@ -101,18 +101,19 @@ fn shortest_delta(from: u32, to: u32, size: i32) -> i32 {
     }
 }
 
-/// Computes the relative orientation `k` from a player to a map tile.
+/// Computes the relative orientation `k` from an inhabitant to a map tile.
 ///
 /// The result matches the Zappy protocol: values `1`–`8` for the eight
-/// surrounding tiles, and `0` when the target tile is the player's own tile.
-/// Orientation is expressed relative to the player's current orientation.
+/// surrounding tiles, and `0` when the target tile is the inhabitant's own tile.
+/// Orientation is expressed relative to the inhabitant's current orientation.
 ///
 /// # Examples
 ///
 /// ```
-/// use zappy_server::game::Player; use zappy_server::utils::orientation::calc_k;
+/// use zappy_server::game::Inhabitant; use zappy_server::utils::orientation::calc_k;
+/// use zappy_server::utils::orientation::RelativeOrientation;
 ///
-/// let player = Player::new(1, 5, 5, 1);
+/// let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
 /// assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
 /// ```
 pub fn calc_k(
