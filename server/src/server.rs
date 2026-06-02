@@ -186,7 +186,7 @@ impl Server {
                             Some("1".to_string()),
                         ));
 
-                        build_inhabitant(&mut self.world);
+                        build_inhabitant(0, 0, 1, &mut self.world);
 
                         client.pending_responses.push(Response::new(
                             ResponseCode::Status(StatusCode::Ok),

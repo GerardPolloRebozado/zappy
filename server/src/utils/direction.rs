@@ -117,14 +117,14 @@ pub fn calc_k(
     map_width: u32,
     map_height: u32,
 ) -> u32 {
-    let dx = shortest_delta(for_player.x, from_x, map_width as i32);
-    let dy = shortest_delta(for_player.y, from_y, map_height as i32);
+    let dx = shortest_delta(for_player.x(), from_x, map_width as i32);
+    let dy = shortest_delta(for_player.y(), from_y, map_height as i32);
 
     if dx == 0 && dy == 0 {
         return RelativeDirection::SameTile.as_protocol_k();
     }
 
-    let (relative_x, relative_y) = world_delta_to_relative_offset(for_player.orientation, dx, dy);
+    let (relative_x, relative_y) = world_delta_to_relative_offset(for_player.orientation(), dx, dy);
     if relative_x == 0 && relative_y == 0 {
         return RelativeDirection::Forward.as_protocol_k();
     }
