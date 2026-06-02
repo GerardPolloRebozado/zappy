@@ -174,6 +174,27 @@ impl Server {
         }
     }
 
+    /// Queues a new task for the specified client.
+    ///
+    /// The task is appended to the client's [`TaskList`] if all of the following
+    /// conditions are met:
+    ///
+    /// - The client exists in `self.clients`.
+    /// - The client is associated with an entity.
+    /// - The entity has a [`TaskList`] component.
+    /// - The task queue contains fewer than 10 tasks.
+    ///
+    /// If any of these conditions are not satisfied, the function returns early
+    /// without modifying the task list.
+    ///
+    /// Newly queued tasks are initialized with:
+    /// - `task_type` set to the provided value.
+    /// - `finish_on` set to `0`, indicating the task has not yet been scheduled
+    ///   or completed.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `client_uuid` does not exist in `self.clients`.
     fn queue_task(&mut self, client_uuid: &str, task_type: TaskType) {
         let client = self.clients.get(client_uuid).unwrap();
 
