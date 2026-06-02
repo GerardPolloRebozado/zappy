@@ -117,5 +117,9 @@ class ZappyAiClient:
         commands.fork(self)
         return self.wait_for_response()
 
+    def eject(self):
+        commands.eject(self)
+        return self.wait_for_response()
+
     def close(self):
         self.connection.close()
