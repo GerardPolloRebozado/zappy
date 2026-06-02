@@ -1,24 +1,21 @@
 pub mod client;
+pub mod commands;
+pub mod map;
+pub mod network;
 pub mod signal;
 
-use crate::ecs::builders::inhabitants::build_inhabitant;
-use crate::ecs::components::task::{TASK_NOT_STARTED, Task, TaskList, TaskType};
+use crate::ecs::components::task::TaskType;
 use crate::ecs::storage::World;
 use crate::ecs::systems::task::any_finished_task;
 use crate::game::*;
-use crate::protocol::{Command, Request, Response, ResponseCode, ServerEvent, StatusCode};
+use crate::protocol::{Request, Response, ServerEvent};
 use crate::server::client::{Client, ClientState};
-use crate::utils::orientation::RelativeOrientation;
+pub use crate::server::map::Map;
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
 use std::net::TcpListener;
 use std::os::fd::AsFd;
-
-pub struct Map {
-    pub width: u32,
-    pub height: u32,
-}
 
 pub struct Server {
     pub listener: TcpListener,
@@ -29,7 +26,6 @@ pub struct Server {
     pub _freq: u32,
     pub game_start: u64,
     pub world: World,
-    // TODO: Add a task scheduler for time management (action / f delay)
 }
 
 impl Default for Server {
@@ -102,11 +98,7 @@ impl Server {
     }
 
     pub fn accept_connections(&mut self) {
-        if let Ok((mut socket, _addr)) = self.listener.accept() {
-            let _ = socket.write_all(b"WELCOME\n");
-            let new_client = Client::new(socket);
-            self.clients.insert(new_client.uuid.clone(), new_client);
-        }
+        network::accept_connections(self);
     }
 
     pub fn process_client_events(
@@ -114,241 +106,15 @@ impl Server {
         client_revents: Vec<PollFlags>,
         client_keys: Vec<String>,
     ) {
-        let mut disconnected = Vec::new();
-        let mut requests_to_read = Vec::new();
-        let mut requests_to_write = Vec::new();
-
-        for (i, uuid) in client_keys.into_iter().enumerate() {
-            let revents = client_revents[i];
-
-            if revents.contains(PollFlags::POLLOUT) {
-                requests_to_write.push(uuid.clone());
-            }
-
-            if !revents.contains(PollFlags::POLLIN) {
-                continue;
-            }
-
-            let client = match self.clients.get_mut(&uuid) {
-                Some(c) => c,
-                None => continue,
-            };
-
-            match client.read_data() {
-                Some(msg) => requests_to_read.push((uuid.clone(), msg)),
-                None => disconnected.push(uuid.clone()),
-            }
-        }
-
-        for (uuid, msg) in requests_to_read {
-            for line in msg.split('\n') {
-                let trimmed = line.trim();
-                if trimmed.is_empty() {
-                    continue;
-                }
-
-                let req = match trimmed.parse::<Request>() {
-                    Ok(req) => req,
-                    Err(_) => {
-                        if let Some(client) = self.clients.get_mut(&uuid) {
-                            client.pending_responses.push(Response {
-                                code: ResponseCode::Status(StatusCode::Ko),
-                                data: None,
-                            });
-                        }
-                        continue;
-                    }
-                };
-
-                self.handle_request(&uuid, req);
-            }
-        }
-
-        for uuid in requests_to_write {
-            let client = self.clients.get_mut(&uuid);
-            if let Some(c) = client {
-                let responses: Vec<Response> = c.pending_responses.drain(..).collect();
-                for response in responses {
-                    self.handle_response(uuid.as_str(), response);
-                }
-            }
-        }
-
-        for uuid in disconnected {
-            if let Some(_client) = self.clients.remove(&uuid) {
-                // TODO: decide what to do when a user disconnects
-            }
-        }
+        network::process_client_events(self, client_revents, client_keys);
     }
 
-    fn queue_task(&mut self, client_uuid: &str, task_type: TaskType) {
-        let client = match self.clients.get(client_uuid) {
-            Some(c) => c,
-            None => return,
-        };
-
-        let entity = match client.entity {
-            Some(e) => e,
-            None => return,
-        };
-
-        let task_list = match self.world.get_component_mut::<TaskList>(entity) {
-            Some(tl) => tl,
-            None => return,
-        };
-
-        if task_list.vector.len() >= 10 {
-            return;
-        }
-
-        task_list.vector.push(Task {
-            task_type,
-            finish_on: TASK_NOT_STARTED,
-        });
+    pub fn queue_task(&mut self, client_uuid: &str, task_type: TaskType) {
+        commands::queue_task(self, client_uuid, task_type);
     }
 
     pub fn handle_request(&mut self, client_uuid: &str, request: Request) {
-        let client_state = match self.clients.get(client_uuid) {
-            Some(c) => c.state.clone(),
-            None => return,
-        };
-
-        if client_state == ClientState::WaitingForTeamName {
-            self.handle_auth_request(client_uuid, request);
-            return;
-        }
-
-        match request.command {
-            Command::Forward => self.queue_task(client_uuid, TaskType::Forward),
-            Command::Right => self.queue_task(client_uuid, TaskType::TurnRight),
-            Command::Left => self.queue_task(client_uuid, TaskType::TurnLeft),
-            Command::Look => self.queue_task(client_uuid, TaskType::Look),
-            Command::Inventory => self.queue_task(client_uuid, TaskType::Inventory),
-            Command::Broadcast(_) => self.queue_task(client_uuid, TaskType::BroadcastText),
-            Command::ConnectNbr => {
-                let client = match self.clients.get_mut(client_uuid) {
-                    Some(c) => c,
-                    None => return,
-                };
-                client.pending_responses.push(Response::new(
-                    ResponseCode::Status(StatusCode::Ok),
-                    Some("1".to_string()),
-                ));
-            }
-            Command::Fork => self.queue_task(client_uuid, TaskType::Fork),
-            Command::Eject => self.queue_task(client_uuid, TaskType::Eject),
-            Command::Take(_) => self.queue_task(client_uuid, TaskType::Take),
-            Command::Set(_) => self.queue_task(client_uuid, TaskType::Drop),
-            Command::Incantation => self.queue_task(client_uuid, TaskType::Incantation),
-
-            Command::Msz => {
-                let client = match self.clients.get_mut(client_uuid) {
-                    Some(c) => c,
-                    None => return,
-                };
-                client.pending_responses.push(Response::new(
-                    ResponseCode::Status(StatusCode::Ok),
-                    Some(format!("msz {} {}", self.map.width, self.map.height)),
-                ));
-            }
-
-            Command::Bct(x, y) => {
-                let data = match self.get_tile_content(x, y) {
-                    Some(d) => d,
-                    None => return,
-                };
-                let client = match self.clients.get_mut(client_uuid) {
-                    Some(c) => c,
-                    None => return,
-                };
-                client.pending_responses.push(Response::new(
-                    ResponseCode::Status(StatusCode::Ok),
-                    Some(data),
-                ));
-            }
-
-            Command::Mct => {
-                println!("Protocol: Received mct from {}", client_uuid);
-                let mut responses = Vec::new();
-                for y in 0..self.map.height {
-                    for x in 0..self.map.width {
-                        if let Some(data) = self.get_tile_content(x, y) {
-                            responses.push(data);
-                        }
-                    }
-                }
-                let client = match self.clients.get_mut(client_uuid) {
-                    Some(c) => c,
-                    None => return,
-                };
-                for r in responses {
-                    client
-                        .pending_responses
-                        .push(Response::new(ResponseCode::Status(StatusCode::Ok), Some(r)));
-                }
-            }
-
-            Command::Unknown(_) => {
-                let client = match self.clients.get_mut(client_uuid) {
-                    Some(c) => c,
-                    None => return,
-                };
-                client.pending_responses.push(Response {
-                    code: ResponseCode::Status(StatusCode::Ko),
-                    data: None,
-                });
-            }
-
-            _ => {
-                let client = match self.clients.get_mut(client_uuid) {
-                    Some(c) => c,
-                    None => return,
-                };
-                client
-                    .pending_responses
-                    .push(Response::new(ResponseCode::Status(StatusCode::Ok), None));
-            }
-        }
-    }
-
-    fn handle_auth_request(&mut self, client_uuid: &str, request: Request) {
-        let client = match self.clients.get_mut(client_uuid) {
-            Some(c) => c,
-            None => return,
-        };
-
-        let team_name = match request.command {
-            Command::Unknown(team_name) => team_name,
-            _ => {
-                client
-                    .pending_responses
-                    .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
-                return;
-            }
-        };
-
-        if team_name == "GRAPHIC" {
-            client.state = ClientState::AuthenticatedGUI;
-            return;
-        }
-
-        client.state = ClientState::AuthenticatedAI(team_name);
-
-        client.pending_responses.push(Response::new(
-            ResponseCode::Status(StatusCode::Ok),
-            Some("1".to_string()),
-        ));
-
-        let entity = build_inhabitant(&mut self.world);
-        client.entity = Some(entity);
-        if let Some(task_list) = self.world.get_component_mut::<TaskList>(entity) {
-            task_list.client_uuid = Some(client_uuid.to_string());
-        }
-
-        client.pending_responses.push(Response::new(
-            ResponseCode::Status(StatusCode::Ok),
-            Some(format!("{} {}", self.map.width, self.map.height)),
-        ));
+        commands::handle_request(self, client_uuid, request);
     }
 
     pub fn handle_response(&mut self, client_uuid: &str, response: Response) {
@@ -356,8 +122,6 @@ impl Server {
         let _ = client.socket.write_all(response.to_string().as_ref());
     }
 
-    //TODO event.to_ai_string
-    //It is missing bc we have to decide what to do with the users and players
     pub fn broadcast_global(&mut self, event: ServerEvent) {
         for client in self.clients.values_mut() {
             let formatted = match &client.state {
@@ -368,7 +132,7 @@ impl Server {
 
             if let Some(data) = formatted {
                 client.pending_responses.push(Response::new(
-                    ResponseCode::Status(StatusCode::Ok),
+                    crate::protocol::ResponseCode::Status(crate::protocol::StatusCode::Ok),
                     Some(data),
                 ));
             }
@@ -384,65 +148,17 @@ impl Server {
         );
     }
 
-    fn get_tile_content(&self, x: u32, y: u32) -> Option<String> {
-        use crate::ecs::components::inventory::Inventory;
-        use crate::ecs::components::position::Position;
-        use crate::ecs::components::terrain_type::TerrainType;
-        use crate::ecs::components::tile::Tile;
-
-        let tiles = self.world.get_storage::<Tile>()?;
-        let positions = self.world.get_storage::<Position>()?;
-        let inventories = self.world.get_storage::<Inventory>()?;
-        let terrains = self.world.get_storage::<TerrainType>()?;
-
-        for (ent, _tile) in tiles.iter() {
-            let _pos = match positions.get(*ent) {
-                Some(p) if p.x == x && p.y == y => p,
-                _ => continue,
-            };
-
-            let inv = match inventories.get(*ent) {
-                Some(i) => i,
-                None => continue,
-            };
-
-            let terrain = match terrains.get(*ent) {
-                Some(t) => t,
-                None => continue,
-            };
-
-            let food = inv.items.get(&Resource::Food).unwrap_or(&0);
-            let linemate = inv.items.get(&Resource::Linemate).unwrap_or(&0);
-            let deraumere = inv.items.get(&Resource::Deraumere).unwrap_or(&0);
-            let sibur = inv.items.get(&Resource::Sibur).unwrap_or(&0);
-            let mendiane = inv.items.get(&Resource::Mendiane).unwrap_or(&0);
-            let phiras = inv.items.get(&Resource::Phiras).unwrap_or(&0);
-            let thystame = inv.items.get(&Resource::Thystame).unwrap_or(&0);
-
-            let t_type = match terrain {
-                TerrainType::Grass => 0,
-                TerrainType::Mountain => 1,
-                TerrainType::Water => 2,
-                TerrainType::Sand => 3,
-                TerrainType::Forest => 4,
-                TerrainType::ObsidianBarrens => 5,
-                TerrainType::LuminousOrchards => 6,
-                TerrainType::CrystalCanyons => 7,
-                TerrainType::MagneticTundra => 8,
-            };
-
-            return Some(format!(
-                "bct {} {} {} {} {} {} {} {} {} {}",
-                x, y, food, linemate, deraumere, sibur, mendiane, phiras, thystame, t_type
-            ));
-        }
-        None
+    pub fn get_tile_content(&self, x: u32, y: u32) -> Option<String> {
+        map::get_tile_content(&self.world, x, y)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ecs::builders::inhabitants::build_inhabitant;
+    use crate::ecs::components::task::{TaskList, TaskType};
+    use crate::utils::orientation::RelativeOrientation;
     use std::net::TcpListener;
 
     #[test]
@@ -469,10 +185,11 @@ mod tests {
         server.world.register_component::<TaskList>();
         server.world.register_component::<Position>();
         server.world.register_component::<Inventory>();
+        server.world.register_component::<RelativeOrientation>();
 
         let client_socket = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
         let mut client = Client::new(client_socket);
-        let entity = build_inhabitant(&mut server.world);
+        let entity = build_inhabitant(0, 0, RelativeOrientation::Forward, &mut server.world);
         client.entity = Some(entity);
         let uuid = client.uuid.clone();
         server.clients.insert(uuid.clone(), client);
