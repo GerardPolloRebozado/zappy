@@ -61,3 +61,11 @@ def fork(client):
     Response: ok
     """
     client.connection.send_line("Fork")
+
+def eject(client):
+    """
+    Eject players from this tile
+    Time limit: 7/f
+    Response: ok/ko
+    """
+    client.connection.send_line("Eject")
