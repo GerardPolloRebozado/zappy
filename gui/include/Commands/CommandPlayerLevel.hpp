@@ -11,6 +11,11 @@
 namespace zappy {
     class CommandPlayerLevel : public ACommand{
         CommandPlayerLevel() = default;
+        /**
+         * @brief Requests the current level of a specific player.
+         * @param args The arguments for the command, expected to contain the player ID.
+         * @param registry The registry containing the application state, where the player's level will be updated
+         */
         void execute(const std::string&args, Register&registry) override
         {
 
