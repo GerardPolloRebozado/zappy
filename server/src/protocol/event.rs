@@ -73,30 +73,30 @@ impl ServerEvent {
     // Builder functions
     pub fn message(broadcaster: &Player, message: impl Into<String>) -> Self {
         Self::Message {
-            player_id: broadcaster.id,
+            player_id: broadcaster.id(),
             message: message.into(),
-            x: broadcaster.x,
-            y: broadcaster.y,
+            x: broadcaster.x(),
+            y: broadcaster.y(),
         }
     }
     pub fn eject(victim: &Player, source: &Player) -> Self {
         Self::Eject {
-            player_id: victim.id,
-            x: source.x,
-            y: source.y,
+            player_id: victim.id(),
+            x: source.x(),
+            y: source.y(),
         }
     }
     pub fn death(player: &Player) -> Self {
         Self::Dead {
-            player_id: player.id,
+            player_id: player.id(),
         }
     }
     pub fn new_player(player: &Player, level: u8, team: impl Into<String>) -> Self {
         Self::NewPlayer {
-            player_id: player.id,
-            x: player.x,
-            y: player.y,
-            orientation: player.orientation,
+            player_id: player.id(),
+            x: player.x(),
+            y: player.y(),
+            orientation: player.orientation(),
             level,
             team: team.into(),
         }
@@ -111,27 +111,27 @@ impl ServerEvent {
     }
     pub fn egg_lay(player: &Player) -> Self {
         Self::EggLay {
-            player_id: player.id,
+            player_id: player.id(),
         }
     }
     pub fn resource_drop(player: &Player, resource: u8) -> Self {
         Self::ResourceDrop {
-            player_id: player.id,
+            player_id: player.id(),
             resource,
         }
     }
     pub fn resource_collect(player: &Player, resource: u8) -> Self {
         Self::ResourceCollect {
-            player_id: player.id,
+            player_id: player.id(),
             resource,
         }
     }
     pub fn egg_laid(egg_id: u32, player: &Player) -> Self {
         Self::EggLaid {
             egg_id,
-            player_id: player.id,
-            x: player.x,
-            y: player.y,
+            player_id: player.id(),
+            x: player.x(),
+            y: player.y(),
         }
     }
 
@@ -215,7 +215,7 @@ impl ServerEvent {
         match self {
             ServerEvent::Dead { player_id } => {
                 if let Some(p) = for_player {
-                    if p.id == *player_id {
+                    if p.id() == *player_id {
                         Some("dead\n".to_string())
                     } else {
                         None
@@ -226,7 +226,7 @@ impl ServerEvent {
             }
             ServerEvent::Eject { player_id, x, y } => {
                 let for_player = for_player?;
-                if for_player.id != *player_id {
+                if for_player.id() != *player_id {
                     return None;
                 }
                 let k = calc_k(*x, *y, for_player, map_width, map_height);
