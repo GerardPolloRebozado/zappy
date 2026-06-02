@@ -9,7 +9,7 @@ def run_client(client):
     try:
         while not client.is_dead:
             # -- testing
-            #res = client.connect_nbr()
+            #res = client.fork()
             
             # -- if not testing just waits for server to say something
             res = client.wait_for_response()
