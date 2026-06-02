@@ -1,4 +1,4 @@
-# The Cartographer's Ledger: The Endless Horizon of Trantor
+# Map
 
 Hark, ye bold navigators and brass-shod explorers! You stand upon the threshold of Trantor, a world of celestial clockwork and ether-seas.
 
