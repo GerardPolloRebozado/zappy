@@ -8,6 +8,8 @@
 #include "NetworkManager.hpp"
 #include <iostream>
 #include <sstream>
+#include "Commands/FactoryCommands.hpp"
+
 
 namespace zappy {
 
@@ -87,16 +89,13 @@ void NetworkManager::_handleProtocolMessage(const std::string& message, Register
         return;
     }
 
-    if (cmd == "msz") {
-        _handleMapSize(message.substr(4));
-    } else if (cmd == "bct") {
-        _handleTileContent(message.substr(4));
-    } else if (cmd == "tna") {
-        _handleTeamNames(message.substr(4), registry);
-    } else if (cmd == "pnw") {
-        _handlePlayerConnection(message.substr(4), registry);
+    std::unique_ptr<ACommand> command = FactoryCommands::createCommand(cmd);
+
+    if (command) {
+        std::string args = message.substr(cmd.length() + 1);
+        command->execute(args, registry);
     } else {
-        // std::cout << "Unprocessed server command: " << cmd << std::endl;
+        std::cout << "Wrong command: " << cmd << std::endl;
     }
 }
 
