@@ -69,3 +69,6 @@ def eject(client):
     Response: ok/ko
     """
     client.connection.send_line("Eject")
+
+def incantation(client):
+    client.connection.send_line("Incantation")
