@@ -17,6 +17,7 @@ class ZappyAiClient:
         self.connection = Connection(ip, port)
         self.messages = []
         self.is_dead = False
+        self.level = 1
 
     def connect(self):
         """
@@ -120,6 +121,15 @@ class ZappyAiClient:
     def eject(self):
         commands.eject(self)
         return self.wait_for_response()
+
+    def incantation(self):
+        commands.incantation(self)
+        resp = self.wait_for_response()
+        if resp == "Elevation underway":
+            resp = self.wait_for_response()
+            if resp and resp.startswith("Current level:"):
+                self.level = int(resp.split(":")[1].strip())
+        return resp
 
     def close(self):
         self.connection.close()
