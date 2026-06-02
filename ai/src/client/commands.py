@@ -45,3 +45,11 @@ def broadcast(client, text):
     Response: ok
     """
     client.connection.send_line(f"Broadcast {text}")
+
+def connect_nbr(client):
+    """
+    Get the number of unused team slots.
+    Time limit: -
+    Response: value
+    """
+    client.connection.send_line("Connect_nbr")
