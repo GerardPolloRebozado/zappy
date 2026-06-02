@@ -1,12 +1,15 @@
 use crate::{
-    ecs::{components::task::TaskList, storage::World},
+    ecs::{
+        components::task::{TASK_NOT_STARTED, TaskList},
+        storage::World,
+    },
     game::Date,
     protocol::{Response, ResponseCode, StatusCode},
 };
 
 /// System that can be run on every game iteration to check if theres any task finished, if its finished it will remove it and start the next one
 pub fn any_finished_task(world: &mut World, freq: u32) -> Vec<(String, Response)> {
-    let mut responses = Vec::new();
+    let mut responses: Vec<(String, Response)> = Vec::new();
     let task_lists = world.get_storage_mut::<TaskList>();
     if task_lists.is_none() {
         return responses;
@@ -15,7 +18,7 @@ pub fn any_finished_task(world: &mut World, freq: u32) -> Vec<(String, Response)
 
     for (_, task_list) in task_lists.iter_mut() {
         if let Some(first_task) = task_list.vector.first_mut() {
-            if first_task.finish_on == 0 {
+            if first_task.finish_on == TASK_NOT_STARTED {
                 first_task.finish_on = Date::now().to_timestamp()
                     + (first_task.task_type.duration() / u64::from(freq));
             } else if first_task.is_finished() {
@@ -39,6 +42,7 @@ pub fn any_finished_task(world: &mut World, freq: u32) -> Vec<(String, Response)
 #[cfg(test)]
 mod tests {
     use crate::ecs::components::task::{Task, TaskType};
+    use crate::ecs::storage::World;
 
     use super::*;
 
