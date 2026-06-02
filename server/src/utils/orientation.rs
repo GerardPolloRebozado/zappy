@@ -1,18 +1,18 @@
-//! Direction helpers for the Zappy AI protocol.
+//! Orientation helpers for the Zappy AI protocol.
 //!
 //! AI clients receive events such as `message k, text` and `eject: k`, where
-//! `k` is a direction relative to the receiving player's orientation.
+//! `k` is a orientation relative to the receiving player's orientation.
 
 use std::cmp::Ordering;
 
-use crate::game::Player;
+use crate::game::Inhabitant;
 
-/// Direction from a listener to a source tile, relative to the listener's facing.
+/// Orientation from a listener to a source tile, relative to the listener's facing.
 ///
 /// Values match the Zappy AI protocol `k` field in `message k, text` and `eject: k`.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RelativeDirection {
+pub enum RelativeOrientation {
     SameTile = 0,
     Forward = 1,
     ForwardLeft = 2,
@@ -22,9 +22,10 @@ pub enum RelativeDirection {
     BackRight = 6,
     Right = 7,
     ForwardRight = 8,
+    Invalid = 9,
 }
 
-impl RelativeDirection {
+impl RelativeOrientation {
     /// Returns the protocol `k` integer sent to AI clients.
     pub fn as_protocol_k(self) -> u32 {
         self as u32
@@ -35,8 +36,12 @@ impl RelativeDirection {
 ///
 /// Orientation `1`–`4` are north, east, south, and west. Invalid orientations
 /// return `(0, 0)`.
-fn world_delta_to_relative_offset(orientation: u8, world_x: i32, world_y: i32) -> (i32, i32) {
-    match orientation {
+fn world_delta_to_relative_offset(
+    orientation: RelativeOrientation,
+    world_x: i32,
+    world_y: i32,
+) -> (i32, i32) {
+    match orientation.as_protocol_k() {
         1 => (world_x, world_y),
         2 => (world_y, -world_x),
         3 => (-world_x, -world_y),
@@ -45,7 +50,7 @@ fn world_delta_to_relative_offset(orientation: u8, world_x: i32, world_y: i32) -
     }
 }
 
-/// Classifies a listener-relative delta into protocol direction `k` (`1`–`8`).
+/// Classifies a listener-relative delta into protocol orientation `k` (`1`–`8`).
 ///
 /// Expects `(relative_x, relative_y)` already rotated into the listener's frame:
 /// forward is negative `y`, back is positive `y`, left is negative `x`, and right
@@ -54,29 +59,29 @@ fn world_delta_to_relative_offset(orientation: u8, world_x: i32, world_y: i32) -
 /// Compares `|relative_y|` and `|relative_x|` to pick the closest axis (forward/back
 /// or left/right). When both components are equal, the target lies on a 45°
 /// diagonal and the signs of `relative_x` and `relative_y` select the diagonal variants.
-fn classify_relative_direction(relative_x: i32, relative_y: i32) -> RelativeDirection {
+fn classify_relative_orientation(relative_x: i32, relative_y: i32) -> RelativeOrientation {
     let ax = relative_x.abs();
     let ay = relative_y.abs();
 
     if ay > ax {
         if relative_y < 0 {
-            RelativeDirection::Forward
+            RelativeOrientation::Forward
         } else {
-            RelativeDirection::Back
+            RelativeOrientation::Back
         }
     } else if ax > ay {
         if relative_x < 0 {
-            RelativeDirection::Left
+            RelativeOrientation::Left
         } else {
-            RelativeDirection::Right
+            RelativeOrientation::Right
         }
     } else {
         match (relative_x.cmp(&0), relative_y.cmp(&0)) {
-            (Ordering::Less, Ordering::Less) => RelativeDirection::ForwardLeft,
-            (Ordering::Less, Ordering::Greater) => RelativeDirection::BackLeft,
-            (Ordering::Greater, Ordering::Greater) => RelativeDirection::BackRight,
-            (Ordering::Greater, Ordering::Less) => RelativeDirection::ForwardRight,
-            _ => RelativeDirection::Forward,
+            (Ordering::Less, Ordering::Less) => RelativeOrientation::ForwardLeft,
+            (Ordering::Less, Ordering::Greater) => RelativeOrientation::BackLeft,
+            (Ordering::Greater, Ordering::Greater) => RelativeOrientation::BackRight,
+            (Ordering::Greater, Ordering::Less) => RelativeOrientation::ForwardRight,
+            _ => RelativeOrientation::Forward,
         }
     }
 }
@@ -84,7 +89,7 @@ fn classify_relative_direction(relative_x: i32, relative_y: i32) -> RelativeDire
 /// Returns the shortest signed distance from `from` to `to` on a wrapping axis.
 ///
 /// On a toroidal map of length `size`, the result is the smallest step count
-/// in either direction (e.g. on a map of width 10, distance from 9 to 0 is `-1`).
+/// in either orientation (e.g. on a map of width 10, distance from 9 to 0 is `-1`).
 fn shortest_delta(from: u32, to: u32, size: i32) -> i32 {
     let diff = to as i32 - from as i32;
     if diff > size / 2 {
@@ -96,89 +101,90 @@ fn shortest_delta(from: u32, to: u32, size: i32) -> i32 {
     }
 }
 
-/// Computes the relative direction `k` from a player to a map tile.
+/// Computes the relative orientation `k` from an inhabitant to a map tile.
 ///
 /// The result matches the Zappy protocol: values `1`–`8` for the eight
-/// surrounding tiles, and `0` when the target tile is the player's own tile.
-/// Direction is expressed relative to the player's current orientation.
+/// surrounding tiles, and `0` when the target tile is the inhabitant's own tile.
+/// Orientation is expressed relative to the inhabitant's current orientation.
 ///
 /// # Examples
 ///
 /// ```
-/// use zappy_server::game::Player; use zappy_server::utils::direction::calc_k;
+/// use zappy_server::game::Inhabitant; use zappy_server::utils::orientation::calc_k;
+/// use zappy_server::utils::orientation::RelativeOrientation;
 ///
-/// let player = Player::new(1, 5, 5, 1);
+/// let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
 /// assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
 /// ```
 pub fn calc_k(
     from_x: u32,
     from_y: u32,
-    for_player: &Player,
+    for_player: &Inhabitant,
     map_width: u32,
     map_height: u32,
 ) -> u32 {
-    let dx = shortest_delta(for_player.x, from_x, map_width as i32);
-    let dy = shortest_delta(for_player.y, from_y, map_height as i32);
+    let dx = shortest_delta(for_player.x(), from_x, map_width as i32);
+    let dy = shortest_delta(for_player.y(), from_y, map_height as i32);
 
     if dx == 0 && dy == 0 {
-        return RelativeDirection::SameTile.as_protocol_k();
+        return RelativeOrientation::SameTile.as_protocol_k();
     }
 
-    let (relative_x, relative_y) = world_delta_to_relative_offset(for_player.orientation, dx, dy);
+    let (relative_x, relative_y) = world_delta_to_relative_offset(for_player.orientation(), dx, dy);
     if relative_x == 0 && relative_y == 0 {
-        return RelativeDirection::Forward.as_protocol_k();
+        return RelativeOrientation::Forward.as_protocol_k();
     }
 
-    classify_relative_direction(relative_x, relative_y).as_protocol_k()
+    classify_relative_orientation(relative_x, relative_y).as_protocol_k()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game::Player;
+    use crate::game::Inhabitant;
 
     #[test]
     fn same_tile_returns_zero() {
-        let player = Player::new(1, 5, 5, 1);
+        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
         assert_eq!(calc_k(5, 5, &player, 10, 10), 0);
     }
 
     #[test]
     fn forward_adjacent_when_facing_north() {
-        let player = Player::new(1, 5, 5, 1);
+        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
         assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
     }
 
     #[test]
     fn left_when_facing_east() {
-        let player = Player::new(1, 5, 5, 2);
+        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::ForwardLeft);
         assert_eq!(calc_k(5, 4, &player, 10, 10), 3);
     }
 
     #[test]
     fn distant_target_on_cardinal() {
-        let player = Player::new(1, 5, 5, 1);
+        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
         assert_eq!(calc_k(5, 0, &player, 10, 10), 1);
         assert_eq!(calc_k(9, 5, &player, 10, 10), 7);
     }
 
     #[test]
     fn distant_target_on_diagonal() {
-        let player = Player::new(1, 5, 5, 1);
+        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
         assert_eq!(calc_k(9, 1, &player, 10, 10), 8);
         assert_eq!(calc_k(1, 1, &player, 10, 10), 2);
     }
 
     #[test]
     fn toroidal_shortest_path() {
-        let player = Player::new(1, 9, 5, 1);
+        let player = Inhabitant::new(1, 9, 5, RelativeOrientation::Forward);
         assert_eq!(calc_k(0, 5, &player, 10, 10), 7);
         assert_eq!(calc_k(9, 0, &player, 10, 10), 1);
     }
 
     #[test]
-    fn all_eight_directions_facing_north() {
-        let player = Player::new(1, 5, 5, 1);
+    fn all_eight_orientation_facing_north() {
+        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
         assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
         assert_eq!(calc_k(4, 4, &player, 10, 10), 2);
         assert_eq!(calc_k(4, 5, &player, 10, 10), 3);
@@ -191,20 +197,20 @@ mod tests {
 
     #[test]
     fn invalid_orientation_falls_back_to_one() {
-        let player = Player::new(1, 5, 5, 9);
+        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Invalid);
         assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
     }
 
     #[test]
-    fn relative_direction_matches_protocol_k() {
-        assert_eq!(RelativeDirection::SameTile.as_protocol_k(), 0);
-        assert_eq!(RelativeDirection::Forward.as_protocol_k(), 1);
-        assert_eq!(RelativeDirection::ForwardLeft.as_protocol_k(), 2);
-        assert_eq!(RelativeDirection::Left.as_protocol_k(), 3);
-        assert_eq!(RelativeDirection::BackLeft.as_protocol_k(), 4);
-        assert_eq!(RelativeDirection::Back.as_protocol_k(), 5);
-        assert_eq!(RelativeDirection::BackRight.as_protocol_k(), 6);
-        assert_eq!(RelativeDirection::Right.as_protocol_k(), 7);
-        assert_eq!(RelativeDirection::ForwardRight.as_protocol_k(), 8);
+    fn relative_orientation_matches_protocol_k() {
+        assert_eq!(RelativeOrientation::SameTile.as_protocol_k(), 0);
+        assert_eq!(RelativeOrientation::Forward.as_protocol_k(), 1);
+        assert_eq!(RelativeOrientation::ForwardLeft.as_protocol_k(), 2);
+        assert_eq!(RelativeOrientation::Left.as_protocol_k(), 3);
+        assert_eq!(RelativeOrientation::BackLeft.as_protocol_k(), 4);
+        assert_eq!(RelativeOrientation::Back.as_protocol_k(), 5);
+        assert_eq!(RelativeOrientation::BackRight.as_protocol_k(), 6);
+        assert_eq!(RelativeOrientation::Right.as_protocol_k(), 7);
+        assert_eq!(RelativeOrientation::ForwardRight.as_protocol_k(), 8);
     }
 }
