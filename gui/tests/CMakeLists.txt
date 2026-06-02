@@ -6,6 +6,7 @@ set(TEST_SOURCES
     ../src/NetworkManager.cpp
     ../src/Network/TcpSocket.cpp
     ../src/Systems/RenderSystem.cpp
+    ../include/Commands/FactoryCommands.cpp
 )
 
 add_executable(unit_tests ${TEST_SOURCES})
