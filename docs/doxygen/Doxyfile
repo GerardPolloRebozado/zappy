@@ -1029,8 +1029,7 @@ WARN_LOGFILE           =
 ## Scan only the three top-level project folders to avoid pulling unrelated
 ## files from other projects on the machine. This also keeps the generated
 ## HTML output for each project inside its own subfolder (ai/, gui/, server/).
-INPUT                  = ai \
-                         gui \
+INPUT                  = gui \
                          README.md \
                          docs/game \
                          docs/doxygen/groups.dox
@@ -1077,7 +1076,6 @@ FILE_PATTERNS          = *.c \
                          *.h \
                          *.cpp \
                          *.hpp \
-                         *.rs \
                          *.md
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
@@ -1102,7 +1100,8 @@ EXCLUDE                = doxy-docs \
                          gui/cmake-build-debug \
                          gui/build \
                          ai/build \
-                         docs/epitech
+                         docs/epitech \
+                         gui/README.md
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
@@ -1200,7 +1199,9 @@ INPUT_FILTER           =
 # need to set EXTENSION_MAPPING for the extension otherwise the files are not
 # properly processed by Doxygen.
 
-FILTER_PATTERNS        =
+FILTER_PATTERNS        = *.md=
+
+
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER) will also be used to filter the input files that are used for

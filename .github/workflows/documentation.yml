@@ -53,8 +53,8 @@ jobs:
           cp -r server/target/doc/* public/server/
           # Copy landing page
           cp docs/index.html public/
-          # Create placeholder for AI if no files yet
-          echo "Documentation coming soon..." > public/ai/index.html
+          # Generate AI documentation using pdoc
+          pdoc ai/src -o public/ai
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
