@@ -74,10 +74,10 @@ class NetworkManager {
     bool isConnected() const;
 
   private:
-    TcpSocket _socket;     /**< The underlying TCP socket. */
-    bool _isHandshakeDone; /**< Flag indicating if the Zappy handshake is complete. */
-    Register& _registry;
-    RenderSystem& _renderSystem;
+    TcpSocket _socket;           /**< The underlying TCP socket. */
+    bool _isHandshakeDone;       /**< Flag indicating if the Zappy handshake is complete. */
+    Register& _registry;         /**< The ECS registry for managing game entities and components. */
+    RenderSystem& _renderSystem; /**< Rendering system for updating visual state (camera, etc.) */
 
     /**
      * @brief Routes a received protocol message to the appropriate handler.
@@ -93,9 +93,13 @@ class NetworkManager {
 
     /** @name Protocol Handlers */
     /** @{ */
+    /** @brief Handles map size update (msz). */
     void _handleMapSize(const std::string& args);
+    /** @brief Handles tile content update (bct). */
     void _handleTileContent(const std::string& args);
+    /** @brief Handles team names list (tna). */
     void _handleTeamNames(const std::string& args);
+    /** @brief Handles new player connection (pnw). */
     void _handlePlayerConnection(const std::string& args);
     /** @} */
 };
