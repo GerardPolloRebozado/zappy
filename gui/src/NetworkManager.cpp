@@ -13,8 +13,8 @@
 
 namespace zappy {
 
-NetworkManager::NetworkManager(Register& registry, RenderSystem& renderSystem)
-    : _registry(registry), _renderSystem(renderSystem), _isHandshakeDone(false) {}
+NetworkManager::NetworkManager(Register& registry)
+    : _registry(registry), _isHandshakeDone(false) {}
 
 NetworkManager::~NetworkManager() { disconnect(); }
 
@@ -97,48 +97,6 @@ void NetworkManager::_handleProtocolMessage(const std::string& message, Register
     } else {
         std::cout << "Wrong command: " << cmd << std::endl;
     }
-}
-
-void NetworkManager::_handleMapSize(const std::string& args) {
-    std::cout << "Protocol: Map size update [" << args << "]" << std::endl;
-    std::istringstream iss(args);
-    int width, height;
-    if (!(iss >> width >> height)) {
-        return;
-    }
-    _renderSystem.centerCamera(width, height);
-}
-
-void NetworkManager::_handleTileContent(const std::string& args) {
-    std::istringstream iss(args);
-    int x, y, q0, q1, q2, q3, q4, q5, q6, t_type;
-    if (!(iss >> x >> y >> q0 >> q1 >> q2 >> q3 >> q4 >> q5 >> q6 >> t_type)) {
-        return;
-    }
-
-    int tileEntity = -1;
-    for (auto const& [ent, pos] : _registry._positions) {
-        if (pos.x == x && pos.y == y && _registry._terrainTypes.count(ent)) {
-            tileEntity = ent;
-            break;
-        }
-    }
-
-    if (tileEntity == -1) {
-        tileEntity = _registry.createEntity();
-        _registry._positions[tileEntity] = {x, y};
-    }
-
-    _registry._inventories[tileEntity] = {q0, q1, q2, q3, q4, q5, q6};
-    _registry._terrainTypes[tileEntity] = {(zappy::TerrainType::Type)t_type};
-
-    if (x == 0 && y == 0) {
-        std::cout << "Debug: Received tile(0,0) terrain type: " << t_type << std::endl;
-    }
-}
-
-void NetworkManager::_handleTeamNames(const std::string& args, Register& registry) {
-    std::cout << "Protocol: Team name: " << args << std::endl;
 }
 
 void NetworkManager::_handlePlayerConnection(const std::string& args, Register& registry) {
