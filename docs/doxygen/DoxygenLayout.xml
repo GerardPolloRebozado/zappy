@@ -1,23 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<doxygenlayout version="2.0">
-  <navindex>
-    <tab type="mainpage" visible="yes" title="Project README"/>
-    <tab type="topics" visible="yes" title="Modules" intro=""/>
-    <tab type="user" visible="yes" title="Game" url="game_rules_page.html"/>
-    
-    <!-- Hidden or secondary tabs -->
-    <tab type="pages" visible="no" title="" intro=""/>
-    <tab type="namespaces" visible="no" title="">
+<navindex>
+  <tab type="mainpage" visible="yes" title="Project README"/>
+  <tab type="pages" visible="yes" title="Game" intro="Automatically generated list of all game documentation files."/>
+
+  <!-- Hidden or secondary tabs -->
+  <tab type="topics" visible="no" title="Modules" intro=""/>
+  <tab type="user" visible="no" title="Game" url="game_rules_page.html"/>  <tab type="namespaces" visible="no" title="">
+...
       <tab type="namespacelist" visible="yes" title="" intro=""/>
       <tab type="namespacemembers" visible="yes" title="" intro=""/>
     </tab>
-    <tab type="classes" visible="no" title="">
+    <tab type="classes" visible="yes" title="GUI Classes">
       <tab type="classlist" visible="yes" title="" intro=""/>
       <tab type="classindex" visible="$ALPHABETICAL_INDEX" title=""/>
       <tab type="hierarchy" visible="yes" title="" intro=""/>
       <tab type="classmembers" visible="yes" title="" intro=""/>
     </tab>
-    <tab type="files" visible="no" title="">
+    <tab type="files" visible="yes" title="GUI Files">
       <tab type="filelist" visible="yes" title="" intro=""/>
       <tab type="globals" visible="yes" title="" intro=""/>
     </tab>
