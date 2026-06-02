@@ -6,6 +6,7 @@ use crate::ecs::storage::World;
 use crate::game::*;
 use crate::protocol::{Command, Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::server::client::{Client, ClientState};
+use crate::utils::orientation::RelativeOrientation;
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
@@ -186,7 +187,7 @@ impl Server {
                             Some("1".to_string()),
                         ));
 
-                        build_inhabitant(&mut self.world);
+                        build_inhabitant(0, 0, RelativeOrientation::Forward, &mut self.world);
 
                         client.pending_responses.push(Response::new(
                             ResponseCode::Status(StatusCode::Ok),

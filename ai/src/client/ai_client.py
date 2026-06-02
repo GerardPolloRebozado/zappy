@@ -163,6 +163,14 @@ class ZappyAiClient:
         commands.eject(self)
         return self.wait_for_response()
 
+    def take(self, object):
+        commands.take(self, object)
+        return self.wait_for_response()
+
+    def set(self, object):
+        commands.set(self, object)
+        return self.wait_for_response()
+
     def incantation(self):
         """
         Calls command incantation, if the incantation starts updates the level of the player
@@ -175,6 +183,6 @@ class ZappyAiClient:
             if resp and resp.startswith("Current level:"):
                 self.level = int(resp.split(":")[1].strip())
         return resp
-
+      
     def close(self):
         self.connection.close()
