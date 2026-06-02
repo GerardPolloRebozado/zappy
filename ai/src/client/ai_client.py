@@ -164,10 +164,20 @@ class ZappyAiClient:
         return self.wait_for_response()
 
     def take(self, object):
+        """
+        Calls command take
+        :param object: Object to take
+        :return: ok/ko
+        """
         commands.take(self, object)
         return self.wait_for_response()
 
     def set(self, object):
+        """
+        Calls command set
+        :param object: Object to set
+        :return: ok/ko
+        """
         commands.set(self, object)
         return self.wait_for_response()
 
