@@ -71,4 +71,9 @@ def eject(client):
     client.connection.send_line("Eject")
 
 def incantation(client):
+    """
+    Start incantation
+    Time limit: 300/f
+    Response: Elevation underway/Current level: k/ko
+    """
     client.connection.send_line("Incantation")
