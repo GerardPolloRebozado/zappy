@@ -121,5 +121,13 @@ class ZappyAiClient:
         commands.eject(self)
         return self.wait_for_response()
 
+    def take(self, object):
+        commands.take(self, object)
+        return self.wait_for_response()
+
+    def set(self, object):
+        commands.set(self, object)
+        return self.wait_for_response()
+
     def close(self):
         self.connection.close()
