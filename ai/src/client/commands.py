@@ -53,3 +53,43 @@ def connect_nbr(client):
     Response: value
     """
     client.connection.send_line("Connect_nbr")
+
+def fork(client):
+    """
+    Forks a player
+    Time limit: 42/f
+    Response: ok
+    """
+    client.connection.send_line("Fork")
+
+def eject(client):
+    """
+    Eject players from this tile
+    Time limit: 7/f
+    Response: ok/ko
+    """
+    client.connection.send_line("Eject")
+
+def take(client, object):
+    """
+    Take an object from the tile.
+    Time limit: 7/f
+    Response: ok/ko
+    """
+    client.connection.send_line(f"Take {object}")
+
+def set(client, object):
+    """
+    Sets an object on the tile.
+    Time limit: 7/f
+    Response: ok/ko
+    """
+    client.connection.send_line(f"Set {object}")
+    
+def incantation(client):
+    """
+    Start incantation
+    Time limit: 300/f
+    Response: Elevation underway/Current level: k/ko
+    """
+    client.connection.send_line("Incantation")

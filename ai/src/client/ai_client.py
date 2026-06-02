@@ -17,6 +17,7 @@ class ZappyAiClient:
         self.connection = Connection(ip, port)
         self.messages = []
         self.is_dead = False
+        self.level = 1
 
     def connect(self):
         """
@@ -52,6 +53,10 @@ class ZappyAiClient:
             return 84
 
     def receive_line(self):
+        """
+        Calls receive_line to receive a line from the server.
+        :return: the line
+        """
         return self.connection.receive_line()
 
     def wait_for_response(self):
@@ -80,32 +85,61 @@ class ZappyAiClient:
                     return line
 
     def forward(self):
+        """
+        Calls movement command forward
+        :return: ok
+        """
         commands.forward(self)
         return self.wait_for_response()
 
     def right(self):
+        """
+        Calls movement command right
+        :return: ok
+        """
         commands.right(self)
         return self.wait_for_response()
 
     def left(self):
+        """
+        Calls movement command left
+        :return: ok
+        """
         commands.left(self)
         return self.wait_for_response()
 
     def look(self):
+        """
+        Calls command look
+        :return: The parsed tile information
+        """
         commands.look(self)
         resp = self.wait_for_response()
         return parse_look(resp) if resp and resp.startswith("[") else resp
 
     def inventory(self):
+        """
+        Calls command inventory
+        :return: The parsed inventory
+        """
         commands.inventory(self)
         resp = self.wait_for_response()
         return Inventory.from_string(resp) if resp and resp.startswith("[") else resp
 
     def broadcast(self, text):
+        """
+        Calls command broadcast
+        :param text: the message to broadcast
+        :return: ok
+        """
         commands.broadcast(self, text)
         return self.wait_for_response()
 
     def connect_nbr(self):
+        """
+        Calls command connect_nbr
+        :return: The number of free slots
+        """
         commands.connect_nbr(self)
         resp = self.wait_for_response()
         try:
@@ -113,5 +147,52 @@ class ZappyAiClient:
         except ValueError:
             return resp
 
+    def fork(self):
+        """
+        Calls command fork
+        :return: ok
+        """
+        commands.fork(self)
+        return self.wait_for_response()
+
+    def eject(self):
+        """
+        Calls command eject
+        :return: ok/ko
+        """
+        commands.eject(self)
+        return self.wait_for_response()
+
+    def take(self, object):
+        """
+        Calls command take
+        :param object: Object to take
+        :return: ok/ko
+        """
+        commands.take(self, object)
+        return self.wait_for_response()
+
+    def set(self, object):
+        """
+        Calls command set
+        :param object: Object to set
+        :return: ok/ko
+        """
+        commands.set(self, object)
+        return self.wait_for_response()
+
+    def incantation(self):
+        """
+        Calls command incantation, if the incantation starts updates the level of the player
+        :return: When the incantation is underway -> current level / ko
+        """
+        commands.incantation(self)
+        resp = self.wait_for_response()
+        if resp == "Elevation underway":
+            resp = self.wait_for_response()
+            if resp and resp.startswith("Current level:"):
+                self.level = int(resp.split(":")[1].strip())
+        return resp
+      
     def close(self):
         self.connection.close()
