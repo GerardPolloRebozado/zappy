@@ -43,11 +43,12 @@ pub struct Task {
 
 impl Task {
     pub fn is_finished(&self) -> bool {
-        self.finish_on <= Date::now().to_timestamp()
+        self.finish_on != 0 && self.finish_on <= Date::now().to_timestamp()
     }
 }
 
 #[derive(Default, Clone)]
 pub struct TaskList {
     pub vector: Vec<Task>,
+    pub client_uuid: Option<String>,
 }
