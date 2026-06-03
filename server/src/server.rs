@@ -1,6 +1,6 @@
 pub mod client;
 pub mod commands;
-pub mod map;
+pub mod map_size;
 pub mod network;
 pub mod signal;
 
@@ -10,7 +10,7 @@ use crate::ecs::systems::task::any_finished_task;
 use crate::game::*;
 use crate::protocol::{Request, Response, ServerEvent};
 use crate::server::client::{Client, ClientState};
-pub use crate::server::map::Map;
+pub use crate::server::map_size::MapSize;
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
@@ -22,7 +22,7 @@ pub struct Server {
     pub clients: HashMap<String, Client>,
     pub _users: HashMap<String, User>,
     pub _teams: HashMap<String, Team>,
-    pub map: Map,
+    pub mapSize: MapSize,
     pub _freq: u32,
     pub game_start: u64,
     pub world: World,
@@ -42,7 +42,7 @@ impl Server {
             clients: HashMap::new(),
             _users: HashMap::new(),
             _teams: HashMap::new(),
-            map: Map {
+            mapSize: MapSize {
                 width: 100,
                 height: 100,
             },
@@ -143,13 +143,13 @@ impl Server {
     pub fn load(&mut self) {
         crate::ecs::systems::tile_system::setup_map(
             &mut self.world,
-            self.map.width,
-            self.map.height,
+            self.mapSize.width,
+            self.mapSize.height,
         );
     }
 
     pub fn get_tile_content(&self, x: u32, y: u32) -> Option<String> {
-        map::get_tile_content(&self.world, x, y)
+        map_size::get_tile_content(&self.world, x, y)
     }
 }
 
@@ -174,7 +174,7 @@ mod tests {
             clients: HashMap::new(),
             _users: HashMap::new(),
             _teams: HashMap::new(),
-            map: Map {
+            mapSize: MapSize {
                 width: 10,
                 height: 10,
             },
