@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose Release or Debug" FORCE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose Release or Debug" FORCE)
 endif ()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -44,7 +44,6 @@ set(SOURCES
         include/Components/ComponentTile.hpp
         include/Systems/RenderSystem.hpp
         include/Graphics/AssetManager.hpp
-        include/ECS/Register.hpp
         include/Commands/ACommand.hpp
         include/Commands/FactoryCommands.hpp
         include/Commands/CommandTimeUpdate.hpp
@@ -56,6 +55,9 @@ set(SOURCES
         include/Commands/CommandMapSize.hpp
         include/Commands/CommandMapContent.hpp
         include/Commands/FactoryCommands.cpp
+        include/ECS/Entity.hpp
+        include/ECS/IComponentStorage.hpp
+        include/ECS/World.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -68,7 +70,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
 
 if (APPLE)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
+  target_link_libraries(${PROJECT_NAME} PRIVATE
             "-framework IOKit"
             "-framework Cocoa"
             "-framework OpenGL"
@@ -79,7 +81,7 @@ include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported OUTPUT error)
 
 if(ipo_supported)
-    set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+  set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 add_custom_target(fclean
