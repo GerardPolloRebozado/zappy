@@ -1,7 +1,7 @@
 use crate::ecs::storage::World;
 use crate::game::Resource;
 
-pub struct Map {
+pub struct MapSize {
     pub width: u32,
     pub height: u32,
 }
