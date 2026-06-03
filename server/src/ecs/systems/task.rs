@@ -16,6 +16,7 @@ pub fn any_finished_task(world: &mut World, freq: u32) -> Vec<(String, Response)
     }
     let task_lists = task_lists.unwrap();
 
+    for (_, task_list) in task_lists.iter_mut() {
         let first_task = match task_list.vector.first_mut() {
             Some(t) => t,
             None => continue,

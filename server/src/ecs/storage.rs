@@ -42,6 +42,7 @@
 //! world.despawn(player);
 //! ```
 
+use crate::ecs::map_size::MapSize;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 
@@ -143,6 +144,7 @@ impl<T: 'static> ComponentStorage for ComponentMap<T> {
 
 /// The `World` is the main container for all ECS data
 pub struct World {
+    pub mapSize: MapSize,
     /// List of generations for all entities, indexed by their ID
     entity_generations: Vec<u32>,
     /// List of Entity IDs that have been despawned and are available for reuse
@@ -161,6 +163,10 @@ impl World {
     /// Creates a new, empty ECS world
     pub fn new() -> Self {
         Self {
+            mapSize: MapSize {
+                width: 100,
+                height: 100,
+            },
             entity_generations: Vec::new(),
             free_ids: Vec::new(),
             storages: HashMap::new(),
