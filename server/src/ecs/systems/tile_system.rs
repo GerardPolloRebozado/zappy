@@ -2,6 +2,7 @@ use crate::ecs::components::inventory::Inventory;
 use crate::ecs::components::position::Position;
 use crate::ecs::components::terrain_type::TerrainType;
 use crate::ecs::components::tile::Tile;
+use crate::ecs::map_size::MapSize;
 use crate::ecs::storage::{Entity, World};
 use crate::game::Resource;
 use noise::{NoiseFn, Perlin};
@@ -55,6 +56,7 @@ pub fn populate_tile_resources(world: &mut World, tile_ent: Entity, terrain: Ter
 
 /// Initializes the game map by registering components and spawning a grid of tiles using noise
 pub fn setup_map(world: &mut World, width: u32, height: u32) {
+    world.mapSize = MapSize { width, height };
     world.register_component::<Tile>();
     world.register_component::<Position>();
     world.register_component::<TerrainType>();

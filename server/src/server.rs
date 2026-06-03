@@ -1,6 +1,5 @@
 pub mod client;
 pub mod commands;
-pub mod map_size;
 pub mod network;
 pub mod signal;
 
@@ -10,7 +9,6 @@ use crate::ecs::systems::task::any_finished_task;
 use crate::game::*;
 use crate::protocol::{Request, Response, ServerEvent};
 use crate::server::client::{Client, ClientState};
-pub use crate::server::map_size::MapSize;
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
@@ -22,7 +20,6 @@ pub struct Server {
     pub clients: HashMap<String, Client>,
     pub _users: HashMap<String, User>,
     pub _teams: HashMap<String, Team>,
-    pub mapSize: MapSize,
     pub _freq: u32,
     pub game_start: u64,
     pub world: World,
@@ -42,10 +39,6 @@ impl Server {
             clients: HashMap::new(),
             _users: HashMap::new(),
             _teams: HashMap::new(),
-            mapSize: MapSize {
-                width: 100,
-                height: 100,
-            },
             _freq: 100,
             game_start: Date::now().to_timestamp(),
             world: World::new(),
@@ -141,15 +134,13 @@ impl Server {
 
     pub fn save(&mut self) {}
     pub fn load(&mut self) {
-        crate::ecs::systems::tile_system::setup_map(
-            &mut self.world,
-            self.mapSize.width,
-            self.mapSize.height,
-        );
+        let width = self.world.mapSize.width;
+        let height = self.world.mapSize.height;
+        crate::ecs::systems::tile_system::setup_map(&mut self.world, width, height);
     }
 
     pub fn get_tile_content(&self, x: u32, y: u32) -> Option<String> {
-        map_size::get_tile_content(&self.world, x, y)
+        crate::ecs::map_size::get_tile_content(&self.world, x, y)
     }
 }
 
@@ -174,10 +165,6 @@ mod tests {
             clients: HashMap::new(),
             _users: HashMap::new(),
             _teams: HashMap::new(),
-            mapSize: MapSize {
-                width: 10,
-                height: 10,
-            },
             _freq: 100,
             game_start: 0,
             world: World::new(),

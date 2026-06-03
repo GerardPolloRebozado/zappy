@@ -3,7 +3,7 @@ use crate::ecs::components::task::{TASK_NOT_STARTED, Task, TaskList, TaskType};
 use crate::protocol::{Command, Request, Response, ResponseCode, StatusCode};
 use crate::server::Server;
 use crate::server::client::ClientState;
-use crate::server::map_size;
+use crate::ecs::map_size;
 
 pub fn queue_task(server: &mut Server, client_uuid: &str, task_type: TaskType) {
     let client = match server.clients.get(client_uuid) {
@@ -66,8 +66,8 @@ pub fn handle_request(server: &mut Server, client_uuid: &str, request: Request) 
         Command::Incantation => queue_task(server, client_uuid, TaskType::Incantation),
 
         Command::Msz => {
-            let width = server.mapSize.width;
-            let height = server.mapSize.height;
+            let width = server.world.mapSize.width;
+            let height = server.world.mapSize.height;
             let client = match server.clients.get_mut(client_uuid) {
                 Some(c) => c,
                 None => return,
@@ -96,8 +96,8 @@ pub fn handle_request(server: &mut Server, client_uuid: &str, request: Request) 
         Command::Mct => {
             println!("Protocol: Received mct from {}", client_uuid);
             let mut responses = Vec::new();
-            let width = server.mapSize.width;
-            let height = server.mapSize.height;
+            let width = server.world.mapSize.width;
+            let height = server.world.mapSize.height;
             for y in 0..height {
                 for x in 0..width {
                     if let Some(data) = map_size::get_tile_content(&server.world, x, y) {
@@ -175,8 +175,8 @@ pub fn handle_auth_request(server: &mut Server, client_uuid: &str, request: Requ
         task_list.client_uuid = Some(client_uuid.to_string());
     }
 
-    let width = server.mapSize.width;
-    let height = server.mapSize.height;
+    let width = server.world.mapSize.width;
+    let height = server.world.mapSize.height;
     client.pending_responses.push(Response::new(
         ResponseCode::Status(StatusCode::Ok),
         Some(format!("{} {}", width, height)),
