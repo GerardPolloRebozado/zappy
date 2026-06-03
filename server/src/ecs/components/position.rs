@@ -11,6 +11,8 @@ impl Position {
         Position { x: 0, y: 0 }
     }
 
+    /// Steps one tile along the cardinal direction given by `orientation` (`k` 1–4).
+    /// Other `k` values leave the position unchanged. Coordinates wrap on both axes.
     pub fn move_forward(
         &mut self,
         orientation: RelativeOrientation,
