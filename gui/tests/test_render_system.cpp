@@ -1,3 +1,4 @@
+#include "ECS/World.hpp"
 #include "Systems/RenderSystem.hpp"
 #include <criterion/criterion.h>
 #include <raylib.h>
@@ -26,17 +27,18 @@ Test(render_system, center_camera, .init = setup_headless_gui, .fini = teardown_
 
     // We check if the state is consistent (no crash, valid returns)
     auto hovered = renderer.getHoveredTile();
-    cr_assert_eq(hovered.first, -999999, "Initial hover should be far away");
+    cr_assert_eq(hovered.first, std::numeric_limits<int>::min(),
+                 "Initial hover should be InvalidTileCoord");
 }
 
 Test(render_system, asset_lazy_loading, .init = setup_headless_gui, .fini = teardown_headless_gui) {
     zappy::RenderSystem renderer;
-    zappy::Register reg;
+    zappy::World world;
 
     // update() should trigger lazy loading.
     // in a headless context with InitWindow, LoadTexture won't crash
     // even if it might fail to find the file (it just logs an error).
-    renderer.update(reg);
+    renderer.update(world);
 
     cr_assert(true, "update() should run without crashing in headless context");
 }
