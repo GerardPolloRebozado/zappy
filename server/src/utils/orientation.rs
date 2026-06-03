@@ -30,6 +30,26 @@ impl RelativeOrientation {
     pub fn as_protocol_k(self) -> u32 {
         self as u32
     }
+
+    pub fn turn_right(self) -> RelativeOrientation {
+        match self {
+            RelativeOrientation::Forward => RelativeOrientation::ForwardLeft,
+            RelativeOrientation::ForwardLeft => RelativeOrientation::Left,
+            RelativeOrientation::Left => RelativeOrientation::BackLeft,
+            RelativeOrientation::BackLeft => RelativeOrientation::Forward,
+            _ => self,
+        }
+    }
+
+    pub fn turn_left(self) -> RelativeOrientation {
+        match self {
+            RelativeOrientation::Forward => RelativeOrientation::BackLeft,
+            RelativeOrientation::ForwardLeft => RelativeOrientation::Forward,
+            RelativeOrientation::Left => RelativeOrientation::ForwardLeft,
+            RelativeOrientation::BackLeft => RelativeOrientation::Left,
+            _ => self,
+        }
+    }
 }
 
 /// Rotates a world-map delta into the listener's relative frame.
@@ -212,5 +232,31 @@ mod tests {
         assert_eq!(RelativeOrientation::BackRight.as_protocol_k(), 6);
         assert_eq!(RelativeOrientation::Right.as_protocol_k(), 7);
         assert_eq!(RelativeOrientation::ForwardRight.as_protocol_k(), 8);
+    }
+
+    #[test]
+    fn turn_right_full_cycle() {
+        let mut o = RelativeOrientation::Forward;
+        o = o.turn_right();
+        assert_eq!(o, RelativeOrientation::ForwardLeft);
+        o = o.turn_right();
+        assert_eq!(o, RelativeOrientation::Left);
+        o = o.turn_right();
+        assert_eq!(o, RelativeOrientation::BackLeft);
+        o = o.turn_right();
+        assert_eq!(o, RelativeOrientation::Forward);
+    }
+
+    #[test]
+    fn turn_left_full_cycle() {
+        let mut o = RelativeOrientation::Forward;
+        o = o.turn_left();
+        assert_eq!(o, RelativeOrientation::BackLeft);
+        o = o.turn_left();
+        assert_eq!(o, RelativeOrientation::Left);
+        o = o.turn_left();
+        assert_eq!(o, RelativeOrientation::ForwardLeft);
+        o = o.turn_left();
+        assert_eq!(o, RelativeOrientation::Forward);
     }
 }
