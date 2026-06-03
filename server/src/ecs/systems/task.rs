@@ -17,8 +17,11 @@ use crate::{
     utils::orientation::RelativeOrientation,
 };
 
-/// Advances every in-progress task, runs effects for those whose timer elapsed,
-/// schedules the next queued task, and returns `(client_uuid, response)` pairs.
+/// Advances queued tasks, applies effects when a timer elapses, starts the next
+/// task's timer, and returns `(client_uuid, response)` pairs.
+///
+/// TaskList storage is processed inside `{ ... }` so that borrow ends before
+/// `execute_task` mutates other components on the same `world`.
 pub fn any_finished_task(world: &mut World, freq: u32) -> Vec<(String, Response)> {
     let mut responses: Vec<(String, Response)> = Vec::new();
     let mut completed: Vec<(Entity, TaskType, Option<String>)> = Vec::new();
