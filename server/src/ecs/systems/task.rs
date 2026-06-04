@@ -136,20 +136,20 @@ fn execute_look(world: &World, entity: Entity) -> String {
     for i in 0..=i32::from(level) {
         for j in -i..=i {
             let (f, r) = (i, j);
-            let (ax, ay) = match ori.as_protocol_k() {
-                1 => (
+            let (ax, ay) = match ori {
+                RelativeOrientation::Forward => (
                     i32::try_from(pos.x).unwrap() + r,
                     i32::try_from(pos.y).unwrap() - f,
                 ),
-                2 => (
+                RelativeOrientation::ForwardLeft => (
                     i32::try_from(pos.x).unwrap() + f,
                     i32::try_from(pos.y).unwrap() + r,
                 ),
-                3 => (
+                RelativeOrientation::Left => (
                     i32::try_from(pos.x).unwrap() - r,
                     i32::try_from(pos.y).unwrap() + f,
                 ),
-                4 => (
+                RelativeOrientation::BackLeft => (
                     i32::try_from(pos.x).unwrap() - f,
                     i32::try_from(pos.y).unwrap() - r,
                 ),
@@ -228,9 +228,15 @@ mod tests {
         world.mapSize.height = map_h;
         world.register_component::<Position>();
         world.register_component::<RelativeOrientation>();
+        world.register_component::<Level>();
+        world.register_component::<TaskList>();
+        world.register_component::<Inventory>();
         let entity = world.spawn();
         world.add_component(entity, Position { x, y });
         world.add_component(entity, orientation);
+        world.add_component(entity, Level::new());
+        world.add_component(entity, TaskList::default());
+        world.add_component(entity, Inventory::new());
         (world, entity)
     }
 
@@ -338,7 +344,7 @@ mod tests {
         // Tile 2: (5,4) -> "food"
         // Tile 3: (6,4) -> ""
         // Note: players on the same tile are also listed. Our player is at (5,5).
-        // Level 1 vision: 4 tiles.
+        assert_eq!(data, "[player,,food,]");
     }
 
     #[test]
@@ -350,7 +356,7 @@ mod tests {
             *world.get_component::<RelativeOrientation>(entity).unwrap(),
         );
 
-        let response = execute_task(&mut world, entity, &TaskType::Look);
+        let response = execute_task(&mut world, entity, &TaskType::Inventory);
         assert_ok(response);
 
         let after = (
