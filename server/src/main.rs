@@ -1,7 +1,6 @@
 use std::io;
 use zappy_server::server::Server;
 use zappy_server::server::signal::{SIGNAL_RECEIVED, install_sigint_handler};
-use zappy_server::utils::parse_args;
 use zappy_server::utils::parse_server_args;
 use zappy_server::utils::constants::ERROR_EXIT_CODE;
 

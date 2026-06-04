@@ -164,7 +164,7 @@ mod tests {
         map_w: u32,
         map_h: u32,
     ) -> (World, Entity) {
-        let mut world = World::new();
+        let mut world = World::default();
         world.map_size.width = map_w;
         world.map_size.height = map_h;
         let entity = world.spawn();
@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn execute_task_forward_without_orientation() {
-        let mut world = World::new();
+        let mut world = World::default();
         world.map_size.width = 10;
         world.map_size.height = 10;
         let entity = world.spawn();
@@ -237,7 +237,7 @@ mod tests {
 
     #[test]
     fn execute_task_turn_without_orientation() {
-        let mut world = World::new();
+        let mut world = World::default();
         let entity = world.spawn();
         world.add_component(entity, Position { x: 1, y: 1 });
 
@@ -287,7 +287,7 @@ mod tests {
 
     #[test]
     fn add_task() {
-        let mut world = World::new();
+        let mut world = World::default();
         let entity = world.spawn();
         world.add_component(entity, TaskList::default());
 
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn task_completion() {
-        let mut world = World::new();
+        let mut world = World::default();
         let entity = world.spawn();
         world.add_component(entity, TaskList::default());
 
