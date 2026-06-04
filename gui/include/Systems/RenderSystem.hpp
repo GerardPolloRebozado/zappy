@@ -8,7 +8,7 @@
 #ifndef ZAPPY_GUI_RENDERSYSTEM_HPP
 #define ZAPPY_GUI_RENDERSYSTEM_HPP
 
-#include "../ECS/Register.hpp"
+#include "ECS/World.hpp"
 #include <map>
 #include <raylib-cpp.hpp>
 #include <raymath.h>
@@ -44,9 +44,9 @@ class RenderSystem {
      * Orchestrates input handling, state updates, and the full rendering pipeline
      * (3D world followed by 2D UI).
      *
-     * @param r The registry containing all entities and components to be rendered.
+     * @param w the ECS world instance to query entities and components
      */
-    void update(Register& r);
+    void update(World& w);
 
     /**
      * @brief Centers the camera on the map based on dimensions.
@@ -79,15 +79,15 @@ class RenderSystem {
 
     /**
      * @brief Renders the terrain tiles based on their types and positions.
-     * @param r The registry to fetch terrain data from.
+     * @param w The world to fetch terrain data from.
      */
-    void _renderTerrain(Register& r);
+    void _renderTerrain(World& w);
 
     /**
      * @brief Renders the inhabitants in the world.
-     * @param r The registry to fetch inhabitant data from.
+     * @param w The world to fetch inhabitant data from.
      */
-    void _renderInhabitants(Register& r);
+    void _renderInhabitants(World& w);
 
     /**
      * @brief Draws a visual highlight (muro) around a specific tile.
