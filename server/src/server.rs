@@ -1,3 +1,5 @@
+//! TCP server: poll loop, client map, and timed task completion.
+
 pub mod client;
 pub mod commands;
 pub mod network;
@@ -45,6 +47,24 @@ impl Server {
         }
     }
 
+    /// One main-loop tick: accept connections, read client input, advance the ECS task queue.
+    ///
+    /// Finished tasks from [`any_finished_task`] yield command replies and optional
+    /// [`ServerEvent`]s. Replies are queued first on the acting client's
+    /// [`Client::pending_responses`], then each event is fan-out with
+    /// [`Self::broadcast_global`].
+    ///
+    /// For `Broadcast <text>` (see [`TaskType::BroadcastText`]):
+    ///
+    /// ```text
+    /// AI  -->  "Broadcast hello\n"     queue task, 7/f timer
+    /// AI  <--  "ok\n"                   command reply
+    /// AI  <--  "message k, hello\n"     all AIs (k per receiver)
+    /// GUI <--  "pbc #n hello\n"
+    /// ```
+    ///
+    /// The broadcaster gets both `ok` and their own `message` line; `k` comes from
+    /// [`ServerEvent::to_ai_string`].
     pub fn run(&mut self) {
         let mut fds = vec![PollFd::new(
             self.listener.as_fd(),
@@ -82,11 +102,16 @@ impl Server {
 
         self.process_client_events(client_revents, client_keys);
 
-        let finished_tasks = any_finished_task(&mut self.world, self._freq);
+        let (finished_tasks, events) = any_finished_task(&mut self.world, self._freq);
+        // Command replies first (e.g. `ok` for a finished Broadcast).
         for (uuid, response) in finished_tasks {
             if let Some(client) = self.clients.get_mut(&uuid) {
                 client.pending_responses.push(response);
             }
+        }
+        // Then world notifications (`message` / `pbc`, …).
+        for event in events {
+            self.broadcast_global(event);
         }
     }
 
@@ -115,18 +140,60 @@ impl Server {
         let _ = client.socket.write_all(response.to_string().as_ref());
     }
 
-    pub fn broadcast_global(&mut self, event: ServerEvent) {
-        for client in self.clients.values_mut() {
-            let formatted = match &client.state {
-                ClientState::AuthenticatedGUI => event.to_gui_string(),
-                ClientState::AuthenticatedAI(_) => None,
-                ClientState::WaitingForTeamName => None,
-            };
+    /// Returns the map snapshot for an AI client ready to receive broadcast lines.
+    ///
+    /// `None` when the client is not authenticated AI, has no [`Client::entity`], or
+    /// the entity is missing position/orientation in [`Self::world`].
+    fn ai_client_ok(client: &Client, world: &World) -> Option<Inhabitant> {
+        let ClientState::AuthenticatedAI(_) = &client.state else {
+            return None;
+        };
+        let entity = client.entity?;
+        Inhabitant::get(entity, world)
+    }
 
-            if let Some(data) = formatted {
+    /// Pushes a [`ServerEvent`] to every connected client that should see it.
+    ///
+    /// - **GUI** ([`ClientState::AuthenticatedGUI`]): [`ServerEvent::to_gui_string`]
+    ///   (e.g. `pbc #3 hello\n` for [`ServerEvent::Message`]).
+    /// - **AI** ([`ClientState::AuthenticatedAI`]): [`ServerEvent::to_ai_string`] with
+    ///   that client’s [`Inhabitant`] snapshot so `k` is relative to the receiver
+    ///   (e.g. `message 2, hello\n`). Skips AI clients with no linked `entity`.
+    ///
+    /// Uses a two-pass collect-then-push pattern so [`Self::world`] and [`Self::clients`]
+    /// are not borrowed mutably at the same time. Lines are queued on
+    /// [`Client::pending_responses`] like ordinary protocol output.
+    pub fn broadcast_global(&mut self, event: ServerEvent) {
+        let mut ai_lines: Vec<(String, String)> = Vec::new();
+        
+        for (uuid, client) in &self.clients {
+            if let Some(inhabitant) = Self::ai_client_ok(client, &self.world) {
+                if let Some(line) = event.to_ai_string(
+                    Some(&inhabitant),
+                    self.world.map_size.width,
+                    self.world.map_size.height,
+                ) {
+                    ai_lines.push((uuid.clone(), line));
+                }
+            }
+        }
+
+        for client in self.clients.values_mut() {
+            if let ClientState::AuthenticatedGUI = &client.state {
+                if let Some(data) = event.to_gui_string() {
+                    client.pending_responses.push(Response::new(
+                        crate::protocol::ResponseCode::Status(crate::protocol::StatusCode::Ok),
+                        Some(data),
+                    ));
+                }
+            }
+        }
+
+        for (uuid, line) in ai_lines {
+            if let Some(client) = self.clients.get_mut(&uuid) {
                 client.pending_responses.push(Response::new(
                     crate::protocol::ResponseCode::Status(crate::protocol::StatusCode::Ok),
-                    Some(data),
+                    Some(line),
                 ));
             }
         }
@@ -180,5 +247,62 @@ mod tests {
 
         let task_list = server.world.get_component::<TaskList>(entity).unwrap();
         assert_eq!(task_list.vector.len(), 10);
+    }
+
+    /// Each AI receiver gets `message k, text` with `k` from their own tile/orientation.
+    #[test]
+    fn test_broadcast_global_ai_per_receiver_k() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let mut server = Server {
+            listener,
+            clients: HashMap::new(),
+            _users: HashMap::new(),
+            _teams: HashMap::new(),
+            _freq: 100,
+            game_start: 0,
+            world: World::new(),
+        };
+        server.world.map_size.width = 10;
+        server.world.map_size.height = 10;
+
+        let entity_same = build_inhabitant(5, 5, RelativeOrientation::Forward, &mut server.world);
+        let entity_east = build_inhabitant(6, 5, RelativeOrientation::Forward, &mut server.world);
+
+        let socket_a = std::net::TcpStream::connect(addr).unwrap();
+        let mut client_a = Client::new(socket_a);
+        client_a.state = ClientState::AuthenticatedAI("team".to_string());
+        client_a.entity = Some(entity_same);
+        let uuid_a = client_a.uuid.clone();
+
+        let socket_b = std::net::TcpStream::connect(addr).unwrap();
+        let mut client_b = Client::new(socket_b);
+        client_b.state = ClientState::AuthenticatedAI("team".to_string());
+        client_b.entity = Some(entity_east);
+        let uuid_b = client_b.uuid.clone();
+
+        server.clients.insert(uuid_a.clone(), client_a);
+        server.clients.insert(uuid_b.clone(), client_b);
+
+        let event = ServerEvent::Message {
+            player_id: 1,
+            message: "hello".to_string(),
+            x: 5,
+            y: 5,
+        };
+        server.broadcast_global(event);
+
+        let line_a = server.clients[&uuid_a].pending_responses[0]
+            .data
+            .as_ref()
+            .unwrap();
+        let line_b = server.clients[&uuid_b].pending_responses[0]
+            .data
+            .as_ref()
+            .unwrap();
+
+        assert_eq!(line_a, "message 0, hello\n");
+        assert_eq!(line_b, "message 3, hello\n");
     }
 }
