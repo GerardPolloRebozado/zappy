@@ -25,7 +25,8 @@ pub fn execute_look(world: &World, entity: Entity) -> String {
     let tiles_content: Vec<String> = (0..=i32::from(level))
         .flat_map(|i| (-i..=i).map(move |j| (i, j)))
         .map(|(f, r)| {
-            let (x, y) = get_relative_coords(pos, ori, f, r, world.map_size.width, world.map_size.height);
+            let (x, y) =
+                get_relative_coords(pos, ori, f, r, world.map_size.width, world.map_size.height);
             get_tile_info(world, x, y)
         })
         .collect();
@@ -42,10 +43,22 @@ fn get_relative_coords(
     height: u32,
 ) -> (u32, u32) {
     let (ax, ay) = match ori {
-        RelativeOrientation::Forward => (i32::try_from(pos.x).unwrap() + r, i32::try_from(pos.y).unwrap() - f),
-        RelativeOrientation::ForwardLeft => (i32::try_from(pos.x).unwrap() + f, i32::try_from(pos.y).unwrap() + r),
-        RelativeOrientation::Left => (i32::try_from(pos.x).unwrap() - r, i32::try_from(pos.y).unwrap() + f),
-        RelativeOrientation::BackLeft => (i32::try_from(pos.x).unwrap() - f, i32::try_from(pos.y).unwrap() - r),
+        RelativeOrientation::Forward => (
+            i32::try_from(pos.x).unwrap() + r,
+            i32::try_from(pos.y).unwrap() - f,
+        ),
+        RelativeOrientation::ForwardLeft => (
+            i32::try_from(pos.x).unwrap() + f,
+            i32::try_from(pos.y).unwrap() + r,
+        ),
+        RelativeOrientation::Left => (
+            i32::try_from(pos.x).unwrap() - r,
+            i32::try_from(pos.y).unwrap() + f,
+        ),
+        RelativeOrientation::BackLeft => (
+            i32::try_from(pos.x).unwrap() - f,
+            i32::try_from(pos.y).unwrap() - r,
+        ),
         _ => (i32::try_from(pos.x).unwrap(), i32::try_from(pos.y).unwrap()),
     };
 
@@ -96,7 +109,7 @@ fn get_resources_on_tile(world: &World, x: u32, y: u32) -> Vec<String> {
             let mut resources: Vec<String> = inv
                 .items
                 .iter()
-                .flat_map(|(res, count)| std::iter::repeat(res.to_string()).take(*count as usize))
+                .flat_map(|(res, count)| std::iter::repeat_n(res.to_string(), *count as usize))
                 .collect();
             resources.sort();
             return resources;

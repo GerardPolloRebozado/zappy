@@ -91,7 +91,7 @@ impl Default for Config {
             height: 100,
             names: vec!["team".to_string()],
             clients_nb: 1,
-            freq: 100
+            freq: 100,
         }
     }
 }
@@ -105,7 +105,6 @@ pub struct Config {
     pub clients_nb: u32,
     pub freq: u32,
 }
-
 
 ///
 /// Parse the command line argument with multiple options.
@@ -190,7 +189,7 @@ pub fn parse_server_args(args: &[String]) -> Result<Config, String> {
                 }
 
                 if team_names.is_empty() {
-                    return Err ("Missing team names after -n".into());
+                    return Err("Missing team names after -n".into());
                 }
 
                 names = Some(team_names);
@@ -217,7 +216,7 @@ pub fn parse_server_args(args: &[String]) -> Result<Config, String> {
 mod tests {
     use std::vec;
 
-use super::*;
+    use super::*;
 
     #[test]
     fn test_uuid_v4() {
@@ -262,22 +261,28 @@ use super::*;
     fn test_parse_server_args() {
         let arguments: Vec<String> = vec![
             "zappy_server".to_string(),
-            "-p".to_string(), "4242".to_string(),
-            "-x".to_string(), "128".to_string(),
-            "-y".to_string(), "96".to_string(),
-            "-n".to_string(), "alpha".to_string(), "beta".to_string(),
-            "-c".to_string(), "4".to_string(),
-            "-f".to_string(), "20".to_string(),
-            ];
+            "-p".to_string(),
+            "4242".to_string(),
+            "-x".to_string(),
+            "128".to_string(),
+            "-y".to_string(),
+            "96".to_string(),
+            "-n".to_string(),
+            "alpha".to_string(),
+            "beta".to_string(),
+            "-c".to_string(),
+            "4".to_string(),
+            "-f".to_string(),
+            "20".to_string(),
+        ];
 
-        let config: Config = Config{
+        let config: Config = Config {
             port: 4242,
             width: 128,
             height: 96,
-            names: vec!["alpha".to_string(),
-            "beta".to_string()],
+            names: vec!["alpha".to_string(), "beta".to_string()],
             clients_nb: 4,
-            freq: 20
+            freq: 20,
         };
 
         assert_eq!(parse_server_args(&arguments).unwrap(), config);
@@ -287,17 +292,19 @@ use super::*;
     fn test_parse_server_args_default_args() {
         let arguments: Vec<String> = vec![
             "zappy_server".to_string(),
-            "-p".to_string(), "4242".to_string(),
-            "-c".to_string(), "4".to_string(),
-            ];
+            "-p".to_string(),
+            "4242".to_string(),
+            "-c".to_string(),
+            "4".to_string(),
+        ];
 
-        let config: Config = Config{
+        let config: Config = Config {
             port: 4242,
             width: 100,
             height: 100,
             names: vec!["team".to_string()],
             clients_nb: 4,
-            freq: 100
+            freq: 100,
         };
 
         assert_eq!(parse_server_args(&arguments).unwrap(), config);
@@ -307,8 +314,9 @@ use super::*;
     fn test_parse_server_args_missing_args_port() {
         let arguments: Vec<String> = vec![
             "zappy_server".to_string(),
-            "-c".to_string(), "4".to_string(),
-            ];
+            "-c".to_string(),
+            "4".to_string(),
+        ];
 
         assert_eq!(parse_server_args(&arguments).unwrap_err(), "Missing -p");
     }
@@ -317,8 +325,9 @@ use super::*;
     fn test_parse_server_args_missing_args_client_number() {
         let arguments: Vec<String> = vec![
             "zappy_server".to_string(),
-            "-p".to_string(), "4242".to_string(),
-            ];
+            "-p".to_string(),
+            "4242".to_string(),
+        ];
 
         assert_eq!(parse_server_args(&arguments).unwrap_err(), "Missing -c");
     }
@@ -327,42 +336,58 @@ use super::*;
     fn test_parse_server_args_missing_value_port() {
         let arguments: Vec<String> = vec![
             "zappy_server".to_string(),
-            "-c".to_string(), "4".to_string(),
+            "-c".to_string(),
+            "4".to_string(),
             "-p".to_string(),
-            ];
+        ];
 
-        assert_eq!(parse_server_args(&arguments).unwrap_err(), "Missing value for -p");
+        assert_eq!(
+            parse_server_args(&arguments).unwrap_err(),
+            "Missing value for -p"
+        );
     }
 
     #[test]
     fn test_parse_server_args_missing_value_name() {
         let arguments: Vec<String> = vec![
             "zappy_server".to_string(),
-            "-p".to_string(), "4242".to_string(),
+            "-p".to_string(),
+            "4242".to_string(),
             "-n".to_string(),
-            ];
+        ];
 
-        assert_eq!(parse_server_args(&arguments).unwrap_err(), "Missing team names after -n");
+        assert_eq!(
+            parse_server_args(&arguments).unwrap_err(),
+            "Missing team names after -n"
+        );
     }
 
     #[test]
     fn test_parse_server_args_invalid_value() {
         let arguments: Vec<String> = vec![
             "zappy_server".to_string(),
-            "-p".to_string(), "not a number".to_string(),
-            ];
+            "-p".to_string(),
+            "not a number".to_string(),
+        ];
 
-        assert_eq!(parse_server_args(&arguments).unwrap_err(), "Invalid value for -p");
+        assert_eq!(
+            parse_server_args(&arguments).unwrap_err(),
+            "Invalid value for -p"
+        );
     }
 
     #[test]
     fn test_parse_server_args_unknow_flag() {
         let arguments: Vec<String> = vec![
             "zappy_server".to_string(),
-            "-p".to_string(), "4242".to_string(),
+            "-p".to_string(),
+            "4242".to_string(),
             "-a".to_string(),
-            ];
+        ];
 
-        assert_eq!(parse_server_args(&arguments).unwrap_err(), "Unknown option: -a");
+        assert_eq!(
+            parse_server_args(&arguments).unwrap_err(),
+            "Unknown option: -a"
+        );
     }
 }

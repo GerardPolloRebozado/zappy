@@ -1,18 +1,18 @@
 //! TCP server: poll loop, client map, and timed task completion.
 
-pub mod client;
 pub mod commands;
-pub mod network;
 pub mod signal;
 
+use crate::ecs::builders::inhabitants::build_inhabitant;
+use crate::ecs::components::network::NetworkData;
 use crate::ecs::components::task::TaskType;
-use crate::ecs::storage::World;
-use crate::ecs::systems::task::any_finished_task;
-use crate::ecs::map_size::MapSize;
+use crate::ecs::storage::{Entity, World};
+use crate::ecs::systems::network::network_system;
+use crate::ecs::systems::run::run_systems;
 use crate::game::*;
-use crate::protocol::{Request, Response, ServerEvent};
-use crate::server::client::{Client, ClientState};
+use crate::protocol::{Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::utils::Config;
+use crate::utils::orientation;
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
@@ -21,7 +21,6 @@ use std::os::fd::AsFd;
 
 pub struct Server {
     pub listener: TcpListener,
-    pub clients: HashMap<String, Client>,
     pub _users: HashMap<String, User>,
     pub _teams: HashMap<String, Team>,
     pub _freq: u32,
@@ -39,170 +38,160 @@ impl Default for Server {
 
 impl Server {
     pub fn new(config: Config) -> Server {
+        let listener =
+            TcpListener::bind(format!("0.0.0.0:{}", config.port)).expect("Error starting server");
+        listener
+            .set_nonblocking(true)
+            .expect("Cannot set non-blocking");
         Server {
-            listener: TcpListener::bind(format!("0.0.0.0:{}", config.port))
-                .expect("Error starting server"),
-            clients: HashMap::new(),
+            listener,
             _users: HashMap::new(),
             _teams: HashMap::new(),
             _freq: config.freq,
             game_start: Date::now().to_timestamp(),
-            world: World::new(MapSize { width: config.width, height: config.height }),
+            world: World::new(
+                crate::ecs::map_size::MapSize {
+                    width: config.width,
+                    height: config.height,
+                },
+                config.freq as u64,
+            ),
             clients_nb: config.clients_nb,
-            team_names: config.names
+            team_names: config.names,
         }
     }
 
     /// One main-loop tick: accept connections, read client input, advance the ECS task queue.
-    ///
-    /// Finished tasks from [`any_finished_task`] yield command replies and optional
-    /// [`ServerEvent`]s. Replies are queued first on the acting client's
-    /// [`Client::pending_responses`], then each event is fan-out with
-    /// [`Self::broadcast_global`].
-    ///
-    /// For `Broadcast <text>` (see [`TaskType::BroadcastText`]):
-    ///
-    /// ```text
-    /// AI  -->  "Broadcast hello\n"     queue task, 7/f timer
-    /// AI  <--  "ok\n"                   command reply
-    /// AI  <--  "message k, hello\n"     all AIs (k per receiver)
-    /// GUI <--  "pbc #n hello\n"
-    /// ```
-    ///
-    /// The broadcaster gets both `ok` and their own `message` line; `k` comes from
-    /// [`ServerEvent::to_ai_string`].
     pub fn run(&mut self) {
+        network_system(self);
+        run_systems(&mut self.world);
+    }
+
+    pub fn accept_connections(&mut self) {
+        while let Ok((socket, _addr)) = self.listener.accept() {
+            let _ = socket.set_nonblocking(true);
+            let mut socket = socket;
+            let _ = socket.write_all(b"WELCOME\n");
+            let network_data = NetworkData::new(socket);
+            build_inhabitant(
+                0,
+                0,
+                orientation::RelativeOrientation::Forward,
+                &mut self.world,
+                network_data,
+            );
+        }
+    }
+
+    pub fn get_server_events(&self) -> Vec<PollFd<'_>> {
         let mut fds = vec![PollFd::new(
             self.listener.as_fd(),
             PollFlags::POLLIN | PollFlags::POLLOUT,
         )];
-        let client_keys: Vec<String> = self.clients.keys().cloned().collect();
 
-        for uuid in &client_keys {
-            if let Some(client) = self.clients.get(uuid) {
+        if let Some(network_data_keys) = self.world.get_storage::<NetworkData>() {
+            for (_, network_data) in network_data_keys.iter() {
                 fds.push(PollFd::new(
-                    client.socket.as_fd(),
+                    network_data.socket.as_fd(),
                     PollFlags::POLLIN | PollFlags::POLLOUT,
                 ));
             }
         }
-
         if let Err(_e) = nix::poll::poll(&mut fds, None::<u16>) {
+            return fds;
+        }
+
+        fds
+    }
+
+    pub fn process_client_events(&mut self, client_revents: Vec<PollFlags>) {
+        let mut disconnected = Vec::new();
+        let mut requests_to_read = Vec::new();
+        let mut requests_to_write = Vec::new();
+
+        {
+            let network_data_storage = self.world.get_storage_mut::<NetworkData>();
+            if network_data_storage.is_none() {
+                return;
+            }
+            let network_data_storage = network_data_storage.unwrap();
+
+            for (i, (entity, network_data)) in network_data_storage.iter_mut().enumerate() {
+                let revents = client_revents[i];
+
+                if revents.contains(PollFlags::POLLOUT) {
+                    requests_to_write.push(*entity);
+                }
+
+                if !revents.contains(PollFlags::POLLIN) {
+                    continue;
+                }
+
+                match network_data.read_data() {
+                    Some(msg) => requests_to_read.push((*entity, msg)),
+                    None => disconnected.push(*entity),
+                }
+            }
+        }
+
+        for (entity, msg) in requests_to_read {
+            for line in msg.split('\n') {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+
+                let req = match trimmed.parse::<Request>() {
+                    Ok(req) => req,
+                    Err(_) => {
+                        if let Some(client) = self.world.get_component_mut::<NetworkData>(entity) {
+                            client.pending_responses.push(Response {
+                                code: ResponseCode::Status(StatusCode::Ko),
+                                data: None,
+                            });
+                        }
+                        continue;
+                    }
+                };
+
+                commands::handle_request(self, entity, req);
+            }
+        }
+
+        for entity in requests_to_write {
+            let mut responses = Vec::new();
+            if let Some(c) = self.world.get_component_mut::<NetworkData>(entity) {
+                responses = c.pending_responses.drain(..).collect();
+            }
+            for response in responses {
+                self.handle_response(entity, response);
+            }
+        }
+
+        for entity in disconnected {
+            self.world.despawn(entity);
+        }
+    }
+
+    pub fn queue_task(&mut self, entity: Entity, task_type: TaskType) {
+        commands::queue_task(self, entity, task_type);
+    }
+
+    pub fn handle_request(&mut self, entity: Entity, request: Request) {
+        commands::handle_request(self, entity, request);
+    }
+
+    pub fn handle_response(&mut self, entity: Entity, response: Response) {
+        let network_data = self.world.get_component_mut::<NetworkData>(entity);
+        if network_data.is_none() {
             return;
         }
-
-        let listener_ready = fds[0]
-            .revents()
-            .is_some_and(|f| f.contains(PollFlags::POLLIN));
-
-        let client_revents: Vec<PollFlags> = fds[1..]
-            .iter()
-            .map(|fd| fd.revents().unwrap_or(PollFlags::empty()))
-            .collect();
-
-        drop(fds);
-
-        if listener_ready {
-            self.accept_connections();
-        }
-
-        self.process_client_events(client_revents, client_keys);
-
-        let (finished_tasks, events) = any_finished_task(&mut self.world, self._freq);
-        // Command replies first (e.g. `ok` for a finished Broadcast).
-        for (uuid, response) in finished_tasks {
-            if let Some(client) = self.clients.get_mut(&uuid) {
-                client.pending_responses.push(response);
-            }
-        }
-        // Then world notifications (`message` / `pbc`, …).
-        for event in events {
-            self.broadcast_global(event);
-        }
+        let network_data = network_data.unwrap();
+        let _ = network_data.socket.write_all(response.to_string().as_ref());
     }
 
-    pub fn accept_connections(&mut self) {
-        network::accept_connections(self);
-    }
-
-    pub fn process_client_events(
-        &mut self,
-        client_revents: Vec<PollFlags>,
-        client_keys: Vec<String>,
-    ) {
-        network::process_client_events(self, client_revents, client_keys);
-    }
-
-    pub fn queue_task(&mut self, client_uuid: &str, task_type: TaskType) {
-        commands::queue_task(self, client_uuid, task_type);
-    }
-
-    pub fn handle_request(&mut self, client_uuid: &str, request: Request) {
-        commands::handle_request(self, client_uuid, request);
-    }
-
-    pub fn handle_response(&mut self, client_uuid: &str, response: Response) {
-        let client = self.clients.get_mut(client_uuid).unwrap();
-        let _ = client.socket.write_all(response.to_string().as_ref());
-    }
-
-    /// Returns the map snapshot for an AI client ready to receive broadcast lines.
-    ///
-    /// `None` when the client is not authenticated AI, has no [`Client::entity`], or
-    /// the entity is missing position/orientation in [`Self::world`].
-    fn ai_client_ok(client: &Client, world: &World) -> Option<Inhabitant> {
-        let ClientState::AuthenticatedAI(_) = &client.state else {
-            return None;
-        };
-        let entity = client.entity?;
-        Inhabitant::get(entity, world)
-    }
-
-    /// Pushes a [`ServerEvent`] to every connected client that should see it.
-    ///
-    /// - **GUI** ([`ClientState::AuthenticatedGUI`]): [`ServerEvent::to_gui_string`]
-    ///   (e.g. `pbc #3 hello\n` for [`ServerEvent::Message`]).
-    /// - **AI** ([`ClientState::AuthenticatedAI`]): [`ServerEvent::to_ai_string`] with
-    ///   that client’s [`Inhabitant`] snapshot so `k` is relative to the receiver
-    ///   (e.g. `message 2, hello\n`). Skips AI clients with no linked `entity`.
-    ///
-    /// Uses a two-pass collect-then-push pattern so [`Self::world`] and [`Self::clients`]
-    /// are not borrowed mutably at the same time. Lines are queued on
-    /// [`Client::pending_responses`] like ordinary protocol output.
     pub fn broadcast_global(&mut self, event: ServerEvent) {
-        let mut ai_lines: Vec<(String, String)> = Vec::new();
-        
-        for (uuid, client) in &self.clients {
-            if let Some(inhabitant) = Self::ai_client_ok(client, &self.world) {
-                if let Some(line) = event.to_ai_string(
-                    Some(&inhabitant),
-                    self.world.map_size.width,
-                    self.world.map_size.height,
-                ) {
-                    ai_lines.push((uuid.clone(), line));
-                }
-            }
-        }
-
-        for client in self.clients.values_mut() {
-            if let ClientState::AuthenticatedGUI = &client.state {
-                if let Some(data) = event.to_gui_string() {
-                    client.pending_responses.push(Response::new(
-                        crate::protocol::ResponseCode::Status(crate::protocol::StatusCode::Ok),
-                        Some(data),
-                    ));
-                }
-            }
-        }
-
-        for (uuid, line) in ai_lines {
-            if let Some(client) = self.clients.get_mut(&uuid) {
-                client.pending_responses.push(Response::new(
-                    crate::protocol::ResponseCode::Status(crate::protocol::StatusCode::Ok),
-                    Some(line),
-                ));
-            }
-        }
+        crate::ecs::systems::task::broadcast_event(&mut self.world, event);
     }
 
     pub fn save(&mut self) {}
@@ -221,6 +210,7 @@ impl Server {
 mod tests {
     use super::*;
     use crate::ecs::builders::inhabitants::build_inhabitant;
+    use crate::ecs::components::network::{ClientState, NetworkData};
     use crate::ecs::components::task::{TaskList, TaskType};
     use crate::utils::orientation::RelativeOrientation;
     use std::net::TcpListener;
@@ -232,32 +222,39 @@ mod tests {
 
         let mut server = Server {
             listener,
-            clients: HashMap::new(),
             _users: HashMap::new(),
             _teams: HashMap::new(),
             _freq: 100,
             game_start: 0,
-            world: World::default(),
+            world: World::new(
+                crate::ecs::map_size::MapSize {
+                    width: 10,
+                    height: 10,
+                },
+                100,
+            ),
             clients_nb: 1,
             team_names: vec!["team".to_string()],
         };
 
         let client_socket = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-        let mut client = Client::new(client_socket);
-        let entity = build_inhabitant(0, 0, RelativeOrientation::Forward, &mut server.world);
-        client.entity = Some(entity);
-        let uuid = client.uuid.clone();
-        server.clients.insert(uuid.clone(), client);
+        let network = NetworkData::new(client_socket);
+        let entity = build_inhabitant(
+            0,
+            0,
+            RelativeOrientation::Forward,
+            &mut server.world,
+            network,
+        );
 
         for _ in 0..15 {
-            server.queue_task(&uuid, TaskType::Forward);
+            server.queue_task(entity, TaskType::Forward);
         }
 
         let task_list = server.world.get_component::<TaskList>(entity).unwrap();
         assert_eq!(task_list.vector.len(), 10);
     }
 
-    /// Each AI receiver gets `message k, text` with `k` from their own tile/orientation.
     #[test]
     fn test_broadcast_global_ai_per_receiver_k() {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -265,35 +262,46 @@ mod tests {
 
         let mut server = Server {
             listener,
-            clients: HashMap::new(),
             _users: HashMap::new(),
             _teams: HashMap::new(),
             _freq: 100,
             game_start: 0,
-            world: World::default(),
+            world: World::new(
+                crate::ecs::map_size::MapSize {
+                    width: 10,
+                    height: 10,
+                },
+                100,
+            ),
             clients_nb: 1,
             team_names: vec!["team".to_string()],
         };
-        server.world.map_size.width = 10;
-        server.world.map_size.height = 10;
-
-        let entity_same = build_inhabitant(5, 5, RelativeOrientation::Forward, &mut server.world);
-        let entity_east = build_inhabitant(6, 5, RelativeOrientation::Forward, &mut server.world);
 
         let socket_a = std::net::TcpStream::connect(addr).unwrap();
-        let mut client_a = Client::new(socket_a);
-        client_a.state = ClientState::AuthenticatedAI("team".to_string());
-        client_a.entity = Some(entity_same);
-        let uuid_a = client_a.uuid.clone();
+        let network_a = NetworkData::new(socket_a);
+        let entity_same = build_inhabitant(
+            5,
+            5,
+            RelativeOrientation::Forward,
+            &mut server.world,
+            network_a,
+        );
+        if let Some(nd) = server.world.get_component_mut::<NetworkData>(entity_same) {
+            nd.state = ClientState::AuthenticatedAI("team".to_string());
+        }
 
         let socket_b = std::net::TcpStream::connect(addr).unwrap();
-        let mut client_b = Client::new(socket_b);
-        client_b.state = ClientState::AuthenticatedAI("team".to_string());
-        client_b.entity = Some(entity_east);
-        let uuid_b = client_b.uuid.clone();
-
-        server.clients.insert(uuid_a.clone(), client_a);
-        server.clients.insert(uuid_b.clone(), client_b);
+        let network_b = NetworkData::new(socket_b);
+        let entity_east = build_inhabitant(
+            6,
+            5,
+            RelativeOrientation::Forward,
+            &mut server.world,
+            network_b,
+        );
+        if let Some(nd) = server.world.get_component_mut::<NetworkData>(entity_east) {
+            nd.state = ClientState::AuthenticatedAI("team".to_string());
+        }
 
         let event = ServerEvent::Message {
             player_id: 1,
@@ -303,14 +311,17 @@ mod tests {
         };
         server.broadcast_global(event);
 
-        let line_a = server.clients[&uuid_a].pending_responses[0]
-            .data
-            .as_ref()
+        let network_a = server
+            .world
+            .get_component::<NetworkData>(entity_same)
             .unwrap();
-        let line_b = server.clients[&uuid_b].pending_responses[0]
-            .data
-            .as_ref()
+        let network_b = server
+            .world
+            .get_component::<NetworkData>(entity_east)
             .unwrap();
+
+        let line_a = network_a.pending_responses[0].data.as_ref().unwrap();
+        let line_b = network_b.pending_responses[0].data.as_ref().unwrap();
 
         assert_eq!(line_a, "message 0, hello\n");
         assert_eq!(line_b, "message 3, hello\n");
