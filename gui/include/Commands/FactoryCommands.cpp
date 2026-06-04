@@ -7,11 +7,11 @@
 #include "FactoryCommands.hpp"
 #include "Commands/CommandMapContent.hpp"
 #include "Commands/CommandMapSize.hpp"
+#include "Commands/CommandPlayerInventory.hpp"
 #include "Commands/CommandPlayerLevel.hpp"
 #include "Commands/CommandPlayerPosition.hpp"
 #include "Commands/CommandTeamNames.hpp"
 #include "Commands/CommandTileContent.hpp"
-#include "Commands/FactoryCommands.hpp"
 
 namespace zappy {
 
@@ -21,7 +21,8 @@ const std::unordered_map<std::string, FactoryCommands::CommandCreator> FactoryCo
      {"bct", []() { return std::make_unique<CommandTileContent>(); }},
      {"tna", []() { return std::make_unique<CommandTeamNames>(); }},
      {"ppo", []() { return std::make_unique<CommandPlayerPosition>(); }},
-     {"plv", []() { return std::make_unique<CommandPlayerLevel>(); }}};
+     {"plv", []() { return std::make_unique<CommandPlayerLevel>(); }},
+     {"pin", []() { return std::make_unique<CommandPlayerInventory>(); }}};
 
 std::unique_ptr<ACommand> FactoryCommands::createCommand(const std::string& commandName) {
     auto it = _creators.find(commandName);

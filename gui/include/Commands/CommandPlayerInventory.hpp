@@ -6,21 +6,61 @@
 */
 #ifndef ZAPPY_COMMANDPLAYERINVENTORY_HPP
 #define ZAPPY_COMMANDPLAYERINVENTORY_HPP
+
 #include "ACommand.hpp"
+#include "Components/ComponentShared.hpp"
+#include <algorithm>
+#include <sstream>
 
 namespace zappy {
-    class CommandPlayerInventory : public ACommand{
-        CommandPlayerInventory() = default;
-        /**
-         * @brief Requests the inventory content of a specific player.
-         * @param args The arguments for the command, expected to contain the player ID.
-         * @param registry The registry containing the application state, where the player's inventory will be updated
-         */
-        void execute(const std::string&args, Register&registry) override
-        {
+class CommandPlayerInventory : public ACommand {
+  public:
+    CommandPlayerInventory() = default;
+    ~CommandPlayerInventory() override = default;
 
-        };
-    };
-} // zappy
+    /**
+     * @brief Handles the "pin" command, updating a player's inventory and position.
+     * @param args The arguments for the command: "#n X Y q0 q1 q2 q3 q4 q5 q6"
+     * @param world The ECS World containing the application state
+     */
+    void execute(const std::string& args, World& world) override {
+        std::string cleanArgs = args;
+        cleanArgs.erase(std::remove(cleanArgs.begin(), cleanArgs.end(), '#'), cleanArgs.end());
 
-#endif //ZAPPY_COMMANDPLAYERINVENTORY_HPP
+        std::istringstream iss(cleanArgs);
+        int playerId, x, y;
+        int q0, q1, q2, q3, q4, q5, q6;
+
+        if (!(iss >> playerId >> x >> y >> q0 >> q1 >> q2 >> q3 >> q4 >> q5 >> q6)) {
+            return;
+        }
+
+        auto posStorage = world.get_storage<Position>();
+        if (!posStorage) {
+            return;
+        }
+
+        for (auto& [entity, position] : *posStorage) {
+            if (entity.id() == (uint32_t)playerId) {
+                position->x = x;
+                position->y = y;
+
+                auto inv = world.get_component<Inventory>(entity);
+                if (inv) {
+                    inv->food = q0;
+                    inv->linemate = q1;
+                    inv->deraumere = q2;
+                    inv->sibur = q3;
+                    inv->mendiane = q4;
+                    inv->phiras = q5;
+                    inv->thystame = q6;
+                }
+                std::cout << "Protocol: Player #" << playerId << " inventory updated" << std::endl;
+                break;
+            }
+        }
+    }
+};
+} // namespace zappy
+
+#endif // ZAPPY_COMMANDPLAYERINVENTORY_HPP
