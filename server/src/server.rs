@@ -25,6 +25,8 @@ pub struct Server {
     pub _freq: u32,
     pub game_start: u64,
     pub world: World,
+    pub clients_nb: u32,
+    pub team_names: Vec<String>,
 }
 
 impl Default for Server {
@@ -48,6 +50,8 @@ impl Server {
             _freq: config.freq,
             game_start: Date::now().to_timestamp(),
             world: World::new(),
+            clients_nb: config.clients_nb,
+            team_names: config.names
         }
     }
 
