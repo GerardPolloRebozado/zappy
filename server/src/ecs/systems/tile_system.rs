@@ -55,11 +55,6 @@ pub fn populate_tile_resources(world: &mut World, tile_ent: Entity, terrain: Ter
 
 /// Initializes the game map by registering components and spawning a grid of tiles using noise
 pub fn setup_map(world: &mut World, width: u32, height: u32) {
-    world.register_component::<Tile>();
-    world.register_component::<Position>();
-    world.register_component::<TerrainType>();
-    world.register_component::<Inventory>();
-
     let mut rng = rng();
     let seed = rng.random();
     //    println!("Map Generation: Seed = {}", seed);
@@ -113,10 +108,6 @@ mod tests {
     #[test]
     fn test_spawn_tile() {
         let mut world = World::new();
-        world.register_component::<Tile>();
-        world.register_component::<Position>();
-        world.register_component::<TerrainType>();
-        world.register_component::<Inventory>();
 
         let tile_ent = spawn_tile(&mut world, 10, 20, TerrainType::Grass);
 
