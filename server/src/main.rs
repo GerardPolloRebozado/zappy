@@ -1,8 +1,8 @@
 use std::io;
 use zappy_server::server::Server;
 use zappy_server::server::signal::{SIGNAL_RECEIVED, install_sigint_handler};
-use zappy_server::utils::parse_server_args;
 use zappy_server::utils::constants::ERROR_EXIT_CODE;
+use zappy_server::utils::parse_server_args;
 
 fn main() -> io::Result<()> {
     install_sigint_handler();
@@ -12,7 +12,9 @@ fn main() -> io::Result<()> {
         Ok(config) => config,
         Err(error) => {
             eprintln!("Error: {error}");
-            eprintln!("Usage: ./zappy_server -p port -x width -y height -n name1 name2 ... -c clientsNb -f freq");
+            eprintln!(
+                "Usage: ./zappy_server -p port -x width -y height -n name1 name2 ... -c clientsNb -f freq"
+            );
             std::process::exit(ERROR_EXIT_CODE);
         }
     };

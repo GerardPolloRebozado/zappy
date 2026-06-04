@@ -8,13 +8,14 @@
 //!
 //! 1. [`crate::server::commands`] queues [`TaskType::BroadcastText`] with the message text.
 //! 2. When the timer elapses, [`execute_task`] returns `ok` plus a [`ServerEvent::Message`].
-//! 3. [`crate::server::Server::run`] pushes `ok` to the acting client, then calls
-//!    [`crate::server::Server::broadcast_global`] so every AI receives `message k, text`
+//! 3. [`any_finished_task`] pushes `ok` to the acting client, then calls
+//!    [`broadcast_event`] so every AI receives `message k, text`
 //!    and the GUI receives `pbc #n text` (see [`ServerEvent::to_ai_string`]).
 
 use crate::{
     ecs::{
         components::{
+            network::{ClientState, NetworkData},
             position::Position,
             task::{TASK_NOT_STARTED, TaskList, TaskType},
         },
@@ -28,23 +29,15 @@ use crate::{
 pub mod look;
 
 /// Advances queued tasks, applies effects when a timer elapses, starts the next
-/// task's timer, and returns `(client_uuid, response)` pairs plus broadcast
-/// [`ServerEvent`]s that must be fan-out to every connected client.
-///
-/// TaskList storage is processed inside `{ ... }` so that borrow ends before
-/// `execute_task` mutates other components on the same `world`.
-pub fn any_finished_task(
-    world: &mut World,
-    freq: u32,
-) -> (Vec<(String, Response)>, Vec<ServerEvent>) {
-    let mut responses: Vec<(String, Response)> = Vec::new();
-    let mut events: Vec<ServerEvent> = Vec::new();
-    let mut completed: Vec<(Entity, TaskType, Option<String>)> = Vec::new();
+/// task's timer, and handles command replies and broadcast events.
+pub fn any_finished_task(world: &mut World) {
+    let mut completed: Vec<(Entity, TaskType)> = Vec::new();
+    let freq = world.freq;
 
     {
         let task_lists = match world.get_storage_mut::<TaskList>() {
             Some(tl) => tl,
-            None => return (responses, events),
+            None => return,
         };
 
         for (entity, task_list) in task_lists.iter_mut() {
@@ -54,8 +47,8 @@ pub fn any_finished_task(
             };
 
             if first_task.finish_on == TASK_NOT_STARTED {
-                first_task.finish_on = Date::now().to_timestamp()
-                    + (first_task.task_type.duration() / u64::from(freq));
+                first_task.finish_on =
+                    Date::now().to_timestamp() + (first_task.task_type.duration() / freq);
                 continue;
             }
 
@@ -63,32 +56,84 @@ pub fn any_finished_task(
                 continue;
             }
 
-            completed.push((
-                *entity,
-                first_task.task_type.clone(),
-                task_list.client_uuid.clone(),
-            ));
+            completed.push((*entity, first_task.task_type.clone()));
 
             task_list.vector.remove(0);
 
             if let Some(new_first_task) = task_list.vector.first_mut() {
-                new_first_task.finish_on = Date::now().to_timestamp()
-                    + (new_first_task.task_type.duration() / u64::from(freq));
+                new_first_task.finish_on =
+                    Date::now().to_timestamp() + (new_first_task.task_type.duration() / freq);
             }
         }
     }
 
-    for (entity, task_type, client_uuid) in completed {
+    for (entity, task_type) in completed {
         let (response, event) = execute_task(world, entity, &task_type);
-        if let Some(uuid) = client_uuid {
-            responses.push((uuid, response));
+
+        if matches!(task_type, TaskType::Death) {
+            if let Some(network_data) = world.get_component_mut::<NetworkData>(entity) {
+                use std::io::Write;
+                let _ = network_data
+                    .socket
+                    .write_all(response.to_string().as_bytes());
+            }
+            world.despawn(entity);
+        } else {
+            if let Some(network_data) = world.get_component_mut::<NetworkData>(entity) {
+                network_data.pending_responses.push(response);
+            }
         }
+
         if let Some(ev) = event {
-            events.push(ev);
+            broadcast_event(world, ev);
+        }
+    }
+}
+
+/// Pushes a [`ServerEvent`] to every connected client that should see it.
+pub fn broadcast_event(world: &mut World, event: ServerEvent) {
+    let map_width = world.map_size.width;
+    let map_height = world.map_size.height;
+
+    let mut ai_data = Vec::new();
+    let mut gui_entities = Vec::new();
+
+    if let Some(network_storage) = world.get_storage::<NetworkData>() {
+        for (entity, network_data) in network_storage.iter() {
+            match &network_data.state {
+                ClientState::AuthenticatedGUI => gui_entities.push(*entity),
+                ClientState::AuthenticatedAI(_) => {
+                    if let Some(inhabitant) = Inhabitant::get(*entity, world)
+                        && let Some(line) =
+                            event.to_ai_string(Some(&inhabitant), map_width, map_height)
+                    {
+                        ai_data.push((*entity, line));
+                    }
+                }
+                _ => {}
+            }
         }
     }
 
-    (responses, events)
+    for entity in gui_entities {
+        if let Some(line) = event.to_gui_string()
+            && let Some(nd) = world.get_component_mut::<NetworkData>(entity)
+        {
+            nd.pending_responses.push(Response::new(
+                ResponseCode::Status(StatusCode::Ok),
+                Some(line),
+            ));
+        }
+    }
+
+    for (entity, line) in ai_data {
+        if let Some(nd) = world.get_component_mut::<NetworkData>(entity) {
+            nd.pending_responses.push(Response::new(
+                ResponseCode::Status(StatusCode::Ok),
+                Some(line),
+            ));
+        }
+    }
 }
 
 /// Applies the game effect of a completed task on `entity`.
@@ -110,10 +155,10 @@ fn execute_task(
             let map_width = world.map_size.width;
             let map_height = world.map_size.height;
             let orientation = world.get_component::<RelativeOrientation>(entity).copied();
-            if let Some(pos) = world.get_component_mut::<Position>(entity) {
-                if let Some(ori) = orientation {
-                    pos.move_forward(ori, map_width, map_height);
-                }
+            if let Some(pos) = world.get_component_mut::<Position>(entity)
+                && let Some(ori) = orientation
+            {
+                pos.move_forward(ori, map_width, map_height);
             }
             (ok, None)
         }
@@ -136,6 +181,13 @@ fn execute_task(
             ),
             None,
         ),
+        TaskType::Death => (
+            Response::new(
+                ResponseCode::Status(StatusCode::Ok),
+                Some("dead".to_string()),
+            ),
+            None,
+        ),
         TaskType::BroadcastText(text) => {
             // No ECS mutation: only snapshot position for ServerEvent + later calc_k per receiver.
             let mut event = None;
@@ -152,6 +204,7 @@ fn execute_task(
 mod tests {
     use crate::ecs::components::inventory::Inventory;
     use crate::ecs::components::level::Level;
+    use crate::ecs::components::life::Life;
     use crate::ecs::components::task::{Task, TaskType};
     use crate::ecs::storage::World;
 
@@ -167,12 +220,14 @@ mod tests {
         let mut world = World::default();
         world.map_size.width = map_w;
         world.map_size.height = map_h;
+
         let entity = world.spawn();
         world.add_component(entity, Position { x, y });
         world.add_component(entity, orientation);
         world.add_component(entity, Level::new());
         world.add_component(entity, TaskList::default());
         world.add_component(entity, Inventory::new());
+        world.add_component(entity, Life::new(world.freq));
         (world, entity)
     }
 
@@ -247,22 +302,19 @@ mod tests {
 
     #[test]
     fn execute_task_broadcast_returns_message_event() {
-        let (mut world, entity) =
-            setup_inhabitant(2, 3, RelativeOrientation::Forward, 10, 10);
+        let (mut world, entity) = setup_inhabitant(2, 3, RelativeOrientation::Forward, 10, 10);
         let (response, event) =
             execute_task(&mut world, entity, &TaskType::BroadcastText("hi".into()));
         assert_ok(response);
-        assert!(
-            matches!(
-                event,
-                Some(ServerEvent::Message {
-                    message,
-                    x: 2,
-                    y: 3,
-                    ..
-                }) if message == "hi"
-            )
-        );
+        assert!(matches!(
+            event,
+            Some(ServerEvent::Message {
+                message,
+                x: 2,
+                y: 3,
+                ..
+            }) if message == "hi"
+        ));
     }
 
     #[test]
@@ -317,7 +369,7 @@ mod tests {
         }
 
         // task should not be finished
-        let _ = any_finished_task(&mut world, 1);
+        any_finished_task(&mut world);
         {
             let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
             assert_eq!(task_list.vector.len(), 1);
@@ -325,7 +377,7 @@ mod tests {
         }
 
         // task should be finished
-        let _ = any_finished_task(&mut world, 1);
+        any_finished_task(&mut world);
         {
             let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
             assert_eq!(task_list.vector.len(), 0);

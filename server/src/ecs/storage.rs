@@ -39,7 +39,6 @@
 //! world.despawn(player);
 //! ```
 
-
 use crate::ecs::map_size::MapSize;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
@@ -149,22 +148,31 @@ pub struct World {
     free_ids: Vec<u32>,
     /// A map of component types to their respective `ComponentMap`
     storages: HashMap<TypeId, Box<dyn ComponentStorage>>,
+    /// curent frequency used to calculate time for instance, if f=1, ”forward” takes 7 / 1 = 7 seconds.
+    pub freq: u64,
 }
 
 impl Default for World {
     fn default() -> Self {
-        Self::new(MapSize { width: 100, height: 100 })
+        Self::new(
+            MapSize {
+                width: 100,
+                height: 100,
+            },
+            100,
+        )
     }
 }
 
 impl World {
     /// Creates a new, empty ECS world
-    pub fn new(map_size: MapSize) -> Self {
+    pub fn new(map_size: MapSize, freq: u64) -> Self {
         Self {
-            map_size: map_size,
+            map_size,
             entity_generations: Vec::new(),
             free_ids: Vec::new(),
             storages: HashMap::new(),
+            freq,
         }
     }
 

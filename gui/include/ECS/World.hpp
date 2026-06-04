@@ -3,7 +3,6 @@
 
 #include "ComponentMap.hpp"
 #include <cstdint>
-#include <iostream>
 #include <memory>
 #include <typeindex>
 #include <unordered_map>

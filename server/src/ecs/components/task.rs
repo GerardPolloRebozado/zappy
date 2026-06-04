@@ -20,6 +20,7 @@ pub enum TaskType {
     Take,
     Drop,
     Incantation,
+    Death,
 }
 
 impl TaskType {
@@ -37,6 +38,7 @@ impl TaskType {
             TaskType::Take => 7,
             TaskType::Drop => 7,
             TaskType::Incantation => 300,
+            TaskType::Death => 0,
         }
     }
 }
@@ -59,5 +61,4 @@ impl Task {
 #[derive(Default, Clone)]
 pub struct TaskList {
     pub vector: Vec<Task>,
-    pub client_uuid: Option<String>,
 }
