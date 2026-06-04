@@ -8,7 +8,7 @@
 #define ZAPPY_GUI_COMPONENTBOT_HPP
 #include <string>
 namespace zappy {
-    struct BotData {
+    struct InhabitantData {
         int id;
         int level;
         int orientation;

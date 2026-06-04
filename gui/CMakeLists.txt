@@ -40,7 +40,7 @@ set(SOURCES
         src/Network/TcpSocket.cpp
         src/Systems/RenderSystem.cpp
         include/Components/ComponentShared.hpp
-        include/Components/ComponentBot.hpp
+        include/Components/ComponentInhabitant.hpp
         include/Components/ComponentTile.hpp
         include/Systems/RenderSystem.hpp
         include/Graphics/AssetManager.hpp
