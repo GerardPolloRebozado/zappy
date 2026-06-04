@@ -48,7 +48,7 @@ pub fn handle_request(server: &mut Server, client_uuid: &str, request: Request) 
         Command::Left => queue_task(server, client_uuid, TaskType::TurnLeft),
         Command::Look => queue_task(server, client_uuid, TaskType::Look),
         Command::Inventory => queue_task(server, client_uuid, TaskType::Inventory),
-        Command::Broadcast(_) => queue_task(server, client_uuid, TaskType::BroadcastText),
+        Command::Broadcast(text) => queue_task(server, client_uuid, TaskType::BroadcastText(text)),
         Command::ConnectNbr => {
             let client = match server.clients.get_mut(client_uuid) {
                 Some(c) => c,
