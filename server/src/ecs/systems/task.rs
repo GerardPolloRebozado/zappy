@@ -80,8 +80,8 @@ pub fn any_finished_task(world: &mut World, freq: u32) -> Vec<(String, Response)
 fn execute_task(world: &mut World, entity: Entity, task_type: &TaskType) -> Response {
     match task_type {
         TaskType::Forward => {
-            let map_width = world.mapSize.width;
-            let map_height = world.mapSize.height;
+            let map_width = world.map_size.width;
+            let map_height = world.map_size.height;
             let orientation = world.get_component::<RelativeOrientation>(entity).copied();
             if let Some(pos) = world.get_component_mut::<Position>(entity) {
                 if let Some(ori) = orientation {
@@ -121,8 +121,8 @@ mod tests {
         map_h: u32,
     ) -> (World, Entity) {
         let mut world = World::new();
-        world.mapSize.width = map_w;
-        world.mapSize.height = map_h;
+        world.map_size.width = map_w;
+        world.map_size.height = map_h;
         world.register_component::<Position>();
         world.register_component::<RelativeOrientation>();
         let entity = world.spawn();
@@ -167,8 +167,8 @@ mod tests {
     #[test]
     fn execute_task_forward_without_orientation() {
         let mut world = World::new();
-        world.mapSize.width = 10;
-        world.mapSize.height = 10;
+        world.map_size.width = 10;
+        world.map_size.height = 10;
         world.register_component::<Position>();
         let entity = world.spawn();
         world.add_component(entity, Position { x: 5, y: 5 });
