@@ -25,7 +25,7 @@ pub fn execute_look(world: &World, entity: Entity) -> String {
     let tiles_content: Vec<String> = (0..=i32::from(level))
         .flat_map(|i| (-i..=i).map(move |j| (i, j)))
         .map(|(f, r)| {
-            let (x, y) = get_relative_coords(pos, ori, f, r, world.mapSize.width, world.mapSize.height);
+            let (x, y) = get_relative_coords(pos, ori, f, r, world.map_size.width, world.map_size.height);
             get_tile_info(world, x, y)
         })
         .collect();
@@ -114,13 +114,8 @@ mod tests {
     #[test]
     fn test_execute_look() {
         let mut world = World::new();
-        world.mapSize.width = 10;
-        world.mapSize.height = 10;
-        world.register_component::<Position>();
-        world.register_component::<RelativeOrientation>();
-        world.register_component::<Level>();
-        world.register_component::<Tile>();
-        world.register_component::<Inventory>();
+        world.map_size.width = 10;
+        world.map_size.height = 10;
 
         let entity = world.spawn();
         world.add_component(entity, Position { x: 5, y: 5 });

@@ -8,20 +8,19 @@
 #define ZAPPY_COMMANDMAPCONTENT_HPP
 #include "ACommand.hpp"
 namespace zappy {
-    class CommandMapContent : public ACommand {
-    public:
-        CommandMapContent() = default;
-        ~CommandMapContent() = default;
-        /**
-         * @brief Sends a request for the content of all tiles on the map.
-         * @param args The arguments for the command.
-         * @param registry The registry containing the application state.
-         */
-        void execute(const std::string&args, Register&registry) override
-        {
+class CommandMapContent : public ACommand {
+  public:
+    CommandMapContent() = default;
+    ~CommandMapContent() = default;
+    /**
+     * @brief Sends a request for the content of all tiles on the map.
+     * @param args The arguments for the command.
+     * @param world The world containing the application state.
+     */
+    void execute(const std::string& args, World& world) override {
 
-        };
     };
-} // zappy
+};
+} // namespace zappy
 
-#endif //ZAPPY_COMMANDMAPCONTENT_HPP
+#endif // ZAPPY_COMMANDMAPCONTENT_HPP

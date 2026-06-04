@@ -134,8 +134,8 @@ impl Server {
 
     pub fn save(&mut self) {}
     pub fn load(&mut self) {
-        let width = self.world.mapSize.width;
-        let height = self.world.mapSize.height;
+        let width = self.world.map_size.width;
+        let height = self.world.map_size.height;
         crate::ecs::systems::tile_system::setup_map(&mut self.world, width, height);
     }
 
@@ -154,10 +154,6 @@ mod tests {
 
     #[test]
     fn test_queue_task_limit() {
-        use crate::ecs::components::inventory::Inventory;
-        use crate::ecs::components::level::Level;
-        use crate::ecs::components::position::Position;
-
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
 
@@ -170,11 +166,6 @@ mod tests {
             game_start: 0,
             world: World::new(),
         };
-        server.world.register_component::<TaskList>();
-        server.world.register_component::<Position>();
-        server.world.register_component::<Inventory>();
-        server.world.register_component::<RelativeOrientation>();
-        server.world.register_component::<Level>();
 
         let client_socket = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
         let mut client = Client::new(client_socket);
