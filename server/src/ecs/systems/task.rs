@@ -123,8 +123,6 @@ mod tests {
         let mut world = World::new();
         world.map_size.width = map_w;
         world.map_size.height = map_h;
-        world.register_component::<Position>();
-        world.register_component::<RelativeOrientation>();
         let entity = world.spawn();
         world.add_component(entity, Position { x, y });
         world.add_component(entity, orientation);
@@ -169,7 +167,6 @@ mod tests {
         let mut world = World::new();
         world.map_size.width = 10;
         world.map_size.height = 10;
-        world.register_component::<Position>();
         let entity = world.spawn();
         world.add_component(entity, Position { x: 5, y: 5 });
 
@@ -200,7 +197,6 @@ mod tests {
     #[test]
     fn execute_task_turn_without_orientation() {
         let mut world = World::new();
-        world.register_component::<Position>();
         let entity = world.spawn();
         world.add_component(entity, Position { x: 1, y: 1 });
 
