@@ -1,5 +1,3 @@
-from .decision_making import take_decision
-
 def run_client(client):
     """
     Loop to handle server communication
