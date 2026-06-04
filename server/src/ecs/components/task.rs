@@ -52,5 +52,4 @@ impl Task {
 #[derive(Default, Clone)]
 pub struct TaskList {
     pub vector: Vec<Task>,
-    pub client_uuid: Option<String>,
 }

@@ -1,7 +1,5 @@
-use crate::ecs::storage::Entity;
 use crate::protocol::Response;
 use crate::utils::constants::MAX_BODY_LENGTH;
-use crate::utils::uuid_v4;
 use std::io::Read;
 use std::net::TcpStream;
 
@@ -12,26 +10,22 @@ pub enum ClientState {
     AuthenticatedGUI,
 }
 
-pub struct Client {
-    pub uuid: String,
+pub struct NetworkData {
     pub socket: TcpStream,
     pub user: Option<String>,
     buffered_data: Option<String>,
     pub pending_responses: Vec<Response>,
     pub state: ClientState,
-    pub entity: Option<Entity>,
 }
 
-impl Client {
-    pub fn new(socket: TcpStream) -> Client {
-        Client {
-            uuid: uuid_v4(),
+impl NetworkData {
+    pub fn new(socket: TcpStream) -> NetworkData {
+        NetworkData {
             socket,
             user: None,
             buffered_data: None,
             pending_responses: Vec::new(),
             state: ClientState::WaitingForTeamName,
-            entity: None,
         }
     }
 
