@@ -2,10 +2,10 @@
 ** EPITECH PROJECT, 2026
 ** zappy_gui
 ** File description:
-** ComponentBot.hpp
+** ComponentInhabitant.hpp
 */
-#ifndef ZAPPY_GUI_COMPONENTBOT_HPP
-#define ZAPPY_GUI_COMPONENTBOT_HPP
+#ifndef ZAPPY_GUI_COMPONENTINHABITANT_HPP
+#define ZAPPY_GUI_COMPONENTINHABITANT_HPP
 #include <string>
 namespace zappy {
 
@@ -31,4 +31,4 @@ namespace zappy {
         Type current_race;
     };
 }
-#endif //ZAPPY_GUI_COMPONENTBOT_HPP
+#endif //ZAPPY_GUI_COMPONENTINHABITANT_HPP
