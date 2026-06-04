@@ -1,11 +1,17 @@
+//! Map dimensions and protocol tile queries.
+//!
+//! Map bounds live on [`World::map_size`] so movement and `bct`/`mct` handlers
+//! read the same values as the spawned tile grid.
+
 use crate::ecs::storage::World;
 use crate::game::Resource;
 
-pub struct Map {
+pub struct MapSize {
     pub width: u32,
     pub height: u32,
 }
 
+/// Builds a `bct x y …` line for the tile at `(x, y)`, or `None` if no tile exists there.
 pub fn get_tile_content(world: &World, x: u32, y: u32) -> Option<String> {
     use crate::ecs::components::inventory::Inventory;
     use crate::ecs::components::position::Position;
