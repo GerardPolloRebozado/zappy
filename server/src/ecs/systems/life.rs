@@ -54,7 +54,7 @@ mod tests {
 
     #[test]
     fn test_check_dead_inhabitants_queues_death() {
-        let mut world = World::new(100);
+        let mut world = World::default();
         let entity = world.spawn();
 
         let life = Life {
@@ -78,7 +78,7 @@ mod tests {
 
     #[test]
     fn test_check_dead_inhabitants_no_duplicate_death() {
-        let mut world = World::new(100);
+        let mut world = World::default();
         let entity = world.spawn();
 
         world.add_component(

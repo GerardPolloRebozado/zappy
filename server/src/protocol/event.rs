@@ -15,7 +15,7 @@ use crate::{
 ///
 /// Variants mirror the Zappy protocol notifications (`pbc`, `pex`, `pnw`, …).
 /// Use the constructor helpers (e.g. [`ServerEvent::message`]) when building
-/// events from live [`Player`] state.
+/// events from live [`Inhabitant`] state.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ServerEvent {
     /// Player broadcast: GUI `pbc #n M`, AI `message k, M`.

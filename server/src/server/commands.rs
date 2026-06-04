@@ -44,7 +44,7 @@ pub fn handle_request(server: &mut Server, entity: Entity, request: Request) {
         Command::Left => queue_task(server, entity, TaskType::TurnLeft),
         Command::Look => queue_task(server, entity, TaskType::Look),
         Command::Inventory => queue_task(server, entity, TaskType::Inventory),
-        Command::Broadcast(_) => queue_task(server, entity, TaskType::BroadcastText),
+        Command::Broadcast(text) => queue_task(server, entity, TaskType::BroadcastText(text)),
         Command::ConnectNbr => {
             let network_data = server.world.get_component_mut::<NetworkData>(entity);
             if network_data.is_none() {
