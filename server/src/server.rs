@@ -8,9 +8,11 @@ pub mod signal;
 use crate::ecs::components::task::TaskType;
 use crate::ecs::storage::World;
 use crate::ecs::systems::task::any_finished_task;
+use crate::ecs::map_size::MapSize;
 use crate::game::*;
 use crate::protocol::{Request, Response, ServerEvent};
 use crate::server::client::{Client, ClientState};
+use crate::utils::Config;
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
@@ -25,25 +27,29 @@ pub struct Server {
     pub _freq: u32,
     pub game_start: u64,
     pub world: World,
+    pub clients_nb: u32,
+    pub team_names: Vec<String>,
 }
 
 impl Default for Server {
     fn default() -> Self {
-        Self::new()
+        Self::new(Config::default())
     }
 }
 
 impl Server {
-    pub fn new() -> Server {
+    pub fn new(config: Config) -> Server {
         Server {
-            listener: TcpListener::bind("0.0.0.0:8080")
-                .expect("Error starting server on port 8080"),
+            listener: TcpListener::bind(format!("0.0.0.0:{}", config.port))
+                .expect("Error starting server"),
             clients: HashMap::new(),
             _users: HashMap::new(),
             _teams: HashMap::new(),
-            _freq: 100,
+            _freq: config.freq,
             game_start: Date::now().to_timestamp(),
-            world: World::new(),
+            world: World::new(MapSize { width: config.width, height: config.height }),
+            clients_nb: config.clients_nb,
+            team_names: config.names
         }
     }
 
@@ -231,7 +237,9 @@ mod tests {
             _teams: HashMap::new(),
             _freq: 100,
             game_start: 0,
-            world: World::new(),
+            world: World::default(),
+            clients_nb: 1,
+            team_names: vec!["team".to_string()],
         };
 
         let client_socket = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
@@ -262,7 +270,9 @@ mod tests {
             _teams: HashMap::new(),
             _freq: 100,
             game_start: 0,
-            world: World::new(),
+            world: World::default(),
+            clients_nb: 1,
+            team_names: vec!["team".to_string()],
         };
         server.world.map_size.width = 10;
         server.world.map_size.height = 10;

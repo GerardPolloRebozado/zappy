@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn test_execute_look() {
-        let mut world = World::new();
+        let mut world = World::default();
         world.map_size.width = 10;
         world.map_size.height = 10;
 
