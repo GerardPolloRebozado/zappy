@@ -1,5 +1,4 @@
 import math
-from src.utils import ELEVATION_TABLE, can_evolve
 
 def get_missing_resources(level, inventory):
     """
