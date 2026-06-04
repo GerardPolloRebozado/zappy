@@ -1,11 +1,6 @@
 use crate::{
     ecs::{
-        components::{
-            inventory::Inventory,
-            level::Level,
-            position::Position,
-            tile::Tile,
-        },
+        components::{inventory::Inventory, level::Level, position::Position, tile::Tile},
         storage::{Entity, World},
     },
     utils::orientation::RelativeOrientation,
@@ -17,94 +12,97 @@ pub fn execute_look(world: &World, entity: Entity) -> String {
         None => return "[]".to_string(),
     };
     let ori = match world.get_component::<RelativeOrientation>(entity) {
-        Some(o) => o,
+        Some(o) => *o,
         None => return "[]".to_string(),
     };
     let level = world
         .get_component::<Level>(entity)
         .map(|l| l.value)
         .unwrap_or(1);
-    let map_width = world.mapSize.width;
-    let map_height = world.mapSize.height;
-
-    let mut tiles_content = Vec::new();
 
     // TODO: Implement vision modifications from biomes (e.g. Luminous Orchards)
     // TODO: Implement Solar Flare global vision
-    for i in 0..=i32::from(level) {
-        for j in -i..=i {
-            let (f, r) = (i, j);
-            let (ax, ay) = match ori {
-                RelativeOrientation::Forward => (
-                    i32::try_from(pos.x).unwrap() + r,
-                    i32::try_from(pos.y).unwrap() - f,
-                ),
-                RelativeOrientation::ForwardLeft => (
-                    i32::try_from(pos.x).unwrap() + f,
-                    i32::try_from(pos.y).unwrap() + r,
-                ),
-                RelativeOrientation::Left => (
-                    i32::try_from(pos.x).unwrap() - r,
-                    i32::try_from(pos.y).unwrap() + f,
-                ),
-                RelativeOrientation::BackLeft => (
-                    i32::try_from(pos.x).unwrap() - f,
-                    i32::try_from(pos.y).unwrap() - r,
-                ),
-                _ => (i32::try_from(pos.x).unwrap(), i32::try_from(pos.y).unwrap()),
-            };
-            let x = u32::try_from(ax.rem_euclid(i32::try_from(map_width).unwrap())).unwrap();
-            let y = u32::try_from(ay.rem_euclid(i32::try_from(map_height).unwrap())).unwrap();
-
-            tiles_content.push(get_tile_info(world, x, y));
-        }
-    }
+    let tiles_content: Vec<String> = (0..=i32::from(level))
+        .flat_map(|i| (-i..=i).map(move |j| (i, j)))
+        .map(|(f, r)| {
+            let (x, y) = get_relative_coords(pos, ori, f, r, world.mapSize.width, world.mapSize.height);
+            get_tile_info(world, x, y)
+        })
+        .collect();
 
     format!("[{}]", tiles_content.join(","))
+}
+
+fn get_relative_coords(
+    pos: &Position,
+    ori: RelativeOrientation,
+    f: i32,
+    r: i32,
+    width: u32,
+    height: u32,
+) -> (u32, u32) {
+    let (ax, ay) = match ori {
+        RelativeOrientation::Forward => (i32::try_from(pos.x).unwrap() + r, i32::try_from(pos.y).unwrap() - f),
+        RelativeOrientation::ForwardLeft => (i32::try_from(pos.x).unwrap() + f, i32::try_from(pos.y).unwrap() + r),
+        RelativeOrientation::Left => (i32::try_from(pos.x).unwrap() - r, i32::try_from(pos.y).unwrap() + f),
+        RelativeOrientation::BackLeft => (i32::try_from(pos.x).unwrap() - f, i32::try_from(pos.y).unwrap() - r),
+        _ => (i32::try_from(pos.x).unwrap(), i32::try_from(pos.y).unwrap()),
+    };
+
+    let x = u32::try_from(ax.rem_euclid(i32::try_from(width).unwrap())).unwrap();
+    let y = u32::try_from(ay.rem_euclid(i32::try_from(height).unwrap())).unwrap();
+    (x, y)
 }
 
 fn get_tile_info(world: &World, x: u32, y: u32) -> String {
     let mut info = Vec::new();
 
-    // 1. Players on this tile
-    if let (Some(positions), Some(orientations)) = (
+    info.extend(get_players_on_tile(world, x, y));
+    info.extend(get_resources_on_tile(world, x, y));
+
+    info.join(" ")
+}
+
+fn get_players_on_tile(world: &World, x: u32, y: u32) -> Vec<String> {
+    let (Some(positions), Some(orientations)) = (
         world.get_storage::<Position>(),
         world.get_storage::<RelativeOrientation>(),
-    ) {
-        for (ent, pos) in positions.iter() {
-            if pos.x == x && pos.y == y && orientations.get(*ent).is_some() {
-                info.push("player".to_string());
-            }
-        }
-    }
+    ) else {
+        return Vec::new();
+    };
 
-    // 2. Resources on this tile
-    if let (Some(tiles), Some(positions), Some(inventories)) = (
+    positions
+        .iter()
+        .filter(|&(ent, pos)| pos.x == x && pos.y == y && orientations.get(*ent).is_some())
+        .map(|_| "player".to_string())
+        .collect()
+}
+
+fn get_resources_on_tile(world: &World, x: u32, y: u32) -> Vec<String> {
+    let (Some(tiles), Some(positions), Some(inventories)) = (
         world.get_storage::<Tile>(),
         world.get_storage::<Position>(),
         world.get_storage::<Inventory>(),
-    ) {
-        for (ent, _tile) in tiles.iter() {
-            if let Some(pos) = positions.get(*ent) {
-                if pos.x == x && pos.y == y {
-                    if let Some(inv) = inventories.get(*ent) {
-                        let mut resources: Vec<String> = Vec::new();
-                        for (res, count) in &inv.items {
-                            for _ in 0..*count {
-                                resources.push(res.to_string());
-                            }
-                        }
-                        // Sort resources to have a consistent output (optional but good for tests)
-                        resources.sort();
-                        info.extend(resources);
-                    }
-                    break;
-                }
-            }
+    ) else {
+        return Vec::new();
+    };
+
+    for (ent, _tile) in tiles.iter() {
+        let (Some(pos), Some(inv)) = (positions.get(*ent), inventories.get(*ent)) else {
+            continue;
+        };
+
+        if pos.x == x && pos.y == y {
+            let mut resources: Vec<String> = inv
+                .items
+                .iter()
+                .flat_map(|(res, count)| std::iter::repeat(res.to_string()).take(*count as usize))
+                .collect();
+            resources.sort();
+            return resources;
         }
     }
-
-    info.join(" ")
+    Vec::new()
 }
 
 #[cfg(test)]
