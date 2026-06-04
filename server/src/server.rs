@@ -134,8 +134,8 @@ impl Server {
 
     pub fn save(&mut self) {}
     pub fn load(&mut self) {
-        let width = self.world.mapSize.width;
-        let height = self.world.mapSize.height;
+        let width = self.world.map_size.width;
+        let height = self.world.map_size.height;
         crate::ecs::systems::tile_system::setup_map(&mut self.world, width, height);
     }
 
