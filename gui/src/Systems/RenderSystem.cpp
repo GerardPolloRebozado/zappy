@@ -11,7 +11,7 @@
  */
 
 #include "Systems/RenderSystem.hpp"
-#include "Components/ComponentBot.hpp"
+#include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
 #include "ECS/World.hpp"
@@ -211,12 +211,12 @@ void RenderSystem::_renderTerrain(World& w) {
 }
 
 void RenderSystem::_renderInhabitants(World& w) {
-    auto botStorage = w.get_storage<BotData>();
-    if (!botStorage) {
+    auto orientationStorage = w.get_storage<Orientation>();
+    if (!orientationStorage) {
         return;
     }
 
-    for (auto const& [entity, bot] : *botStorage) {
+    for (auto const& [entity, orientationPtr] : *orientationStorage) {
         auto pos = w.get_component<Position>(entity);
         if (pos) {
             raylib::Vector3 vpos(pos->x, 2.5f, pos->y);

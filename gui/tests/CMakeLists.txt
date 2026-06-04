@@ -4,6 +4,7 @@ set(TEST_SOURCES
     test_ecs.cpp
     test_network.cpp
     test_render_system.cpp
+    test_player.cpp
     ../src/NetworkManager.cpp
     ../src/Network/TcpSocket.cpp
     ../src/Systems/RenderSystem.cpp
