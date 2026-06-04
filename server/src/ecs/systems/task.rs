@@ -25,6 +25,8 @@ use crate::{
     utils::orientation::RelativeOrientation,
 };
 
+pub mod look;
+
 /// Advances queued tasks, applies effects when a timer elapses, starts the next
 /// task's timer, and returns `(client_uuid, response)` pairs plus broadcast
 /// [`ServerEvent`]s that must be fan-out to every connected client.
@@ -127,6 +129,13 @@ fn execute_task(
             }
             (ok, None)
         }
+        TaskType::Look => (
+            Response::new(
+                ResponseCode::Status(StatusCode::Ok),
+                Some(look::execute_look(world, entity)),
+            ),
+            None,
+        ),
         TaskType::BroadcastText(text) => {
             // No ECS mutation: only snapshot position for ServerEvent + later calc_k per receiver.
             let mut event = None;
@@ -141,6 +150,8 @@ fn execute_task(
 
 #[cfg(test)]
 mod tests {
+    use crate::ecs::components::inventory::Inventory;
+    use crate::ecs::components::level::Level;
     use crate::ecs::components::task::{Task, TaskType};
     use crate::ecs::storage::World;
 
@@ -159,6 +170,9 @@ mod tests {
         let entity = world.spawn();
         world.add_component(entity, Position { x, y });
         world.add_component(entity, orientation);
+        world.add_component(entity, Level::new());
+        world.add_component(entity, TaskList::default());
+        world.add_component(entity, Inventory::new());
         (world, entity)
     }
 
@@ -166,11 +180,9 @@ mod tests {
         assert_eq!(response.code, ResponseCode::Status(StatusCode::Ok));
         assert!(response.data.is_none());
     }
-
     #[test]
     fn execute_task_forward_moves_north() {
-        let (mut world, entity) =
-            setup_inhabitant(5, 5, RelativeOrientation::Forward, 10, 10);
+        let (mut world, entity) = setup_inhabitant(5, 5, RelativeOrientation::Forward, 10, 10);
         let (response, _) = execute_task(&mut world, entity, &TaskType::Forward);
         assert_ok(response);
         let pos = world.get_component::<Position>(entity).unwrap();
@@ -179,8 +191,7 @@ mod tests {
 
     #[test]
     fn execute_task_forward_moves_east() {
-        let (mut world, entity) =
-            setup_inhabitant(5, 5, RelativeOrientation::ForwardLeft, 10, 10);
+        let (mut world, entity) = setup_inhabitant(5, 5, RelativeOrientation::ForwardLeft, 10, 10);
         execute_task(&mut world, entity, &TaskType::Forward);
         let pos = world.get_component::<Position>(entity).unwrap();
         assert_eq!((pos.x, pos.y), (6, 5));
@@ -188,8 +199,7 @@ mod tests {
 
     #[test]
     fn execute_task_forward_wraps() {
-        let (mut world, entity) =
-            setup_inhabitant(3, 0, RelativeOrientation::Forward, 10, 10);
+        let (mut world, entity) = setup_inhabitant(3, 0, RelativeOrientation::Forward, 10, 10);
         execute_task(&mut world, entity, &TaskType::Forward);
         let pos = world.get_component::<Position>(entity).unwrap();
         assert_eq!((pos.x, pos.y), (3, 9));
@@ -211,8 +221,7 @@ mod tests {
 
     #[test]
     fn execute_task_turn_right() {
-        let (mut world, entity) =
-            setup_inhabitant(0, 0, RelativeOrientation::Forward, 10, 10);
+        let (mut world, entity) = setup_inhabitant(0, 0, RelativeOrientation::Forward, 10, 10);
         execute_task(&mut world, entity, &TaskType::TurnRight);
         let ori = world.get_component::<RelativeOrientation>(entity).unwrap();
         assert_eq!(*ori, RelativeOrientation::ForwardLeft);
@@ -220,8 +229,7 @@ mod tests {
 
     #[test]
     fn execute_task_turn_left() {
-        let (mut world, entity) =
-            setup_inhabitant(0, 0, RelativeOrientation::Forward, 10, 10);
+        let (mut world, entity) = setup_inhabitant(0, 0, RelativeOrientation::Forward, 10, 10);
         execute_task(&mut world, entity, &TaskType::TurnLeft);
         let ori = world.get_component::<RelativeOrientation>(entity).unwrap();
         assert_eq!(*ori, RelativeOrientation::BackLeft);
@@ -259,15 +267,14 @@ mod tests {
 
     #[test]
     fn execute_task_unimplemented_returns_ok() {
-        let (mut world, entity) =
-            setup_inhabitant(2, 3, RelativeOrientation::Forward, 10, 10);
+        let (mut world, entity) = setup_inhabitant(2, 3, RelativeOrientation::Forward, 10, 10);
         let before = (
             world.get_component::<Position>(entity).unwrap().x,
             world.get_component::<Position>(entity).unwrap().y,
             *world.get_component::<RelativeOrientation>(entity).unwrap(),
         );
 
-        let (response, _) = execute_task(&mut world, entity, &TaskType::Look);
+        let (response, _) = execute_task(&mut world, entity, &TaskType::Inventory);
         assert_ok(response);
 
         let after = (
