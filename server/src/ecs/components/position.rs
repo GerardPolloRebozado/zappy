@@ -11,19 +11,28 @@ impl Position {
         Position { x: 0, y: 0 }
     }
 
-    /// Steps one tile along the cardinal direction given by `orientation` (`k` 1–4).
-    /// Other `k` values leave the position unchanged. Coordinates wrap on both axes.
+    /// Steps one tile along the inhabitant's facing (`Forward` = north, `ForwardLeft` = east,
+    /// `Left` = south, `BackLeft` = west). Other orientations leave the position unchanged.
+    /// Coordinates wrap on both axes.
     pub fn move_forward(
         &mut self,
         orientation: RelativeOrientation,
         map_width: u32,
         map_height: u32,
     ) {
-        match orientation.as_protocol_k() {
-            1 => self.y = (self.y + map_height - 1) % map_height,
-            2 => self.x = (self.x + 1) % map_width,
-            3 => self.y = (self.y + 1) % map_height,
-            4 => self.x = (self.x + map_width - 1) % map_width,
+        match orientation {
+            RelativeOrientation::Forward => {
+                self.y = (self.y + map_height - 1) % map_height;
+            }
+            RelativeOrientation::ForwardLeft => {
+                self.x = (self.x + 1) % map_width;
+            }
+            RelativeOrientation::Left => {
+                self.y = (self.y + 1) % map_height;
+            }
+            RelativeOrientation::BackLeft => {
+                self.x = (self.x + map_width - 1) % map_width;
+            }
             _ => {}
         }
     }
