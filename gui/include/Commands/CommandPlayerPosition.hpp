@@ -13,11 +13,10 @@
 #include "ECS/ComponentMap.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
+#include "Components/ComponentInhabitant.hpp"
 
 #include <algorithm>
 #include <sstream>
-
-#include "Components/ComponentInhabitant.hpp"
 
 namespace zappy {
     class CommandPlayerPosition : public ACommand {
@@ -40,36 +39,23 @@ namespace zappy {
             if (!(iss >> playerId >> x >> y >> orientation)) {
                 return;
             }
-            auto InhabitantStorage = world.get_storage<InhabitantData>();
-            if (!InhabitantStorage) {
+            auto positionsStorage = world.get_storage<Position>();
+            if (!positionsStorage) {
                 return;
             }
-            bool found = false;
-            Entity targetEntity{0, 0};
+            for (auto & [entity, position] : *positionsStorage) {
 
-            for (auto const& [entity, Inhabitant] : *InhabitantStorage) {
-                if (Inhabitant->id == playerId) {
-                    targetEntity = entity;
-                    found = true;
+                if (entity.id() == playerId) {
+
+                    position->x = x;
+                    position->y = y;
+
+                    auto orientationComp = world.get_component<Orientation>(entity);
+                    if (orientationComp) {
+                        orientationComp->current_direction = static_cast<Orientation::Direction>(orientation);
+                    }
                     break;
                 }
-            }
-
-            if (found) {
-                auto pos = world.get_component<Position>(targetEntity);
-                if (pos) {
-                    pos->x = x;
-                    pos->y = y;
-                } else {
-                    world.add_component<Position>(targetEntity, Position{x, y});
-                }
-
-                auto Inhabitant = world.get_component<InhabitantData>
-                (targetEntity);
-                if (Inhabitant) {
-                    Inhabitant->orientation = orientation;
-                }
-            } else {
             }
         }
     };

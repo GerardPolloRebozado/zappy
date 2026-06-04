@@ -8,12 +8,22 @@
 #define ZAPPY_GUI_COMPONENTBOT_HPP
 #include <string>
 namespace zappy {
-    struct InhabitantData {
-        int id;
+
+    struct Level {
         int level;
-        int orientation;
-        std::string team_name;
+    };
+
+    struct Orientation {
+        enum Direction { N = 1, E = 2, S = 3, W = 4 };
+        Direction current_direction;
+    };
+
+    struct VisionRange {
         int vision_range;
+    };
+
+    struct TeamName {
+        std::string team_name;
     };
 
     struct Race {
