@@ -1,7 +1,10 @@
-#include <criterion/criterion.h>
-#include "ECS/Register.hpp"
-#include "Commands/FactoryCommands.hpp"
 #include "Commands/ACommand.hpp"
+#include "Commands/FactoryCommands.hpp"
+#include "Components/ComponentShared.hpp"
+#include "Components/ComponentTags.hpp"
+#include "Components/ComponentTile.hpp"
+#include "ECS/World.hpp"
+#include <criterion/criterion.h>
 
 using namespace zappy;
 
@@ -16,62 +19,74 @@ Test(FactoryCommandsTest, CreateValidCommands) {
 }
 
 Test(CommandMapSizeTest, ExecuteValidMapSize) {
-    Register registry;
+    World world;
     auto cmd = FactoryCommands::createCommand("msz");
 
     cr_assert_not_null(cmd.get());
 
-    cmd->execute("20 10", registry);
+    cmd->execute("20 10", world);
 
-    cr_assert_eq(registry._sizes.size(), 1);
+    auto storage = world.get_storage<Size>();
+    cr_assert_not_null(storage);
 
-    auto it = registry._sizes.begin();
-    int entityId = it->first;
-    auto sizeComponent = it->second;
-
-    cr_assert_eq(sizeComponent.width, 20);
-    cr_assert_eq(sizeComponent.height, 10);
-    cr_assert(registry._mapTags.find(entityId) != registry._mapTags.end());
+    int count = 0;
+    for (auto const& [entity, size] : *storage) {
+        cr_assert_eq(size->width, 20);
+        cr_assert_eq(size->height, 10);
+        cr_assert_not_null(world.get_component<MapTag>(entity));
+        count++;
+    }
+    cr_assert_eq(count, 1);
 }
 
 Test(CommandMapSizeTest, ExecuteInvalidMapSize) {
-    Register registry;
+    World world;
     auto cmd = FactoryCommands::createCommand("msz");
 
-    cmd->execute("20 hola", registry);
+    cmd->execute("20 hola", world);
 
-    cr_assert_eq(registry._sizes.size(), 0);
+    auto storage = world.get_storage<Size>();
+    if (storage) {
+        int count = 0;
+        for (auto const& _ : *storage) {
+            count++;
+        }
+        cr_assert_eq(count, 0);
+    }
 }
 
 Test(CommandTileContentTest, ExecuteValidTileContent) {
-    Register registry;
+    World world;
     auto cmd = FactoryCommands::createCommand("bct");
 
     cr_assert_not_null(cmd.get());
 
-    cmd->execute("5 4 10 1 2 0 0 0 0 1", registry);
+    cmd->execute("5 4 10 1 2 0 0 0 0 1", world);
 
-    cr_assert_eq(registry._positions.size(), 1);
-    cr_assert_eq(registry._inventories.size(), 1);
-    cr_assert_eq(registry._terrainTypes.size(), 1);
-    cr_assert_eq(registry._tileTags.size(), 1);
+    auto posStorage = world.get_storage<Position>();
+    cr_assert_not_null(posStorage);
 
-    auto it = registry._positions.begin();
-    int entityId = it->first;
-    auto pos = it->second;
+    int count = 0;
+    for (auto const& [entity, pos] : *posStorage) {
+        cr_assert_eq(pos->x, 5);
+        cr_assert_eq(pos->y, 4);
 
-    cr_assert_eq(pos.x, 5);
-    cr_assert_eq(pos.y, 4);
+        auto inv = world.get_component<Inventory>(entity);
+        cr_assert_not_null(inv);
+        cr_assert_eq(inv->food, 10);
+        cr_assert_eq(inv->linemate, 1);
+        cr_assert_eq(inv->deraumere, 2);
+        cr_assert_eq(inv->sibur, 0);
+        cr_assert_eq(inv->mendiane, 0);
+        cr_assert_eq(inv->phiras, 0);
+        cr_assert_eq(inv->thystame, 0);
 
-    auto inv = registry._inventories[entityId];
-    cr_assert_eq(inv.food, 10);
-    cr_assert_eq(inv.linemate, 1);
-    cr_assert_eq(inv.deraumere, 2);
-    cr_assert_eq(inv.sibur, 0);
-    cr_assert_eq(inv.mendiane, 0);
-    cr_assert_eq(inv.phiras, 0);
-    cr_assert_eq(inv.thystame, 0);
+        auto terrain = world.get_component<TerrainType>(entity);
+        cr_assert_not_null(terrain);
+        cr_assert_eq(terrain->current_type, static_cast<zappy::TerrainType::Type>(1));
 
-    auto terrain = registry._terrainTypes[entityId];
-    cr_assert_eq(terrain.current_type, static_cast<zappy::TerrainType::Type>(1));
+        cr_assert_not_null(world.get_component<TileTag>(entity));
+        count++;
+    }
+    cr_assert_eq(count, 1);
 }

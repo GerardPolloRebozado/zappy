@@ -13,9 +13,6 @@
 //!
 //! let mut world = World::new();
 //!
-//! // Register components
-//! world.register_component::<Position>();
-//! world.register_component::<Velocity>();
 //!
 //! // Spawn an entity
 //! let player = world.spawn();
@@ -144,7 +141,7 @@ impl<T: 'static> ComponentStorage for ComponentMap<T> {
 
 /// The `World` is the main container for all ECS data
 pub struct World {
-    pub mapSize: MapSize,
+    pub map_size: MapSize,
     /// List of generations for all entities, indexed by their ID
     entity_generations: Vec<u32>,
     /// List of Entity IDs that have been despawned and are available for reuse
@@ -163,7 +160,7 @@ impl World {
     /// Creates a new, empty ECS world
     pub fn new() -> Self {
         Self {
-            mapSize: MapSize {
+            map_size: MapSize {
                 width: 100,
                 height: 100,
             },
@@ -173,8 +170,8 @@ impl World {
         }
     }
 
-    /// Registers a component type with the world
-    pub fn register_component<T: 'static>(&mut self) {
+    /// Registers a component type with the world, this is only used internally
+    fn register_component<T: 'static>(&mut self) {
         self.storages
             .entry(TypeId::of::<T>())
             .or_insert_with(|| Box::new(ComponentMap::<T>::new()));
@@ -194,11 +191,14 @@ impl World {
 
     /// Adds a component to an entity
     pub fn add_component<T: 'static>(&mut self, entity: Entity, component: T) {
-        let storage = self
-            .storages
-            .get_mut(&TypeId::of::<T>())
+        let mut storage = self.storages.get_mut(&TypeId::of::<T>());
+        if storage.is_none() {
+            self.register_component::<T>();
+            storage = self.storages.get_mut(&TypeId::of::<T>());
+        }
+        let storage = storage
             .and_then(|s| s.as_any_mut().downcast_mut::<ComponentMap<T>>())
-            .expect("Component not registered");
+            .unwrap();
         storage.insert(entity, component);
     }
 
@@ -259,7 +259,6 @@ mod tests {
     #[test]
     fn ecs_lifecycle() {
         let mut world = World::new();
-        world.register_component::<i32>();
 
         let ent = world.spawn();
         world.add_component(ent, 42);

@@ -6,16 +6,16 @@
 */
 #ifndef ZAPPY_ACOMMAND_HPP
 #define ZAPPY_ACOMMAND_HPP
-#include "ECS/Register.hpp"
-#include <sstream>
+#include "ECS/World.hpp"
 #include <iostream>
+#include <sstream>
 
 namespace zappy {
-    class ACommand {
-    public:
-        ~ACommand() = default;
-        virtual void execute(const std::string& args, Register& registry) = 0;
-    };
-} // zappy
+class ACommand {
+  public:
+    virtual ~ACommand() = default;
+    virtual void execute(const std::string& args, World& world) = 0;
+};
+} // namespace zappy
 
-#endif //ZAPPY_ACOMMAND_HPP
+#endif // ZAPPY_ACOMMAND_HPP
