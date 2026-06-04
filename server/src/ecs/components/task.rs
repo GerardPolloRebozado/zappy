@@ -1,3 +1,9 @@
+//! Timed player actions queued per inhabitant entity.
+//!
+//! Most variants are unit-like; [`TaskType::BroadcastText`] carries the message
+//! string until the 7/f action completes and [`crate::ecs::systems::task`] builds
+//! a [`crate::protocol::ServerEvent::Message`] for fan-out.
+
 use crate::game::Date;
 
 #[derive(Clone)]
@@ -7,7 +13,8 @@ pub enum TaskType {
     TurnLeft,
     Look,
     Inventory,
-    BroadcastText,
+    /// `Broadcast <text>` — duration 7/f. The `String` is the text to relay after completion.
+    BroadcastText(String),
     Fork,
     Eject,
     Take,
@@ -24,7 +31,7 @@ impl TaskType {
             TaskType::TurnLeft => 7,
             TaskType::Look => 7,
             TaskType::Inventory => 1,
-            TaskType::BroadcastText => 7,
+            TaskType::BroadcastText(_) => 7,
             TaskType::Fork => 42,
             TaskType::Eject => 7,
             TaskType::Take => 7,
