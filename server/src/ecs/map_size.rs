@@ -1,6 +1,6 @@
 //! Map dimensions and protocol tile queries.
 //!
-//! Map bounds live on [`World::mapSize`] so movement and `bct`/`mct` handlers
+//! Map bounds live on [`World::map_size`] so movement and `bct`/`mct` handlers
 //! read the same values as the spawned tile grid.
 
 use crate::ecs::storage::World;

@@ -22,8 +22,8 @@ pub fn queue_task(server: &mut Server, entity: Entity, task_type: TaskType) {
 }
 
 pub fn handle_request(server: &mut Server, entity: Entity, request: Request) {
-    let width = server.world.mapSize.width;
-    let height = server.world.mapSize.height;
+    let width = server.world.map_size.width;
+    let height = server.world.map_size.height;
 
     {
         let network_data = server.world.get_component_mut::<NetworkData>(entity);
@@ -93,6 +93,8 @@ pub fn handle_request(server: &mut Server, entity: Entity, request: Request) {
 
         Command::Mct => {
             let mut responses = Vec::new();
+            let width = server.world.map_size.width;
+            let height = server.world.map_size.height;
             for y in 0..height {
                 for x in 0..width {
                     if let Some(data) = map_size::get_tile_content(&server.world, x, y) {
@@ -138,8 +140,8 @@ pub fn handle_request(server: &mut Server, entity: Entity, request: Request) {
 }
 
 pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request) {
-    let width = server.world.mapSize.width;
-    let height = server.world.mapSize.height;
+    let width = server.world.map_size.width;
+    let height = server.world.map_size.height;
     let network_data = server.world.get_component_mut::<NetworkData>(entity);
     if network_data.is_none() {
         return;

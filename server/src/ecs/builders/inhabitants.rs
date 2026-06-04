@@ -1,7 +1,8 @@
 use crate::{
     ecs::{
         components::{
-            inventory::Inventory, network::NetworkData, position::Position, task::TaskList,
+            inventory::Inventory, level::Level, network::NetworkData, position::Position,
+            task::TaskList,
         },
         storage::{Entity, World},
     },
@@ -18,6 +19,7 @@ pub fn build_inhabitant(
     let new_inhabitant = world.spawn();
     world.add_component(new_inhabitant, TaskList::default());
     world.add_component(new_inhabitant, Position::new());
+    world.add_component(new_inhabitant, Level::new());
     world.add_component(new_inhabitant, Inventory::new());
     world.add_component(new_inhabitant, RelativeOrientation::Forward);
     world.add_component(new_inhabitant, network_data);

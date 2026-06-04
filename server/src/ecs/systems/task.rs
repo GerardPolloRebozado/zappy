@@ -18,6 +18,8 @@ use crate::{
     utils::orientation::RelativeOrientation,
 };
 
+pub mod look;
+
 /// Advances queued tasks, applies effects when a timer elapses, starts the next
 /// task's timer, and returns `(client_uuid, response)` pairs.
 ///
@@ -78,8 +80,8 @@ pub fn any_finished_task(world: &mut World) {
 fn execute_task(world: &mut World, entity: Entity, task_type: &TaskType) -> Response {
     match task_type {
         TaskType::Forward => {
-            let map_width = world.mapSize.width;
-            let map_height = world.mapSize.height;
+            let map_width = world.map_size.width;
+            let map_height = world.map_size.height;
             let orientation = world.get_component::<RelativeOrientation>(entity).copied();
             if let Some(pos) = world.get_component_mut::<Position>(entity)
                 && let Some(ori) = orientation
@@ -100,12 +102,18 @@ fn execute_task(world: &mut World, entity: Entity, task_type: &TaskType) -> Resp
             }
             Response::new(ResponseCode::Status(StatusCode::Ok), None)
         }
+        TaskType::Look => Response::new(
+            ResponseCode::Status(StatusCode::Ok),
+            Some(look::execute_look(world, entity)),
+        ),
         _ => Response::new(ResponseCode::Status(StatusCode::Ok), None),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::ecs::components::inventory::Inventory;
+    use crate::ecs::components::level::Level;
     use crate::ecs::components::task::{Task, TaskType};
     use crate::ecs::storage::World;
 
@@ -119,13 +127,15 @@ mod tests {
         map_h: u32,
     ) -> (World, Entity) {
         let mut world = World::new(100);
-        world.mapSize.width = map_w;
-        world.mapSize.height = map_h;
-        world.register_component::<Position>();
-        world.register_component::<RelativeOrientation>();
+        world.map_size.width = map_w;
+        world.map_size.height = map_h;
+
         let entity = world.spawn();
         world.add_component(entity, Position { x, y });
         world.add_component(entity, orientation);
+        world.add_component(entity, Level::new());
+        world.add_component(entity, TaskList::default());
+        world.add_component(entity, Inventory::new());
         (world, entity)
     }
 
@@ -133,7 +143,6 @@ mod tests {
         assert_eq!(response.code, ResponseCode::Status(StatusCode::Ok));
         assert!(response.data.is_none());
     }
-
     #[test]
     fn execute_task_forward_moves_north() {
         let (mut world, entity) = setup_inhabitant(5, 5, RelativeOrientation::Forward, 10, 10);
@@ -162,9 +171,8 @@ mod tests {
     #[test]
     fn execute_task_forward_without_orientation() {
         let mut world = World::new(100);
-        world.mapSize.width = 10;
-        world.mapSize.height = 10;
-        world.register_component::<Position>();
+        world.map_size.width = 10;
+        world.map_size.height = 10;
         let entity = world.spawn();
         world.add_component(entity, Position { x: 5, y: 5 });
 
@@ -193,7 +201,6 @@ mod tests {
     #[test]
     fn execute_task_turn_without_orientation() {
         let mut world = World::new(100);
-        world.register_component::<Position>();
         let entity = world.spawn();
         world.add_component(entity, Position { x: 1, y: 1 });
 
@@ -210,7 +217,7 @@ mod tests {
             *world.get_component::<RelativeOrientation>(entity).unwrap(),
         );
 
-        let response = execute_task(&mut world, entity, &TaskType::Look);
+        let response = execute_task(&mut world, entity, &TaskType::Inventory);
         assert_ok(response);
 
         let after = (
@@ -223,8 +230,7 @@ mod tests {
 
     #[test]
     fn add_task() {
-        let mut world = World::new(100);
-        world.register_component::<TaskList>();
+        let mut world = World::default();
         let entity = world.spawn();
         world.add_component(entity, TaskList::default());
 
@@ -239,8 +245,7 @@ mod tests {
 
     #[test]
     fn task_completion() {
-        let mut world = World::new(100);
-        world.register_component::<TaskList>();
+        let mut world = World::default();
         let entity = world.spawn();
         world.add_component(entity, TaskList::default());
 
@@ -255,7 +260,7 @@ mod tests {
         }
 
         // task should not be finished
-        let _ = any_finished_task(&mut world);
+        any_finished_task(&mut world);
         {
             let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
             assert_eq!(task_list.vector.len(), 1);
@@ -263,7 +268,7 @@ mod tests {
         }
 
         // task should be finished
-        let _ = any_finished_task(&mut world);
+        any_finished_task(&mut world);
         {
             let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
             assert_eq!(task_list.vector.len(), 0);
