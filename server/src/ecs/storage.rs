@@ -154,18 +154,21 @@ pub struct World {
 
 impl Default for World {
     fn default() -> Self {
-        Self::new(100)
+        Self::new(
+            MapSize {
+                width: 100,
+                height: 100,
+            },
+            100,
+        )
     }
 }
 
 impl World {
     /// Creates a new, empty ECS world
-    pub fn new(freq: u64) -> Self {
+    pub fn new(map_size: MapSize, freq: u64) -> Self {
         Self {
-            map_size: MapSize {
-                width: 100,
-                height: 100,
-            },
+            map_size,
             entity_generations: Vec::new(),
             free_ids: Vec::new(),
             storages: HashMap::new(),
@@ -262,7 +265,6 @@ mod tests {
     #[test]
     fn ecs_lifecycle() {
         let mut world = World::default();
-        world.register_component::<i32>();
 
         let ent = world.spawn();
         world.add_component(ent, 42);

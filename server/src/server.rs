@@ -1,14 +1,17 @@
+//! TCP server: poll loop, client map, and timed task completion.
+
 pub mod commands;
 pub mod signal;
 
 use crate::ecs::builders::inhabitants::build_inhabitant;
-use crate::ecs::components::network::{ClientState, NetworkData};
+use crate::ecs::components::network::NetworkData;
 use crate::ecs::components::task::TaskType;
 use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::network::network_system;
 use crate::ecs::systems::run::run_systems;
 use crate::game::*;
 use crate::protocol::{Request, Response, ResponseCode, ServerEvent, StatusCode};
+use crate::utils::Config;
 use crate::utils::orientation;
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
@@ -23,18 +26,20 @@ pub struct Server {
     pub _freq: u32,
     pub game_start: u64,
     pub world: World,
+    pub clients_nb: u32,
+    pub team_names: Vec<String>,
 }
 
 impl Default for Server {
     fn default() -> Self {
-        Self::new()
+        Self::new(Config::default())
     }
 }
 
 impl Server {
-    pub fn new() -> Server {
+    pub fn new(config: Config) -> Server {
         let listener =
-            TcpListener::bind("0.0.0.0:8080").expect("Error starting server on port 8080");
+            TcpListener::bind(format!("0.0.0.0:{}", config.port)).expect("Error starting server");
         listener
             .set_nonblocking(true)
             .expect("Cannot set non-blocking");
@@ -42,12 +47,21 @@ impl Server {
             listener,
             _users: HashMap::new(),
             _teams: HashMap::new(),
-            _freq: 100,
+            _freq: config.freq,
             game_start: Date::now().to_timestamp(),
-            world: World::default(), // TODO: change this to use the specified one, once argument parsing is done
+            world: World::new(
+                crate::ecs::map_size::MapSize {
+                    width: config.width,
+                    height: config.height,
+                },
+                config.freq as u64,
+            ),
+            clients_nb: config.clients_nb,
+            team_names: config.names,
         }
     }
 
+    /// One main-loop tick: accept connections, read client input, advance the ECS task queue.
     pub fn run(&mut self) {
         network_system(self);
         run_systems(&mut self.world);
@@ -154,11 +168,9 @@ impl Server {
             }
         }
 
-        // for uuid in disconnected {
-        // if let Some(_client) = server.clients.remove(&uuid) {
-        // TODO: decide what to do when a user disconnects
-        //}
-        //}
+        for entity in disconnected {
+            self.world.despawn(entity);
+        }
     }
 
     pub fn queue_task(&mut self, entity: Entity, task_type: TaskType) {
@@ -179,25 +191,7 @@ impl Server {
     }
 
     pub fn broadcast_global(&mut self, event: ServerEvent) {
-        let storage = self.world.get_storage_mut::<NetworkData>();
-        if storage.is_none() {
-            return;
-        }
-        let storage = storage.unwrap();
-        for (_, network_data) in storage.iter_mut() {
-            let formatted = match &network_data.state {
-                ClientState::AuthenticatedGUI => event.to_gui_string(),
-                ClientState::AuthenticatedAI(_) => None,
-                ClientState::WaitingForTeamName => None,
-            };
-
-            if let Some(data) = formatted {
-                network_data.pending_responses.push(Response::new(
-                    crate::protocol::ResponseCode::Status(crate::protocol::StatusCode::Ok),
-                    Some(data),
-                ));
-            }
-        }
+        crate::ecs::systems::task::broadcast_event(&mut self.world, event);
     }
 
     pub fn save(&mut self) {}
@@ -216,6 +210,7 @@ impl Server {
 mod tests {
     use super::*;
     use crate::ecs::builders::inhabitants::build_inhabitant;
+    use crate::ecs::components::network::{ClientState, NetworkData};
     use crate::ecs::components::task::{TaskList, TaskType};
     use crate::utils::orientation::RelativeOrientation;
     use std::net::TcpListener;
@@ -231,7 +226,15 @@ mod tests {
             _teams: HashMap::new(),
             _freq: 100,
             game_start: 0,
-            world: World::new(100),
+            world: World::new(
+                crate::ecs::map_size::MapSize {
+                    width: 10,
+                    height: 10,
+                },
+                100,
+            ),
+            clients_nb: 1,
+            team_names: vec!["team".to_string()],
         };
 
         let client_socket = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
@@ -250,5 +253,77 @@ mod tests {
 
         let task_list = server.world.get_component::<TaskList>(entity).unwrap();
         assert_eq!(task_list.vector.len(), 10);
+    }
+
+    #[test]
+    fn test_broadcast_global_ai_per_receiver_k() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let mut server = Server {
+            listener,
+            _users: HashMap::new(),
+            _teams: HashMap::new(),
+            _freq: 100,
+            game_start: 0,
+            world: World::new(
+                crate::ecs::map_size::MapSize {
+                    width: 10,
+                    height: 10,
+                },
+                100,
+            ),
+            clients_nb: 1,
+            team_names: vec!["team".to_string()],
+        };
+
+        let socket_a = std::net::TcpStream::connect(addr).unwrap();
+        let network_a = NetworkData::new(socket_a);
+        let entity_same = build_inhabitant(
+            5,
+            5,
+            RelativeOrientation::Forward,
+            &mut server.world,
+            network_a,
+        );
+        if let Some(nd) = server.world.get_component_mut::<NetworkData>(entity_same) {
+            nd.state = ClientState::AuthenticatedAI("team".to_string());
+        }
+
+        let socket_b = std::net::TcpStream::connect(addr).unwrap();
+        let network_b = NetworkData::new(socket_b);
+        let entity_east = build_inhabitant(
+            6,
+            5,
+            RelativeOrientation::Forward,
+            &mut server.world,
+            network_b,
+        );
+        if let Some(nd) = server.world.get_component_mut::<NetworkData>(entity_east) {
+            nd.state = ClientState::AuthenticatedAI("team".to_string());
+        }
+
+        let event = ServerEvent::Message {
+            player_id: 1,
+            message: "hello".to_string(),
+            x: 5,
+            y: 5,
+        };
+        server.broadcast_global(event);
+
+        let network_a = server
+            .world
+            .get_component::<NetworkData>(entity_same)
+            .unwrap();
+        let network_b = server
+            .world
+            .get_component::<NetworkData>(entity_east)
+            .unwrap();
+
+        let line_a = network_a.pending_responses[0].data.as_ref().unwrap();
+        let line_b = network_b.pending_responses[0].data.as_ref().unwrap();
+
+        assert_eq!(line_a, "message 0, hello\n");
+        assert_eq!(line_b, "message 3, hello\n");
     }
 }
