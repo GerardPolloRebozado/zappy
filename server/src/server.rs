@@ -33,9 +33,13 @@ impl Default for Server {
 
 impl Server {
     pub fn new() -> Server {
+        let listener =
+            TcpListener::bind("0.0.0.0:8080").expect("Error starting server on port 8080");
+        listener
+            .set_nonblocking(true)
+            .expect("Cannot set non-blocking");
         Server {
-            listener: TcpListener::bind("0.0.0.0:8080")
-                .expect("Error starting server on port 8080"),
+            listener,
             _users: HashMap::new(),
             _teams: HashMap::new(),
             _freq: 100,
@@ -50,20 +54,18 @@ impl Server {
     }
 
     pub fn accept_connections(&mut self) {
-        loop {
-            if let Ok((mut socket, _addr)) = self.listener.accept() {
-                let _ = socket.write_all(b"WELCOME\n");
-                let network_data = NetworkData::new(socket);
-                build_inhabitant(
-                    0,
-                    0,
-                    orientation::RelativeOrientation::Forward,
-                    &mut self.world,
-                    network_data,
-                );
-            } else {
-                return;
-            }
+        while let Ok((socket, _addr)) = self.listener.accept() {
+            let _ = socket.set_nonblocking(true);
+            let mut socket = socket;
+            let _ = socket.write_all(b"WELCOME\n");
+            let network_data = NetworkData::new(socket);
+            build_inhabitant(
+                0,
+                0,
+                orientation::RelativeOrientation::Forward,
+                &mut self.world,
+                network_data,
+            );
         }
     }
 
@@ -73,19 +75,14 @@ impl Server {
             PollFlags::POLLIN | PollFlags::POLLOUT,
         )];
 
-        let network_data_keys = self.world.get_storage::<NetworkData>();
-        if network_data_keys.is_none() {
-            return fds;
+        if let Some(network_data_keys) = self.world.get_storage::<NetworkData>() {
+            for (_, network_data) in network_data_keys.iter() {
+                fds.push(PollFd::new(
+                    network_data.socket.as_fd(),
+                    PollFlags::POLLIN | PollFlags::POLLOUT,
+                ));
+            }
         }
-        let network_data_keys = network_data_keys.unwrap();
-
-        for (_, network_data) in network_data_keys.iter() {
-            fds.push(PollFd::new(
-                network_data.socket.as_fd(),
-                PollFlags::POLLIN | PollFlags::POLLOUT,
-            ));
-        }
-
         if let Err(_e) = nix::poll::poll(&mut fds, None::<u16>) {
             return fds;
         }

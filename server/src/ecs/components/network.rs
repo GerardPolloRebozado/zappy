@@ -38,7 +38,6 @@ impl NetworkData {
 
                 let mut buf = self.buffered_data.take().unwrap_or_default();
                 buf.push_str(&msg);
-
                 if buf.ends_with('\n') {
                     Some(buf)
                 } else {

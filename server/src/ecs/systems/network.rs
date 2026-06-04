@@ -14,11 +14,9 @@ pub fn network_system(server: &mut Server) {
         .map(|fd| fd.revents().unwrap_or(PollFlags::empty()))
         .collect();
 
-    drop(fds);
+    server.process_client_events(client_revents);
 
     if listener_ready {
         server.accept_connections();
     }
-
-    server.process_client_events(client_revents);
 }
