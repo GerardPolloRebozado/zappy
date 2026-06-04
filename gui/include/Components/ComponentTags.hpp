@@ -8,10 +8,11 @@
 #define ZAPPY_GUI_COMPONENTTAGS_HPP
 
 namespace zappy {
-    struct TileTag {};
-    struct InhabitantTag {};
-    struct EggTag {};
-    struct MapTag {};
-} // zappy
+struct TileTag {};
+struct InhabitantTag {};
+struct EggTag {};
+struct MapTag {};
+struct TeamTag {};
+} // namespace zappy
 
-#endif //ZAPPY_GUI_COMPONENTTAGS_HPP
+#endif // ZAPPY_GUI_COMPONENTTAGS_HPP
