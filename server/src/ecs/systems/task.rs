@@ -64,12 +64,21 @@ pub fn any_finished_task(world: &mut World) {
 
     for (entity, task_type) in completed {
         let response = execute_task(world, entity, &task_type);
-        let network_data = world.get_component_mut::<NetworkData>(entity);
-        if network_data.is_none() {
-            return;
+
+        if matches!(task_type, TaskType::Death) {
+            if let Some(network_data) = world.get_component_mut::<NetworkData>(entity) {
+                use std::io::Write;
+                let _ = network_data
+                    .socket
+                    .write_all(response.to_string().as_bytes());
+            }
+            world.despawn(entity);
+            continue;
         }
-        let network_data = network_data.unwrap();
-        network_data.pending_responses.push(response);
+
+        if let Some(network_data) = world.get_component_mut::<NetworkData>(entity) {
+            network_data.pending_responses.push(response);
+        }
     }
 }
 
@@ -105,6 +114,10 @@ fn execute_task(world: &mut World, entity: Entity, task_type: &TaskType) -> Resp
         TaskType::Look => Response::new(
             ResponseCode::Status(StatusCode::Ok),
             Some(look::execute_look(world, entity)),
+        ),
+        TaskType::Death => Response::new(
+            ResponseCode::Status(StatusCode::Ok),
+            Some("dead".to_string()),
         ),
         _ => Response::new(ResponseCode::Status(StatusCode::Ok), None),
     }

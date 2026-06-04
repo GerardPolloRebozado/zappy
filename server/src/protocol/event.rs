@@ -206,7 +206,7 @@ impl ServerEvent {
     /// use zappy_server::game::Inhabitant; use zappy_server::protocol::ServerEvent;
     /// use zappy_server::utils::orientation::RelativeOrientation;
     ///
-    /// let player = Inhabitant::new(5, 0, 0, RelativeOrientation::Forward);
+    /// let player = Inhabitant::default().with_id(5);
     /// let event = ServerEvent::Dead { player_id: 5 };
     /// assert_eq!(event.to_ai_string(Some(&player), 10, 10), Some("dead\n".to_string()));
     /// ```
@@ -265,7 +265,7 @@ mod tests {
         let event = ServerEvent::Dead { player_id: 5 };
         assert_eq!(event.to_gui_string(), Some("pdi #5\n".to_string()));
 
-        let for_player = Inhabitant::new(5, 0, 0, RelativeOrientation::Forward);
+        let for_player = Inhabitant::default().with_id(5);
         assert_eq!(
             event.to_ai_string(Some(&for_player), 10, 10),
             Some("dead\n".to_string())
@@ -298,13 +298,16 @@ mod tests {
             y: 4,
         };
 
-        let facing_north = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
+        let facing_north = Inhabitant::default().with_id(1).with_pos(5, 5);
         assert_eq!(
             event.to_ai_string(Some(&facing_north), 10, 10),
             Some("eject: 1\n".to_string())
         );
 
-        let facing_east = Inhabitant::new(1, 5, 5, RelativeOrientation::ForwardLeft);
+        let facing_east = Inhabitant::default()
+            .with_id(1)
+            .with_pos(5, 5)
+            .with_orientation(RelativeOrientation::ForwardLeft);
         assert_eq!(
             event.to_ai_string(Some(&facing_east), 10, 10),
             Some("eject: 3\n".to_string())
@@ -313,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_constructors_use_player_fields() {
-        let broadcaster = Inhabitant::new(7, 2, 3, RelativeOrientation::Forward);
+        let broadcaster = Inhabitant::default().with_id(7).with_pos(2, 3);
         let event = ServerEvent::message(&broadcaster, "hi");
         assert!(
             matches!(event, ServerEvent::Message { player_id: 7, message, x: 2, y: 3, } if message == "hi")

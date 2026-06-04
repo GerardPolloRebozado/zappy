@@ -1,13 +1,9 @@
-use crate::{
-    ecs::{storage::World, systems::task::any_finished_task},
-    protocol::Response,
+use crate::ecs::{
+    storage::World,
+    systems::{life::check_dead_inhabitants, task::any_finished_task},
 };
 
-pub fn run_systems(world: &mut World) -> Vec<(String, Response)> {
-    let responses = Vec::new();
-
-    {
-        any_finished_task(world);
-    }
-    responses
+pub fn run_systems(world: &mut World) {
+    check_dead_inhabitants(world);
+    any_finished_task(world);
 }

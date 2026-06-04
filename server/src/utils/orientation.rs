@@ -133,7 +133,7 @@ fn shortest_delta(from: u32, to: u32, size: i32) -> i32 {
 /// use zappy_server::game::Inhabitant; use zappy_server::utils::orientation::calc_k;
 /// use zappy_server::utils::orientation::RelativeOrientation;
 ///
-/// let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
+/// let player = Inhabitant::default().with_id(1).with_pos(5, 5);
 /// assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
 /// ```
 pub fn calc_k(
@@ -165,46 +165,49 @@ mod tests {
 
     #[test]
     fn same_tile_returns_zero() {
-        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
+        let player = Inhabitant::default().with_id(1).with_pos(5, 5);
         assert_eq!(calc_k(5, 5, &player, 10, 10), 0);
     }
 
     #[test]
     fn forward_adjacent_when_facing_north() {
-        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
+        let player = Inhabitant::default().with_id(1).with_pos(5, 5);
         assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
     }
 
     #[test]
     fn left_when_facing_east() {
-        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::ForwardLeft);
+        let player = Inhabitant::default()
+            .with_id(1)
+            .with_pos(5, 5)
+            .with_orientation(RelativeOrientation::ForwardLeft);
         assert_eq!(calc_k(5, 4, &player, 10, 10), 3);
     }
 
     #[test]
     fn distant_target_on_cardinal() {
-        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
+        let player = Inhabitant::default().with_id(1).with_pos(5, 5);
         assert_eq!(calc_k(5, 0, &player, 10, 10), 1);
         assert_eq!(calc_k(9, 5, &player, 10, 10), 7);
     }
 
     #[test]
     fn distant_target_on_diagonal() {
-        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
+        let player = Inhabitant::default().with_id(1).with_pos(5, 5);
         assert_eq!(calc_k(9, 1, &player, 10, 10), 8);
         assert_eq!(calc_k(1, 1, &player, 10, 10), 2);
     }
 
     #[test]
     fn toroidal_shortest_path() {
-        let player = Inhabitant::new(1, 9, 5, RelativeOrientation::Forward);
+        let player = Inhabitant::default().with_id(1).with_pos(9, 5);
         assert_eq!(calc_k(0, 5, &player, 10, 10), 7);
         assert_eq!(calc_k(9, 0, &player, 10, 10), 1);
     }
 
     #[test]
     fn all_eight_orientation_facing_north() {
-        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Forward);
+        let player = Inhabitant::default().with_id(1).with_pos(5, 5);
         assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
         assert_eq!(calc_k(4, 4, &player, 10, 10), 2);
         assert_eq!(calc_k(4, 5, &player, 10, 10), 3);
@@ -217,7 +220,10 @@ mod tests {
 
     #[test]
     fn invalid_orientation_falls_back_to_one() {
-        let player = Inhabitant::new(1, 5, 5, RelativeOrientation::Invalid);
+        let player = Inhabitant::default()
+            .with_id(1)
+            .with_pos(5, 5)
+            .with_orientation(RelativeOrientation::Invalid);
         assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
     }
 
