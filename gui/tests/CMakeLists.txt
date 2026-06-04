@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 set(TEST_SOURCES
+    test_ecs.cpp
     test_network.cpp
     test_render_system.cpp
     ../src/NetworkManager.cpp

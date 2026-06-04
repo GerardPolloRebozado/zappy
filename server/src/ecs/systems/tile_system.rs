@@ -115,10 +115,6 @@ mod tests {
     #[test]
     fn test_spawn_tile() {
         let mut world = World::new();
-        world.register_component::<Tile>();
-        world.register_component::<Position>();
-        world.register_component::<TerrainType>();
-        world.register_component::<Inventory>();
 
         let tile_ent = spawn_tile(&mut world, 10, 20, TerrainType::Grass);
 

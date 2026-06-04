@@ -232,7 +232,6 @@ mod tests {
     #[test]
     fn add_task() {
         let mut world = World::new();
-        world.register_component::<TaskList>();
         let entity = world.spawn();
         world.add_component(entity, TaskList::default());
 
@@ -248,7 +247,6 @@ mod tests {
     #[test]
     fn task_completion() {
         let mut world = World::new();
-        world.register_component::<TaskList>();
         let entity = world.spawn();
         world.add_component(entity, TaskList::default());
 

@@ -6,15 +6,11 @@
 */
 
 #include "NetworkManager.hpp"
+#include "Commands/FactoryCommands.hpp"
 #include <iostream>
 #include <sstream>
-#include "Commands/FactoryCommands.hpp"
-
 
 namespace zappy {
-
-NetworkManager::NetworkManager(Register& registry)
-    : _registry(registry), _isHandshakeDone(false) {}
 
 NetworkManager::~NetworkManager() { disconnect(); }
 
@@ -28,7 +24,7 @@ void NetworkManager::disconnect() {
     _isHandshakeDone = false;
 }
 
-void NetworkManager::update(Register& registry) {
+void NetworkManager::update(World& world) {
     if (!_socket.isConnected()) {
         return;
     }
@@ -44,7 +40,7 @@ void NetworkManager::update(Register& registry) {
                 if (!_isHandshakeDone) {
                     _processHandshake(line);
                 } else {
-                    _handleProtocolMessage(line, registry);
+                    _handleProtocolMessage(line, world);
                 }
             }
         }
@@ -61,11 +57,21 @@ bool NetworkManager::isConnected() const { return _socket.isConnected(); }
 void NetworkManager::requestMapSize() { sendCommand("msz"); }
 void NetworkManager::requestMapContent() { sendCommand("mct"); }
 void NetworkManager::requestTeamNames() { sendCommand("tna"); }
-void NetworkManager::requestTimeUpdate(int newTime) { sendCommand("sst " + std::to_string(newTime)); }
-void NetworkManager::requestPlayerPosition(int playerId) { sendCommand("ppo #" + std::to_string(playerId)); }
-void NetworkManager::requestPlayerLevel(int playerId) { sendCommand("plv #" + std::to_string(playerId)); }
-void NetworkManager::requestPlayerInventory(int playerId) { sendCommand("pin #" + std::to_string(playerId)); }
-void NetworkManager::requestTileContent(int x, int y) { sendCommand("bct " + std::to_string(x) + " " + std::to_string(y)); }
+void NetworkManager::requestTimeUpdate(int newTime) {
+    sendCommand("sst " + std::to_string(newTime));
+}
+void NetworkManager::requestPlayerPosition(int playerId) {
+    sendCommand("ppo #" + std::to_string(playerId));
+}
+void NetworkManager::requestPlayerLevel(int playerId) {
+    sendCommand("plv #" + std::to_string(playerId));
+}
+void NetworkManager::requestPlayerInventory(int playerId) {
+    sendCommand("pin #" + std::to_string(playerId));
+}
+void NetworkManager::requestTileContent(int x, int y) {
+    sendCommand("bct " + std::to_string(x) + " " + std::to_string(y));
+}
 
 void NetworkManager::_processHandshake(const std::string& message) {
     if (message == "WELCOME") {
@@ -82,7 +88,7 @@ void NetworkManager::_processHandshake(const std::string& message) {
 }
 
 // should return info somewhere?
-void NetworkManager::_handleProtocolMessage(const std::string& message, Register& registry) {
+void NetworkManager::_handleProtocolMessage(const std::string& message, World& world) {
     std::istringstream iss(message);
     std::string cmd;
     if (!(iss >> cmd)) {
@@ -93,13 +99,13 @@ void NetworkManager::_handleProtocolMessage(const std::string& message, Register
 
     if (command) {
         std::string args = message.substr(cmd.length() + 1);
-        command->execute(args, registry);
+        command->execute(args, world);
     } else {
         std::cout << "Wrong command: " << cmd << std::endl;
     }
 }
 
-void NetworkManager::_handlePlayerConnection(const std::string& args, Register& registry) {
+void NetworkManager::_handlePlayerConnection(const std::string& args, World& world) {
     // Parse #n X Y O L N
 }
 
