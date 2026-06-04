@@ -30,7 +30,7 @@ def can_evolve(current_level: int, inventory, players_on_tile: int) -> bool:
     return (
         players_on_tile >= req.players and
         inventory.linemate >= req.linemate and
-        inventory.deraumere >= req.dreaumere and
+        inventory.deraumere >= req.deraumere and
         inventory.sibur >= req.sibur and
         inventory.mendiane >= req.mendiane and
         inventory.phiras >= req.phiras and
