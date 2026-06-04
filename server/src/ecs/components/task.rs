@@ -13,6 +13,7 @@ pub enum TaskType {
     Take,
     Drop,
     Incantation,
+    Death,
 }
 
 impl TaskType {
@@ -30,6 +31,7 @@ impl TaskType {
             TaskType::Take => 7,
             TaskType::Drop => 7,
             TaskType::Incantation => 300,
+            TaskType::Death => 0,
         }
     }
 }
