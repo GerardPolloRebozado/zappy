@@ -151,17 +151,19 @@ pub struct World {
     free_ids: Vec<u32>,
     /// A map of component types to their respective `ComponentMap`
     storages: HashMap<TypeId, Box<dyn ComponentStorage>>,
+    /// curent frequency used to calculate time for instance, if f=1, ”forward” takes 7 / 1 = 7 seconds.
+    pub freq: u64,
 }
 
 impl Default for World {
     fn default() -> Self {
-        Self::new()
+        Self::new(100)
     }
 }
 
 impl World {
     /// Creates a new, empty ECS world
-    pub fn new() -> Self {
+    pub fn new(freq: u64) -> Self {
         Self {
             mapSize: MapSize {
                 width: 100,
@@ -170,6 +172,7 @@ impl World {
             entity_generations: Vec::new(),
             free_ids: Vec::new(),
             storages: HashMap::new(),
+            freq,
         }
     }
 
@@ -258,7 +261,7 @@ mod tests {
 
     #[test]
     fn ecs_lifecycle() {
-        let mut world = World::new();
+        let mut world = World::default();
         world.register_component::<i32>();
 
         let ent = world.spawn();

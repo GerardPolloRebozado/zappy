@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_spawn_tile() {
-        let mut world = World::new();
+        let mut world = World::default();
         world.register_component::<Tile>();
         world.register_component::<Position>();
         world.register_component::<TerrainType>();
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn test_setup_map() {
-        let mut world = World::new();
+        let mut world = World::default();
         setup_map(&mut world, 10, 10);
 
         let tiles = world.get_storage::<Tile>().unwrap();

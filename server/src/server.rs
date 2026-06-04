@@ -1,14 +1,15 @@
-pub mod client;
 pub mod commands;
-pub mod network;
 pub mod signal;
 
+use crate::ecs::builders::inhabitants::build_inhabitant;
+use crate::ecs::components::network::{ClientState, NetworkData};
 use crate::ecs::components::task::TaskType;
-use crate::ecs::storage::World;
-use crate::ecs::systems::task::any_finished_task;
+use crate::ecs::storage::{Entity, World};
+use crate::ecs::systems::network::network_system;
+use crate::ecs::systems::run::run_systems;
 use crate::game::*;
-use crate::protocol::{Request, Response, ServerEvent};
-use crate::server::client::{Client, ClientState};
+use crate::protocol::{Request, Response, ResponseCode, ServerEvent, StatusCode};
+use crate::utils::orientation;
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
@@ -17,7 +18,6 @@ use std::os::fd::AsFd;
 
 pub struct Server {
     pub listener: TcpListener,
-    pub clients: HashMap<String, Client>,
     pub _users: HashMap<String, User>,
     pub _teams: HashMap<String, Team>,
     pub _freq: u32,
@@ -36,95 +36,166 @@ impl Server {
         Server {
             listener: TcpListener::bind("0.0.0.0:8080")
                 .expect("Error starting server on port 8080"),
-            clients: HashMap::new(),
             _users: HashMap::new(),
             _teams: HashMap::new(),
             _freq: 100,
             game_start: Date::now().to_timestamp(),
-            world: World::new(),
+            world: World::default(), // TODO: change this to use the specified one, once argument parsing is done
         }
     }
 
     pub fn run(&mut self) {
+        network_system(self);
+        run_systems(&mut self.world);
+    }
+
+    pub fn accept_connections(&mut self) {
+        loop {
+            if let Ok((mut socket, _addr)) = self.listener.accept() {
+                let _ = socket.write_all(b"WELCOME\n");
+                let network_data = NetworkData::new(socket);
+                build_inhabitant(
+                    0,
+                    0,
+                    orientation::RelativeOrientation::Forward,
+                    &mut self.world,
+                    network_data,
+                );
+            } else {
+                return;
+            }
+        }
+    }
+
+    pub fn get_server_events(&self) -> Vec<PollFd<'_>> {
         let mut fds = vec![PollFd::new(
             self.listener.as_fd(),
             PollFlags::POLLIN | PollFlags::POLLOUT,
         )];
-        let client_keys: Vec<String> = self.clients.keys().cloned().collect();
 
-        for uuid in &client_keys {
-            if let Some(client) = self.clients.get(uuid) {
-                fds.push(PollFd::new(
-                    client.socket.as_fd(),
-                    PollFlags::POLLIN | PollFlags::POLLOUT,
-                ));
-            }
+        let network_data_keys = self.world.get_storage::<NetworkData>();
+        if network_data_keys.is_none() {
+            return fds;
+        }
+        let network_data_keys = network_data_keys.unwrap();
+
+        for (_, network_data) in network_data_keys.iter() {
+            fds.push(PollFd::new(
+                network_data.socket.as_fd(),
+                PollFlags::POLLIN | PollFlags::POLLOUT,
+            ));
         }
 
         if let Err(_e) = nix::poll::poll(&mut fds, None::<u16>) {
-            return;
+            return fds;
         }
 
-        let listener_ready = fds[0]
-            .revents()
-            .is_some_and(|f| f.contains(PollFlags::POLLIN));
+        fds
+    }
 
-        let client_revents: Vec<PollFlags> = fds[1..]
-            .iter()
-            .map(|fd| fd.revents().unwrap_or(PollFlags::empty()))
-            .collect();
+    pub fn process_client_events(&mut self, client_revents: Vec<PollFlags>) {
+        let mut disconnected = Vec::new();
+        let mut requests_to_read = Vec::new();
+        let mut requests_to_write = Vec::new();
 
-        drop(fds);
+        {
+            let network_data_storage = self.world.get_storage_mut::<NetworkData>();
+            if network_data_storage.is_none() {
+                return;
+            }
+            let network_data_storage = network_data_storage.unwrap();
 
-        if listener_ready {
-            self.accept_connections();
-        }
+            for (i, (entity, network_data)) in network_data_storage.iter_mut().enumerate() {
+                let revents = client_revents[i];
 
-        self.process_client_events(client_revents, client_keys);
+                if revents.contains(PollFlags::POLLOUT) {
+                    requests_to_write.push(*entity);
+                }
 
-        let finished_tasks = any_finished_task(&mut self.world, self._freq);
-        for (uuid, response) in finished_tasks {
-            if let Some(client) = self.clients.get_mut(&uuid) {
-                client.pending_responses.push(response);
+                if !revents.contains(PollFlags::POLLIN) {
+                    continue;
+                }
+
+                match network_data.read_data() {
+                    Some(msg) => requests_to_read.push((*entity, msg)),
+                    None => disconnected.push(*entity),
+                }
             }
         }
+
+        for (entity, msg) in requests_to_read {
+            for line in msg.split('\n') {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+
+                let req = match trimmed.parse::<Request>() {
+                    Ok(req) => req,
+                    Err(_) => {
+                        if let Some(client) = self.world.get_component_mut::<NetworkData>(entity) {
+                            client.pending_responses.push(Response {
+                                code: ResponseCode::Status(StatusCode::Ko),
+                                data: None,
+                            });
+                        }
+                        continue;
+                    }
+                };
+
+                commands::handle_request(self, entity, req);
+            }
+        }
+
+        for entity in requests_to_write {
+            let mut responses = Vec::new();
+            if let Some(c) = self.world.get_component_mut::<NetworkData>(entity) {
+                responses = c.pending_responses.drain(..).collect();
+            }
+            for response in responses {
+                self.handle_response(entity, response);
+            }
+        }
+
+        // for uuid in disconnected {
+        // if let Some(_client) = server.clients.remove(&uuid) {
+        // TODO: decide what to do when a user disconnects
+        //}
+        //}
     }
 
-    pub fn accept_connections(&mut self) {
-        network::accept_connections(self);
+    pub fn queue_task(&mut self, entity: Entity, task_type: TaskType) {
+        commands::queue_task(self, entity, task_type);
     }
 
-    pub fn process_client_events(
-        &mut self,
-        client_revents: Vec<PollFlags>,
-        client_keys: Vec<String>,
-    ) {
-        network::process_client_events(self, client_revents, client_keys);
+    pub fn handle_request(&mut self, entity: Entity, request: Request) {
+        commands::handle_request(self, entity, request);
     }
 
-    pub fn queue_task(&mut self, client_uuid: &str, task_type: TaskType) {
-        commands::queue_task(self, client_uuid, task_type);
-    }
-
-    pub fn handle_request(&mut self, client_uuid: &str, request: Request) {
-        commands::handle_request(self, client_uuid, request);
-    }
-
-    pub fn handle_response(&mut self, client_uuid: &str, response: Response) {
-        let client = self.clients.get_mut(client_uuid).unwrap();
-        let _ = client.socket.write_all(response.to_string().as_ref());
+    pub fn handle_response(&mut self, entity: Entity, response: Response) {
+        let network_data = self.world.get_component_mut::<NetworkData>(entity);
+        if network_data.is_none() {
+            return;
+        }
+        let network_data = network_data.unwrap();
+        let _ = network_data.socket.write_all(response.to_string().as_ref());
     }
 
     pub fn broadcast_global(&mut self, event: ServerEvent) {
-        for client in self.clients.values_mut() {
-            let formatted = match &client.state {
+        let storage = self.world.get_storage_mut::<NetworkData>();
+        if storage.is_none() {
+            return;
+        }
+        let storage = storage.unwrap();
+        for (_, network_data) in storage.iter_mut() {
+            let formatted = match &network_data.state {
                 ClientState::AuthenticatedGUI => event.to_gui_string(),
                 ClientState::AuthenticatedAI(_) => None,
                 ClientState::WaitingForTeamName => None,
             };
 
             if let Some(data) = formatted {
-                client.pending_responses.push(Response::new(
+                network_data.pending_responses.push(Response::new(
                     crate::protocol::ResponseCode::Status(crate::protocol::StatusCode::Ok),
                     Some(data),
                 ));
@@ -162,12 +233,11 @@ mod tests {
 
         let mut server = Server {
             listener,
-            clients: HashMap::new(),
             _users: HashMap::new(),
             _teams: HashMap::new(),
             _freq: 100,
             game_start: 0,
-            world: World::new(),
+            world: World::new(100),
         };
         server.world.register_component::<TaskList>();
         server.world.register_component::<Position>();
@@ -175,14 +245,17 @@ mod tests {
         server.world.register_component::<RelativeOrientation>();
 
         let client_socket = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-        let mut client = Client::new(client_socket);
-        let entity = build_inhabitant(0, 0, RelativeOrientation::Forward, &mut server.world);
-        client.entity = Some(entity);
-        let uuid = client.uuid.clone();
-        server.clients.insert(uuid.clone(), client);
+        let network = NetworkData::new(client_socket);
+        let entity = build_inhabitant(
+            0,
+            0,
+            RelativeOrientation::Forward,
+            &mut server.world,
+            network,
+        );
 
         for _ in 0..15 {
-            server.queue_task(&uuid, TaskType::Forward);
+            server.queue_task(entity, TaskType::Forward);
         }
 
         let task_list = server.world.get_component::<TaskList>(entity).unwrap();
