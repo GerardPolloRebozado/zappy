@@ -11,7 +11,7 @@
 //! struct Position { x: f32, y: f32 }
 //! struct Velocity { dx: f32, dy: f32 }
 //!
-//! let mut world = World::new();
+//! let mut world = World::default();
 //!
 //!
 //! // Spawn an entity
@@ -38,6 +38,7 @@
 //! // despawn when done
 //! world.despawn(player);
 //! ```
+
 
 use crate::ecs::map_size::MapSize;
 use std::any::{Any, TypeId};
@@ -152,18 +153,15 @@ pub struct World {
 
 impl Default for World {
     fn default() -> Self {
-        Self::new()
+        Self::new(MapSize { width: 100, height: 100 })
     }
 }
 
 impl World {
     /// Creates a new, empty ECS world
-    pub fn new() -> Self {
+    pub fn new(map_size: MapSize) -> Self {
         Self {
-            map_size: MapSize {
-                width: 100,
-                height: 100,
-            },
+            map_size: map_size,
             entity_generations: Vec::new(),
             free_ids: Vec::new(),
             storages: HashMap::new(),
@@ -258,7 +256,7 @@ mod tests {
 
     #[test]
     fn ecs_lifecycle() {
-        let mut world = World::new();
+        let mut world = World::default();
 
         let ent = world.spawn();
         world.add_component(ent, 42);
