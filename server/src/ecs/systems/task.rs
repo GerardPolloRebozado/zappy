@@ -33,9 +33,10 @@
 use crate::{
     ecs::{
         components::{
-            network::{ClientState, NetworkData},
+            network::NetworkData,
             position::Position,
             task::{TASK_NOT_STARTED, TaskList, TaskType},
+            team::Team,
         },
         storage::{Entity, World},
     },
@@ -117,11 +118,11 @@ pub fn broadcast_event(world: &mut World, event: ServerEvent) {
     let mut ai_data = Vec::new();
     let mut gui_entities = Vec::new();
 
-    if let Some(network_storage) = world.get_storage::<NetworkData>() {
-        for (entity, network_data) in network_storage.iter() {
-            match &network_data.state {
-                ClientState::AuthenticatedGUI => gui_entities.push(*entity),
-                ClientState::AuthenticatedAI(_) => {
+    if let Some(team_storage) = world.get_storage::<Team>() {
+        for (entity, team) in team_storage.iter() {
+            match &team {
+                Team::AuthenticatedGUI => gui_entities.push(*entity),
+                Team::AuthenticatedAI(_) => {
                     if let Some(inhabitant) = Inhabitant::get(*entity, world)
                         && let Some(line) =
                             event.to_ai_string(Some(&inhabitant), map_width, map_height)
@@ -261,6 +262,7 @@ mod tests {
         world.add_component(entity, TaskList::default());
         world.add_component(entity, Inventory::new());
         world.add_component(entity, Life::new(world.freq));
+        world.add_component(entity, crate::ecs::components::team::Team::default());
         (world, entity)
     }
 

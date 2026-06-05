@@ -22,7 +22,6 @@ use std::os::fd::AsFd;
 pub struct Server {
     pub listener: TcpListener,
     pub _users: HashMap<String, User>,
-    pub _teams: HashMap<String, Team>,
     pub _freq: u32,
     pub game_start: u64,
     pub world: World,
@@ -46,7 +45,6 @@ impl Server {
         Server {
             listener,
             _users: HashMap::new(),
-            _teams: HashMap::new(),
             _freq: config.freq,
             game_start: Date::now().to_timestamp(),
             world: World::new(
@@ -210,8 +208,9 @@ impl Server {
 mod tests {
     use super::*;
     use crate::ecs::builders::inhabitants::build_inhabitant;
-    use crate::ecs::components::network::{ClientState, NetworkData};
+    use crate::ecs::components::network::NetworkData;
     use crate::ecs::components::task::{TaskList, TaskType};
+    use crate::ecs::components::team::Team;
     use crate::utils::orientation::RelativeOrientation;
     use std::net::TcpListener;
 
@@ -223,7 +222,6 @@ mod tests {
         let mut server = Server {
             listener,
             _users: HashMap::new(),
-            _teams: HashMap::new(),
             _freq: 100,
             game_start: 0,
             world: World::new(
@@ -263,7 +261,6 @@ mod tests {
         let mut server = Server {
             listener,
             _users: HashMap::new(),
-            _teams: HashMap::new(),
             _freq: 100,
             game_start: 0,
             world: World::new(
@@ -286,8 +283,8 @@ mod tests {
             &mut server.world,
             network_a,
         );
-        if let Some(nd) = server.world.get_component_mut::<NetworkData>(entity_same) {
-            nd.state = ClientState::AuthenticatedAI("team".to_string());
+        if let Some(nd) = server.world.get_component_mut::<Team>(entity_same) {
+            *nd = Team::AuthenticatedAI("team".to_string());
         }
 
         let socket_b = std::net::TcpStream::connect(addr).unwrap();
@@ -299,8 +296,8 @@ mod tests {
             &mut server.world,
             network_b,
         );
-        if let Some(nd) = server.world.get_component_mut::<NetworkData>(entity_east) {
-            nd.state = ClientState::AuthenticatedAI("team".to_string());
+        if let Some(nd) = server.world.get_component_mut::<Team>(entity_east) {
+            *nd = Team::AuthenticatedAI("team".to_string());
         }
 
         let event = ServerEvent::Message {
