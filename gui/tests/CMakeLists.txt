@@ -5,6 +5,11 @@ set(TEST_SOURCES
     test_network.cpp
     test_render_system.cpp
     test_player.cpp
+    test_team.cpp
+    test_resources.cpp
+    test_incantation.cpp
+    test_egg.cpp
+    test_misc.cpp
     ../src/NetworkManager.cpp
     ../src/Network/TcpSocket.cpp
     ../src/Systems/RenderSystem.cpp
