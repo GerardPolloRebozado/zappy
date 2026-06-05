@@ -58,6 +58,11 @@ def move_to_tile(client, tile_index):
 
 
 def count_players_in_tile(tile):
+    """
+    Counts the number of players in the tile.
+    :param tile: the tile to count
+    :return: number of players
+    """
     return tile.count("player")
 
 
