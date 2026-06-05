@@ -1,8 +1,26 @@
-//! Task queue processing for queued player commands.
+//! Timed execution of queued AI player commands.
 //!
-//! Each [`TaskList`] holds a FIFO of timed actions. This module advances timers,
-//! pops finished entries, applies their game effects, and returns protocol
-//! responses keyed by client UUID.
+//! Commands accepted by [`crate::server::commands`] are not applied immediately.
+//! [`crate::server::commands::queue_task`] appends a [`Task`] to the inhabitant's
+//! [`TaskList`] (FIFO, max 10). Each server tick, [`crate::ecs::systems::run::run_systems`]
+//! calls [`any_finished_task`] to advance those queues.
+//!
+//! # Lifecycle
+//!
+//! Only the head of each [`TaskList`] runs at a time. A newly queued task has
+//! [`TASK_NOT_STARTED`]; the next pass sets `finish_on` from [`TaskType::duration`]
+//! and world frequency. When the timer elapses, the task is popped, [`execute_task`]
+//! applies its effect, and the next queued task (if any) starts its timer.
+//!
+//! # Responses and side effects
+//!
+//! Most tasks push an `ok` [`Response`] onto the acting client's
+//! [`NetworkData::pending_responses`]. Some also attach data (`Look`, `Inventory`) or
+//! emit a [`ServerEvent`] for other clients (`BroadcastText`). [`TaskType::Death`] is
+//! special: it writes `dead` straight to the socket and despawns the entity.
+//!
+//! Per-command logic lives in [`execute_task`]. Data-heavy commands delegate to the
+//! [`inventory`] and [`look`] submodules.
 //!
 //! # Broadcast flow
 //!
@@ -26,6 +44,7 @@ use crate::{
     utils::orientation::RelativeOrientation,
 };
 
+pub mod inventory;
 pub mod look;
 
 /// Advances queued tasks, applies effects when a timer elapses, starts the next
@@ -140,6 +159,11 @@ pub fn broadcast_event(world: &mut World, event: ServerEvent) {
 ///
 /// `Forward` updates [`Position`] from [`RelativeOrientation`] on the same entity.
 /// `TurnRight` / `TurnLeft` rotate that orientation.
+/// `Look` reads the surrounding tiles from the entity's [`Position`], [`RelativeOrientation`],
+/// and [`Level`], and returns a bracket-formatted vision string (data-only response).
+/// `Inventory` reads the entity's [`Inventory`] and returns a bracket-formatted resource count
+/// string (data-only response).
+/// `Death` returns `"dead"` as the response data.
 /// `BroadcastText` produces a [`ServerEvent::Message`] for fan-out.
 ///
 /// Returns the response for the acting client plus an optional broadcast event.
@@ -181,6 +205,13 @@ fn execute_task(
             ),
             None,
         ),
+        TaskType::Inventory => (
+            Response::new(
+                ResponseCode::Status(StatusCode::Ok),
+                Some(inventory::execute_inventory(world, entity)),
+            ),
+            None,
+        ),
         TaskType::Death => (
             Response::new(
                 ResponseCode::Status(StatusCode::Ok),
@@ -207,6 +238,8 @@ mod tests {
     use crate::ecs::components::life::Life;
     use crate::ecs::components::task::{Task, TaskType};
     use crate::ecs::storage::World;
+    use crate::ecs::systems::inventory_system::add_item;
+    use crate::game::Resource;
 
     use super::*;
 
@@ -318,7 +351,30 @@ mod tests {
     }
 
     #[test]
-    fn execute_task_unimplemented_returns_ok() {
+    fn execute_task_inventory_returns_formatted_data() {
+        let (mut world, entity) = setup_inhabitant(2, 3, RelativeOrientation::Forward, 10, 10);
+
+        {
+            let inv = world.get_component_mut::<Inventory>(entity).unwrap();
+            add_item(inv, Resource::Food, 10);
+            add_item(inv, Resource::Linemate, 5);
+            add_item(inv, Resource::Sibur, 1);
+            add_item(inv, Resource::Mendiane, 2);
+            add_item(inv, Resource::Phiras, 3);
+            add_item(inv, Resource::Thystame, 4);
+        }
+
+        let (response, event) = execute_task(&mut world, entity, &TaskType::Inventory);
+        assert_eq!(response.code, ResponseCode::Status(StatusCode::Ok));
+        assert_eq!(
+            response.data.as_deref(),
+            Some("[food 10, linemate 5, deraumere 0, sibur 1, mendiane 2, phiras 3, thystame 4]")
+        );
+        assert!(event.is_none());
+    }
+
+    #[test]
+    fn execute_task_inventory_does_not_change_position_or_orientation() {
         let (mut world, entity) = setup_inhabitant(2, 3, RelativeOrientation::Forward, 10, 10);
         let before = (
             world.get_component::<Position>(entity).unwrap().x,
@@ -326,8 +382,7 @@ mod tests {
             *world.get_component::<RelativeOrientation>(entity).unwrap(),
         );
 
-        let (response, _) = execute_task(&mut world, entity, &TaskType::Inventory);
-        assert_ok(response);
+        execute_task(&mut world, entity, &TaskType::Inventory);
 
         let after = (
             world.get_component::<Position>(entity).unwrap().x,
