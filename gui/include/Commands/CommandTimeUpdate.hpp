@@ -6,22 +6,48 @@
 */
 #ifndef ZAPPY_COMMANDTIMEUPDATE_HPP
 #define ZAPPY_COMMANDTIMEUPDATE_HPP
+
 #include "ACommand.hpp"
+#include "Components/ComponentShared.hpp"
+#include <sstream>
 
 namespace zappy {
-    class CommandTimeUpdate : public ACommand{
-        CommandTimeUpdate() = default;
-        /**
-       * @brief Handles the "sgt" command, which provides the current time unit duration in the game.
-       * Parses the time unit duration from the command arguments and updates the registry or internal state as needed. This information can be used to adjust the timing of animations, movements, and other time-dependent features in the GUI to ensure they are synchronized with the server's timing.
-       * @param args The arguments for the command, expected to contain the time unit duration in milliseconds.
-       * @param registry The registry containing the application state, where the time unit duration will be updated
-       */
-        void execute(const std::string&args, Register&registry) override
-        {
+class CommandTimeUpdate : public ACommand {
+  public:
+    CommandTimeUpdate() = default;
+    ~CommandTimeUpdate() override = default;
 
-        };
-    };
-} // zappy
+    /**
+     * @brief Handles the "sgt" and "sst" commands.
+     * @param args The arguments for the command: "T"
+     * @param world The ECS World containing the application state
+     */
+    void execute(const std::string& args, World& world) override {
+        std::istringstream iss(args);
+        int frequency;
 
-#endif //ZAPPY_COMMANDTIMEUPDATE_HPP
+        if (!(iss >> frequency)) {
+            return;
+        }
+
+        auto storage = world.get_storage<TimeUnit>();
+        bool found = false;
+        if (storage) {
+            for (auto const& [entity, timeUnit] : *storage) {
+                timeUnit->frequency = frequency;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            Entity timeEntity = world.spawn();
+            world.add_component<TimeUnit>(timeEntity, {frequency});
+        }
+
+        std::cout << "Protocol: Time unit updated to " << frequency << std::endl;
+    }
+};
+} // namespace zappy
+
+#endif // ZAPPY_COMMANDTIMEUPDATE_HPP
