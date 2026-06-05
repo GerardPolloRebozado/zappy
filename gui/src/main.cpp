@@ -1,3 +1,6 @@
+#include "Components/ComponentInhabitant.hpp"
+#include "Components/ComponentShared.hpp"
+#include "Components/ComponentTile.hpp"
 #include "NetworkManager.hpp"
 #include "Systems/RenderSystem.hpp"
 #include <iostream>
@@ -49,8 +52,29 @@ int main(int argc, char** argv) {
         raylib::Window window(1280, 720, "Zappy GUI");
         SetTargetFPS(60);
 
-        // Map will be populated via network (mct command)
-        // renderSys.camera position will be adjusted once msz is received
+        // Hardcoded testing data
+        for (int x = 0; x < 10; ++x) {
+            for (int y = 0; y < 10; ++y) {
+                auto tile = registry.spawn();
+                registry.add_component(tile, zappy::Position{x, y});
+                registry.add_component(tile, zappy::TerrainType{zappy::TerrainType::GRASS});
+                registry.add_component(tile, zappy::Inventory{x + y, x, y, 0, 0, 0, 0});
+            }
+        }
+
+        auto p1 = registry.spawn();
+        registry.add_component(p1, zappy::Position{2, 2});
+        registry.add_component(p1, zappy::Orientation{zappy::Orientation::N});
+        registry.add_component(p1, zappy::Level{1});
+        registry.add_component(p1, zappy::TeamName{"Team Alpha"});
+
+        auto p2 = registry.spawn();
+        registry.add_component(p2, zappy::Position{5, 5});
+        registry.add_component(p2, zappy::Orientation{zappy::Orientation::E});
+        registry.add_component(p2, zappy::Level{4});
+        registry.add_component(p2, zappy::TeamName{"Team Beta"});
+
+        renderSys.centerCamera(10, 10);
 
         while (!window.ShouldClose()) {
 
