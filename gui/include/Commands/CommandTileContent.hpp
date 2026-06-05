@@ -18,19 +18,15 @@ class CommandTileContent : public ACommand {
 
     /**
      * @brief Handles the "bct" command, which provides the content of a specific tile on the map.
-     * Parses the tile coordinates, inventory quantities, and terrain type from the command
-     * arguments. Updates the world with the tile's position, inventory, and terrain type. If an
-     * entity for the tile doesn't exist, it creates one and assigns the appropriate components.
-     * @param args The arguments for the command, expected to be in the format "x y q0 q1 q2 q3 q4
-     * q5 q6 t_type", where (x, y) are the tile coordinates, q0-q6 are the quantities of each
-     * resource, and t_type is the terrain type identifier.
-     * @param world The world containing the application state, where the tile's content will be
-     * updated
+     * Parses the tile coordinates and inventory quantities from the command arguments.
+     * Support both protocol standard (9 args) and project extension (10 args with terrain type).
+     * @param args The arguments for the command, expected to be "x y q0 q1 q2 q3 q4 q5 q6 [t_type]"
+     * @param world The world containing the application state.
      */
     void execute(const std::string& args, World& world) override {
         std::istringstream iss(args);
-        int x, y, q0, q1, q2, q3, q4, q5, q6, t_type;
-        if (!(iss >> x >> y >> q0 >> q1 >> q2 >> q3 >> q4 >> q5 >> q6 >> t_type)) {
+        int x, y, q0, q1, q2, q3, q4, q5, q6;
+        if (!(iss >> x >> y >> q0 >> q1 >> q2 >> q3 >> q4 >> q5 >> q6)) {
             return;
         }
 
@@ -40,7 +36,7 @@ class CommandTileContent : public ACommand {
         if (posStorage) {
             for (auto const& [ent, pos] : *posStorage) {
                 if (pos->x == x && pos->y == y) {
-                    if (world.get_component<TerrainType>(ent)) {
+                    if (world.get_component<TileTag>(ent)) {
                         tileEntity = ent;
                         found = true;
                         break;
@@ -56,11 +52,14 @@ class CommandTileContent : public ACommand {
         }
 
         world.add_component<Inventory>(tileEntity, {q0, q1, q2, q3, q4, q5, q6});
-        world.add_component<TerrainType>(tileEntity, {(zappy::TerrainType::Type)t_type});
 
-        if (x == 0 && y == 0) {
-            std::cout << "Debug: Received tile(0,0) terrain type: " << t_type << std::endl;
+        // terrain type
+        int t_type;
+        if (iss >> t_type) {
+            world.add_component<TerrainType>(tileEntity, {static_cast<TerrainType::Type>(t_type)});
         }
+
+        std::cout << "Protocol: Tile (" << x << ", " << y << ") content updated" << std::endl;
     }
 };
 } // namespace zappy
