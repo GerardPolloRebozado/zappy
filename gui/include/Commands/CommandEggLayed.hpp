@@ -39,7 +39,7 @@ class CommandEggLayed : public ACommand {
         Entity egg = world.spawn();
         world.add_component<Position>(egg, {x, y});
         world.add_component<Egg>(egg, {eggId});
-        world.add_component<EggTag>(egg, {});
+        world.add_component<EggTag>(egg, EggTag{});
 
         std::cout << "Protocol: Egg #" << eggId << " layed by player #" << playerId << " at (" << x
                   << ", " << y << ")" << std::endl;

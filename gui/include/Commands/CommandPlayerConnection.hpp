@@ -45,7 +45,7 @@ class CommandPlayerConnection : public ACommand {
         world.add_component<Level>(player, {level});
         world.add_component<TeamName>(player, {teamName});
         world.add_component<Inventory>(player, {0, 0, 0, 0, 0, 0, 0});
-        world.add_component<InhabitantTag>(player, {});
+        world.add_component<InhabitantTag>(player, InhabitantTag{});
 
         std::cout << "Protocol: New player #" << playerId << " connected (Team: " << teamName << ")"
                   << std::endl;
