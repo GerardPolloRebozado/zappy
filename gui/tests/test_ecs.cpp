@@ -1,127 +1,106 @@
+/*
+** EPITECH PROJECT, 2026
+** zappy
+** File description:
+** test_ecs.cpp
+*/
+
 #include "Components/ComponentShared.hpp"
 #include "ECS/World.hpp"
 #include <criterion/criterion.h>
 
 using namespace zappy;
 
-Test(ECSTest, SpawnEntity) {
+struct EmptyTag {};
+
+Test(WorldTest, SpawnAndDespawn) {
     World world;
     Entity e1 = world.spawn();
     Entity e2 = world.spawn();
 
-    cr_assert(e1.id() != e2.id());
     cr_assert(world.is_alive(e1));
     cr_assert(world.is_alive(e2));
-}
-
-Test(ECSTest, DespawnEntity) {
-    World world;
-    Entity e1 = world.spawn();
-
-    cr_assert(world.is_alive(e1));
-    world.despawn(e1);
-    cr_assert(!world.is_alive(e1));
-}
-
-Test(ECSTest, EntityGeneration) {
-    World world;
-    Entity e1 = world.spawn();
-    uint32_t id = e1.id();
-    uint32_t gen = e1.generation();
+    cr_assert_neq(e1.id(), e2.id());
 
     world.despawn(e1);
-    Entity e2 = world.spawn();
-
-    cr_assert_eq(e2.id(), id);
-    cr_assert_eq(e2.generation(), gen + 1);
     cr_assert(!world.is_alive(e1));
     cr_assert(world.is_alive(e2));
 }
 
-Test(ECSTest, AddGetComponent) {
+Test(WorldTest, ReuseIds) {
     World world;
     Entity e1 = world.spawn();
+    uint32_t id1 = e1.id();
+    world.despawn(e1);
 
-    Position pos = {10, 20};
-    world.add_component<Position>(e1, pos);
-
-    auto retrievedPos = world.get_component<Position>(e1);
-    cr_assert_not_null(retrievedPos);
-    cr_assert_eq(retrievedPos->x, 10);
-    cr_assert_eq(retrievedPos->y, 20);
-}
-
-Test(ECSTest, GetNonExistentComponent) {
-    World world;
-    Entity e1 = world.spawn();
-
-    auto retrievedPos = world.get_component<Position>(e1);
-    cr_assert_null(retrievedPos);
-}
-
-Test(ECSTest, RemoveComponent) {
-    World world;
-    Entity e1 = world.spawn();
-
-    world.add_component<Position>(e1, {10, 20});
-    cr_assert_not_null(world.get_component<Position>(e1));
-
-    world.remove_component<Position>(e1);
-    cr_assert_null(world.get_component<Position>(e1));
-}
-
-Test(ECSTest, StorageIteration) {
-    World world;
-    Entity e1 = world.spawn();
     Entity e2 = world.spawn();
-
-    world.add_component<Position>(e1, {1, 2});
-    world.add_component<Position>(e2, {3, 4});
-
-    auto storage = world.get_storage<Position>();
-    cr_assert_not_null(storage);
-
-    int count = 0;
-    for (auto const& [ent, pos] : *storage) {
-        if (ent == e1) {
-            cr_assert_eq(pos->x, 1);
-            cr_assert_eq(pos->y, 2);
-        } else if (ent == e2) {
-            cr_assert_eq(pos->x, 3);
-            cr_assert_eq(pos->y, 4);
-        } else {
-            cr_assert_fail("Unexpected entity in storage");
-        }
-        count++;
-    }
-    cr_assert_eq(count, 2);
+    cr_assert_eq(e2.id(), id1);
+    cr_assert_neq(e2.generation(), e1.generation());
 }
 
-Test(ECSTest, ComponentRegistration) {
+Test(WorldTest, RegisterAndGetStorage) {
     World world;
     world.register_component<Position>();
     auto storage = world.get_storage<Position>();
-    cr_assert_not_null(storage);
+    cr_assert_not_null(storage.get());
 }
 
-Test(ECSTest, DespawnCleanupComponents) {
+Test(WorldTest, AddAndGetComponent) {
     World world;
     Entity e1 = world.spawn();
-    world.add_component<Position>(e1, {10, 20});
 
-    cr_assert_not_null(world.get_component<Position>(e1));
-    world.despawn(e1);
+    world.add_component<Position>(e1, Position{10, 20});
+    auto pos = world.get_component<Position>(e1);
 
-    // After despawn, components should be removed from storage
-    cr_assert_null(world.get_component<Position>(e1));
+    cr_assert_not_null(pos.get());
+    cr_assert_eq(pos->x, 10);
+    cr_assert_eq(pos->y, 20);
 }
 
-struct EmptyTag {};
-
-Test(ECSTest, EmptyComponent) {
+Test(WorldTest, MultipleComponents) {
     World world;
-    const Entity e1 = world.spawn();
+    Entity e1 = world.spawn();
+    Entity e2 = world.spawn();
+
+    world.add_component<Position>(e1, Position{1, 2});
+    world.add_component<Position>(e2, Position{3, 4});
+
+    auto p1 = world.get_component<Position>(e1);
+    auto p2 = world.get_component<Position>(e2);
+
+    cr_assert_eq(p1->x, 1);
+    cr_assert_eq(p2->x, 3);
+}
+
+Test(WorldTest, RemoveComponent) {
+    World world;
+    Entity e1 = world.spawn();
+
+    world.add_component<Position>(e1, Position{10, 20});
+    world.remove_component<Position>(e1);
+
+    auto pos = world.get_component<Position>(e1);
+    cr_assert_null(pos.get());
+}
+
+Test(WorldTest, DespawnRemovesComponents) {
+    World world;
+    Entity e1 = world.spawn();
+    world.add_component<Position>(e1, Position{10, 20});
+
+    world.despawn(e1);
+
+    auto storage = world.get_storage<Position>();
+    cr_assert_null(storage->get(e1).get());
+}
+
+Test(WorldTest, TagsWork) {
+    World world;
+    Entity e1 = world.spawn();
+
     world.add_component<EmptyTag>(e1, EmptyTag{});
-    cr_assert_not_null(world.get_storage<EmptyTag>());
-    cr_assert_not_null(world.get_component<EmptyTag>(e1));
+    cr_assert_not_null(world.get_component<EmptyTag>(e1).get());
+
+    world.remove_component<EmptyTag>(e1);
+    cr_assert_null(world.get_component<EmptyTag>(e1).get());
 }

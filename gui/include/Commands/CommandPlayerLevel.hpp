@@ -6,21 +6,49 @@
 */
 #ifndef ZAPPY_COMMANDPLAYERLEVEL_HPP
 #define ZAPPY_COMMANDPLAYERLEVEL_HPP
+
 #include "ACommand.hpp"
+#include "Components/ComponentInhabitant.hpp"
+#include <algorithm>
+#include <sstream>
 
 namespace zappy {
-    class CommandPlayerLevel : public ACommand{
-        CommandPlayerLevel() = default;
-        /**
-         * @brief Requests the current level of a specific player.
-         * @param args The arguments for the command, expected to contain the player ID.
-         * @param registry The registry containing the application state, where the player's level will be updated
-         */
-        void execute(const std::string&args, Register&registry) override
-        {
+class CommandPlayerLevel : public ACommand {
+  public:
+    CommandPlayerLevel() = default;
+    ~CommandPlayerLevel() override = default;
 
-        };
-    };
-} // zappy
+    /**
+     * @brief Handles the "plv" command, updating a player's level.
+     * @param args The arguments for the command, expected to be "#n L" or "n L"
+     * @param world The ECS World containing the application state
+     */
+    void execute(const std::string& args, World& world) override {
+        std::string cleanArgs = args;
+        cleanArgs.erase(std::remove(cleanArgs.begin(), cleanArgs.end(), '#'), cleanArgs.end());
 
-#endif //ZAPPY_COMMANDPLAYERLEVEL_HPP
+        std::istringstream iss(cleanArgs);
+        int playerId, level;
+
+        if (!(iss >> playerId >> level)) {
+            return;
+        }
+
+        auto levelStorage = world.get_storage<Level>();
+        if (!levelStorage) {
+            return;
+        }
+
+        for (auto& [entity, levelComp] : *levelStorage) {
+            if (entity.id() == (uint32_t)playerId) {
+                levelComp->level = level;
+                std::cout << "Protocol: Player #" << playerId << " level updated to " << level
+                          << std::endl;
+                break;
+            }
+        }
+    }
+};
+} // namespace zappy
+
+#endif // ZAPPY_COMMANDPLAYERLEVEL_HPP
