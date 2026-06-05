@@ -1,4 +1,5 @@
-import time
+from .decision_making import take_decision
+
 
 def run_client(client):
     """
@@ -8,29 +9,12 @@ def run_client(client):
     """
     try:
         while not client.is_dead:
-            # -- testing
-            #res = client.incantation()
-            
-            # -- if not testing just waits for server to say something
-            res = client.wait_for_response()
+            take_decision(client)
 
-            if res is None:
-                print("Server closed the connection.")
-                break
-
-            if client.is_dead or res == "dead":
-                print("The AI has died.")
-                break
-
-            print(f"Result: {res}")
-            
             while client.messages:
                 msg = client.messages.pop(0)
                 print(f"Broadcast from {msg['direction']}: {msg['text']}")
 
-            # -- testing command
-            #time.sleep(1)
-            
     except KeyboardInterrupt:
         pass
     finally:
