@@ -1,5 +1,6 @@
 use crate::ecs::components::life::Life;
 use crate::ecs::components::position::Position;
+use crate::ecs::components::team::Team;
 use crate::ecs::storage::{Entity, World};
 use crate::utils::orientation::RelativeOrientation;
 
@@ -17,6 +18,7 @@ pub struct Inhabitant {
     /// Facing direction on the map (`1` = north, `2` = east, `3` = south, `4` = west).
     orientation: RelativeOrientation,
     life: Life,
+    team: Team,
 }
 
 impl Default for Inhabitant {
@@ -27,19 +29,28 @@ impl Default for Inhabitant {
             y: 0,
             orientation: RelativeOrientation::Forward,
             life: Life::new(100),
+            team: Team::default(),
         }
     }
 }
 
 impl Inhabitant {
     /// Creates an inhabitant snapshot at the given position and orientation
-    pub fn new(id: u32, x: u32, y: u32, orientation: RelativeOrientation, life: Life) -> Self {
+    pub fn new(
+        id: u32,
+        x: u32,
+        y: u32,
+        orientation: RelativeOrientation,
+        life: Life,
+        team: Team,
+    ) -> Self {
         Self {
             id,
             x,
             y,
             orientation,
             life,
+            team,
         }
     }
 
@@ -75,6 +86,7 @@ impl Inhabitant {
         let pos = world.get_component::<Position>(entity)?;
         let ori = world.get_component::<RelativeOrientation>(entity)?;
         let life = world.get_component::<Life>(entity)?;
+        let team = world.get_component::<Team>(entity)?;
 
         Some(Self {
             id: entity.id(),
@@ -82,6 +94,7 @@ impl Inhabitant {
             y: pos.y,
             orientation: *ori,
             life: *life,
+            team: team.clone(),
         })
     }
 
@@ -103,5 +116,9 @@ impl Inhabitant {
     /// Returns the player's facing direction.
     pub fn orientation(&self) -> RelativeOrientation {
         self.orientation
+    }
+
+    pub fn team(&self) -> &Team {
+        &self.team
     }
 }
