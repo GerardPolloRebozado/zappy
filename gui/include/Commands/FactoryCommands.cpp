@@ -5,11 +5,15 @@
 ** FactoryCommands.cpp
 */
 #include "FactoryCommands.hpp"
+#include "Commands/CommandEggConnection.hpp"
+#include "Commands/CommandEggDeath.hpp"
+#include "Commands/CommandEggLayed.hpp"
 #include "Commands/CommandIncantationEnd.hpp"
 #include "Commands/CommandIncantationStart.hpp"
 #include "Commands/CommandMapContent.hpp"
 #include "Commands/CommandMapSize.hpp"
 #include "Commands/CommandPlayerConnection.hpp"
+#include "Commands/CommandPlayerFork.hpp"
 #include "Commands/CommandPlayerInventory.hpp"
 #include "Commands/CommandPlayerLevel.hpp"
 #include "Commands/CommandPlayerPosition.hpp"
@@ -28,7 +32,11 @@ const std::unordered_map<std::string, FactoryCommands::CommandCreator> FactoryCo
      {"pin", []() { return std::make_unique<CommandPlayerInventory>(); }},
      {"pnw", []() { return std::make_unique<CommandPlayerConnection>(); }},
      {"pic", []() { return std::make_unique<CommandIncantationStart>(); }},
-     {"pie", []() { return std::make_unique<CommandIncantationEnd>(); }}};
+     {"pie", []() { return std::make_unique<CommandIncantationEnd>(); }},
+     {"enw", []() { return std::make_unique<CommandEggLayed>(); }},
+     {"ebo", []() { return std::make_unique<CommandEggConnection>(); }},
+     {"edi", []() { return std::make_unique<CommandEggDeath>(); }},
+     {"pfk", []() { return std::make_unique<CommandPlayerFork>(); }}};
 
 std::unique_ptr<ACommand> FactoryCommands::createCommand(const std::string& commandName) {
     auto it = _creators.find(commandName);
