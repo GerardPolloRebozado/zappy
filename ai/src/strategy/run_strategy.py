@@ -1,3 +1,6 @@
+from .decision_making import take_decision
+
+
 def run_client(client):
     """
     Loop to handle server communication
@@ -7,7 +10,7 @@ def run_client(client):
     try:
         while not client.is_dead:
             take_decision(client)
-            
+
             while client.messages:
                 msg = client.messages.pop(0)
                 print(f"Broadcast from {msg['direction']}: {msg['text']}")
