@@ -1,34 +1,92 @@
-#include "Network/TcpSocket.hpp"
-#include "NetworkManager.hpp"
+#include "Commands/ACommand.hpp"
+#include "Commands/FactoryCommands.hpp"
+#include "Components/ComponentShared.hpp"
+#include "Components/ComponentTags.hpp"
+#include "Components/ComponentTile.hpp"
+#include "ECS/World.hpp"
 #include <criterion/criterion.h>
 
-Test(tcp_socket, connection_failure) {
-    zappy::TcpSocket socket;
-    // Connecting to a likely closed port on localhost
-    cr_assert_neq(socket.connect("127.0.0.1", 12345), true,
-                  "Socket should not connect to a closed port");
-    cr_assert_eq(socket.isConnected(), false,
-                 "Socket should be disconnected after failed connection");
+using namespace zappy;
+
+Test(FactoryCommandsTest, CreateValidCommands) {
+    auto cmdMsz = FactoryCommands::createCommand("msz");
+    auto cmdBct = FactoryCommands::createCommand("bct");
+    auto cmdInvalid = FactoryCommands::createCommand("comando_inventado");
+
+    cr_assert_not_null(cmdMsz.get());
+    cr_assert_not_null(cmdBct.get());
+    cr_assert_null(cmdInvalid.get());
 }
 
-Test(network_manager, connection_failure) {
-    zappy::Register reg;
-    zappy::RenderSystem rs;
-    zappy::NetworkManager network(reg, rs);
-    // Connecting to a likely closed port on localhost
-    cr_assert_neq(network.connect("127.0.0.1", 12345), true,
-                  "NetworkManager should not connect to a closed port");
-    cr_assert_eq(network.isConnected(), false, "NetworkManager should report as disconnected");
+Test(CommandMapSizeTest, ExecuteValidMapSize) {
+    World world;
+    auto cmd = FactoryCommands::createCommand("msz");
+
+    cr_assert_not_null(cmd.get());
+
+    cmd->execute("20 10", world);
+
+    auto storage = world.get_storage<Size>();
+    cr_assert_not_null(storage);
+
+    int count = 0;
+    for (auto const& [entity, size] : *storage) {
+        cr_assert_eq(size->width, 20);
+        cr_assert_eq(size->height, 10);
+        cr_assert_not_null(world.get_component<MapTag>(entity));
+        count++;
+    }
+    cr_assert_eq(count, 1);
 }
 
-Test(tcp_socket, initial_state) {
-    zappy::TcpSocket socket;
-    cr_assert_eq(socket.isConnected(), false, "Socket should be initially disconnected");
+Test(CommandMapSizeTest, ExecuteInvalidMapSize) {
+    World world;
+    auto cmd = FactoryCommands::createCommand("msz");
+
+    cmd->execute("20 hola", world);
+
+    auto storage = world.get_storage<Size>();
+    if (storage) {
+        int count = 0;
+        for (auto const& _ : *storage) {
+            count++;
+        }
+        cr_assert_eq(count, 0);
+    }
 }
 
-Test(network_manager, initial_state) {
-    zappy::Register reg;
-    zappy::RenderSystem rs;
-    zappy::NetworkManager network(reg, rs);
-    cr_assert_eq(network.isConnected(), false, "NetworkManager should be initially disconnected");
+Test(CommandTileContentTest, ExecuteValidTileContent) {
+    World world;
+    auto cmd = FactoryCommands::createCommand("bct");
+
+    cr_assert_not_null(cmd.get());
+
+    cmd->execute("5 4 10 1 2 0 0 0 0 1", world);
+
+    auto posStorage = world.get_storage<Position>();
+    cr_assert_not_null(posStorage);
+
+    int count = 0;
+    for (auto const& [entity, pos] : *posStorage) {
+        cr_assert_eq(pos->x, 5);
+        cr_assert_eq(pos->y, 4);
+
+        auto inv = world.get_component<Inventory>(entity);
+        cr_assert_not_null(inv);
+        cr_assert_eq(inv->food, 10);
+        cr_assert_eq(inv->linemate, 1);
+        cr_assert_eq(inv->deraumere, 2);
+        cr_assert_eq(inv->sibur, 0);
+        cr_assert_eq(inv->mendiane, 0);
+        cr_assert_eq(inv->phiras, 0);
+        cr_assert_eq(inv->thystame, 0);
+
+        auto terrain = world.get_component<TerrainType>(entity);
+        cr_assert_not_null(terrain);
+        cr_assert_eq(terrain->current_type, static_cast<zappy::TerrainType::Type>(1));
+
+        cr_assert_not_null(world.get_component<TileTag>(entity));
+        count++;
+    }
+    cr_assert_eq(count, 1);
 }

@@ -11,11 +11,8 @@
 //! struct Position { x: f32, y: f32 }
 //! struct Velocity { dx: f32, dy: f32 }
 //!
-//! let mut world = World::new();
+//! let mut world = World::default();
 //!
-//! // Register components
-//! world.register_component::<Position>();
-//! world.register_component::<Velocity>();
 //!
 //! // Spawn an entity
 //! let player = world.spawn();
@@ -42,6 +39,7 @@
 //! world.despawn(player);
 //! ```
 
+use crate::ecs::map_size::MapSize;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 
@@ -143,32 +141,43 @@ impl<T: 'static> ComponentStorage for ComponentMap<T> {
 
 /// The `World` is the main container for all ECS data
 pub struct World {
+    pub map_size: MapSize,
     /// List of generations for all entities, indexed by their ID
     entity_generations: Vec<u32>,
     /// List of Entity IDs that have been despawned and are available for reuse
     free_ids: Vec<u32>,
     /// A map of component types to their respective `ComponentMap`
     storages: HashMap<TypeId, Box<dyn ComponentStorage>>,
+    /// curent frequency used to calculate time for instance, if f=1, ”forward” takes 7 / 1 = 7 seconds.
+    pub freq: u64,
 }
 
 impl Default for World {
     fn default() -> Self {
-        Self::new()
+        Self::new(
+            MapSize {
+                width: 100,
+                height: 100,
+            },
+            100,
+        )
     }
 }
 
 impl World {
     /// Creates a new, empty ECS world
-    pub fn new() -> Self {
+    pub fn new(map_size: MapSize, freq: u64) -> Self {
         Self {
+            map_size,
             entity_generations: Vec::new(),
             free_ids: Vec::new(),
             storages: HashMap::new(),
+            freq,
         }
     }
 
-    /// Registers a component type with the world
-    pub fn register_component<T: 'static>(&mut self) {
+    /// Registers a component type with the world, this is only used internally
+    fn register_component<T: 'static>(&mut self) {
         self.storages
             .entry(TypeId::of::<T>())
             .or_insert_with(|| Box::new(ComponentMap::<T>::new()));
@@ -188,11 +197,14 @@ impl World {
 
     /// Adds a component to an entity
     pub fn add_component<T: 'static>(&mut self, entity: Entity, component: T) {
-        let storage = self
-            .storages
-            .get_mut(&TypeId::of::<T>())
+        let mut storage = self.storages.get_mut(&TypeId::of::<T>());
+        if storage.is_none() {
+            self.register_component::<T>();
+            storage = self.storages.get_mut(&TypeId::of::<T>());
+        }
+        let storage = storage
             .and_then(|s| s.as_any_mut().downcast_mut::<ComponentMap<T>>())
-            .expect("Component not registered");
+            .unwrap();
         storage.insert(entity, component);
     }
 
@@ -252,8 +264,7 @@ mod tests {
 
     #[test]
     fn ecs_lifecycle() {
-        let mut world = World::new();
-        world.register_component::<i32>();
+        let mut world = World::default();
 
         let ent = world.spawn();
         world.add_component(ent, 42);
