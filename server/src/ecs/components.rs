@@ -4,5 +4,6 @@ pub mod life;
 pub mod network;
 pub mod position;
 pub mod task;
+pub mod team;
 pub mod terrain_type;
 pub mod tile;
