@@ -31,8 +31,8 @@ RenderSystem::RenderSystem() {
 
 void RenderSystem::centerCamera(int width, int height) {
     _camera.target = (raylib::Vector3){(float)width / 2.0f, 0.0f, (float)height / 2.0f};
-    _camera.position = (raylib::Vector3){(float)width / 2.0f, (float)std::max(width, height),
-                                         (float)height + 10.0f};
+    _camera.position =
+        (raylib::Vector3){(float)width / 2.0f + 10.0f, 15.0f, (float)height / 2.0f + 10.0f};
 }
 
 void RenderSystem::update(World& w) {
@@ -42,21 +42,20 @@ void RenderSystem::update(World& w) {
 
     _camera.BeginMode();
     _renderTerrain(w);
+    _renderLandmarks(w);
+    _renderResources(w);
     _renderInhabitants(w);
     _camera.EndMode();
 
-    _renderUI();
+    _renderUI(w);
 }
 
 void RenderSystem::_lazyLoadAssets() {
-    if (_mouseTex.id == 0) {
-        try {
-            _mouseTex.Load("assets/mouse.png");
-            _mousePressedTex.Load("assets/mouse_pressed.png");
-            HideCursor();
-        } catch (const raylib::RaylibException& e) {
-            std::cerr << "RenderSystem: Failed to load UI assets: " << e.what() << std::endl;
-        }
+    static bool loaded = false;
+    if (!loaded) {
+        AssetManager::getInstance().loadAll();
+        HideCursor();
+        loaded = true;
     }
 }
 
@@ -123,6 +122,11 @@ void RenderSystem::_handleInput() {
         _camera.target = (raylib::Vector3)_camera.target + right * moveSpeed;
     }
 
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        _selectedX = _hoveredX;
+        _selectedZ = _hoveredZ;
+    }
+
     // Zoom (Mouse Wheel)
     float wheel = GetMouseWheelMove();
     if (wheel != 0) {
@@ -166,9 +170,18 @@ void RenderSystem::_renderTerrain(World& w) {
         return;
     }
 
+    raylib::Vector3 cameraTarget = _camera.target;
+
     for (auto const& [entity, type] : *terrainStorage) {
         auto pos = w.get_component<Position>(entity);
         if (pos) {
+            // Simple distance culling: only render tiles within 60 units of camera target
+            float dist = std::sqrt(std::pow(pos->x - cameraTarget.x, 2) +
+                                   std::pow(pos->y - cameraTarget.z, 2));
+            if (dist > 60.0f) {
+                continue;
+            }
+
             raylib::Vector3 vpos(pos->x, 1.5f, pos->y);
 
             raylib::Color color = GRAY;
@@ -216,13 +229,111 @@ void RenderSystem::_renderInhabitants(World& w) {
         return;
     }
 
+    auto& am = AssetManager::getInstance();
+    raylib::Model& robot = am.getModel("robot");
+    float scale = 0.1f;
+
+    // Get bounding box to center the model
+    BoundingBox box = robot.GetBoundingBox();
+    raylib::Vector3 center = {(box.min.x + box.max.x) / 2.0f,
+                              box.min.y, // Ground it on its bottom
+                              (box.min.z + box.max.z) / 2.0f};
+
     for (auto const& [entity, orientationPtr] : *orientationStorage) {
         auto pos = w.get_component<Position>(entity);
         if (pos) {
-            raylib::Vector3 vpos(pos->x, 2.5f, pos->y);
-            DrawSphere(vpos, 0.3f, RED);
+            float rotation = 0.0f;
+            switch (orientationPtr->current_direction) {
+                case Orientation::N:
+                    rotation = 180.0f;
+                    break;
+                case Orientation::E:
+                    rotation = 90.0f;
+                    break;
+                case Orientation::S:
+                    rotation = 0.0f;
+                    break;
+                case Orientation::W:
+                    rotation = 270.0f;
+                    break;
+            }
+
+            // Calculate position: center the model on the tile and nudge it 'forward' (+0.2)
+            raylib::Vector3 vpos((float)pos->x + 0.2f - (center.x * scale),
+                                 2.01f - (center.y * scale),
+                                 (float)pos->y + 0.2f - (center.z * scale));
+
+            robot.Draw(vpos, {0, 1, 0}, rotation, {scale, scale, scale}, WHITE);
         }
     }
+}
+
+void RenderSystem::_renderResources(World& w) {
+    auto terrainStorage = w.get_storage<TerrainType>();
+    if (!terrainStorage) {
+        return;
+    }
+
+    raylib::Vector3 cameraTarget = _camera.target;
+    auto& am = AssetManager::getInstance();
+    raylib::Model& chicken = am.getModel("chicken");
+    float chickenScale = 0.17f;
+
+    BoundingBox cBox = chicken.GetBoundingBox();
+    raylib::Vector3 cCenter = {(cBox.min.x + cBox.max.x) / 2.0f, cBox.min.y,
+                               (cBox.min.z + cBox.max.z) / 2.0f};
+
+    for (auto const& [entity, type] : *terrainStorage) {
+        auto pos = w.get_component<Position>(entity);
+        auto inv = w.get_component<Inventory>(entity);
+        if (pos && inv) {
+            // Only render resources if tile is close to camera
+            float dist = std::sqrt(std::pow(pos->x - cameraTarget.x, 2) +
+                                   std::pow(pos->y - cameraTarget.z, 2));
+            if (dist > 40.0f) {
+                continue;
+            }
+
+            float yBase = 2.01f;
+
+            // Use chicken model for food, offset slightly from center
+            if (inv->food > 0) {
+                raylib::Vector3 cPos((float)pos->x - 0.2f - (cCenter.x * chickenScale),
+                                     yBase - (cCenter.y * chickenScale),
+                                     (float)pos->y - 0.2f - (cCenter.z * chickenScale));
+                chicken.Draw(cPos, chickenScale, WHITE);
+            }
+
+            float startX = (float)pos->x - 0.3f;
+            float startZ = (float)pos->y - 0.3f;
+            float size = 0.12f;
+
+            // Use DrawCube instead of DrawSphere for resources - much faster
+            if (inv->linemate > 0) {
+                DrawCube({startX, yBase + size / 2, startZ}, size, size, size, WHITE);
+            }
+            if (inv->deraumere > 0) {
+                DrawCube({startX + 0.2f, yBase + size / 2, startZ}, size, size, size, SKYBLUE);
+            }
+            if (inv->sibur > 0) {
+                DrawCube({startX + 0.4f, yBase + size / 2, startZ}, size, size, size, DARKBLUE);
+            }
+            if (inv->mendiane > 0) {
+                DrawCube({startX, yBase + size / 2, startZ + 0.2f}, size, size, size, PINK);
+            }
+            if (inv->phiras > 0) {
+                DrawCube({startX + 0.2f, yBase + size / 2, startZ + 0.2f}, size, size, size,
+                         DARKPURPLE);
+            }
+            if (inv->thystame > 0) {
+                DrawCube({startX + 0.4f, yBase + size / 2, startZ + 0.2f}, size, size, size, GOLD);
+            }
+        }
+    }
+}
+
+void RenderSystem::_renderLandmarks(World& w) {
+    // Placeholder for monoliths, fissures, etc.
 }
 
 void RenderSystem::_renderHoverEffect(int x, int z) {
@@ -237,10 +348,98 @@ void RenderSystem::_renderHoverEffect(int x, int z) {
     DrawCube({(float)x - 0.5f, yB + wH / 2, (float)z}, wT, wH, 1.0f + wT, hCol);
 }
 
-void RenderSystem::_renderUI() {
-    raylib::Texture2D& tex = IsMouseButtonDown(MOUSE_BUTTON_LEFT) ? _mousePressedTex : _mouseTex;
+void RenderSystem::_renderUI(World& w) {
+    auto& am = AssetManager::getInstance();
+    raylib::Texture2D& tex = IsMouseButtonDown(MOUSE_BUTTON_LEFT) ? am.getTexture("mouse_pressed")
+                                                                  : am.getTexture("mouse");
+
     if (tex.id != 0) {
         DrawTextureEx(tex, {(float)GetMouseX(), (float)GetMouseY()}, 0.0f, 3.0f, WHITE);
+    }
+
+    // Basic HUD for selected tile
+    if (_selectedX != InvalidTileCoord) {
+        std::string info =
+            "Tile [" + std::to_string(_selectedX) + ", " + std::to_string(_selectedZ) + "]";
+        DrawRectangle(10, 50, 240, 350, Fade(DARKGRAY, 0.85f));
+        DrawRectangleLines(10, 50, 240, 350, GOLD);
+        DrawText(info.c_str(), 25, 65, 20, GOLD);
+
+        _renderTileDetails(w);
+    }
+}
+
+// Helper to find tile entity and render its specific details
+void RenderSystem::_renderTileDetails(World& w) {
+    if (_selectedX == InvalidTileCoord) {
+        return;
+    }
+
+    auto terrainStorage = w.get_storage<TerrainType>();
+    auto orientationStorage = w.get_storage<Orientation>();
+
+    std::shared_ptr<Inventory> inv = nullptr;
+    if (terrainStorage) {
+        for (auto const& [entity, type] : *terrainStorage) {
+            auto pos = w.get_component<Position>(entity);
+            if (pos && pos->x == _selectedX && pos->y == _selectedZ) {
+                inv = w.get_component<Inventory>(entity);
+                break;
+            }
+        }
+    }
+
+    int yOffset = 100;
+    if (inv) {
+        auto drawResource = [&](const std::string& name, int count, Color col) {
+            std::string text = name + ": " + std::to_string(count);
+            DrawText(text.c_str(), 30, yOffset, 16, col);
+            yOffset += 20;
+        };
+
+        drawResource("Food", inv->food, ORANGE);
+        drawResource("Linemate", inv->linemate, WHITE);
+        drawResource("Deraumere", inv->deraumere, SKYBLUE);
+        drawResource("Sibur", inv->sibur, DARKBLUE);
+        drawResource("Mendiane", inv->mendiane, PINK);
+        drawResource("Phiras", inv->phiras, DARKPURPLE);
+        drawResource("Thystame", inv->thystame, GOLD);
+    } else {
+        DrawText("Resources: No data", 30, yOffset, 16, LIGHTGRAY);
+        yOffset += 20;
+    }
+
+    yOffset += 10;
+    DrawLine(20, yOffset, 230, yOffset, GRAY);
+    yOffset += 10;
+    DrawText("Players:", 25, yOffset, 18, GOLD);
+    yOffset += 25;
+
+    bool foundPlayer = false;
+    if (orientationStorage) {
+        for (auto const& [entity, orient] : *orientationStorage) {
+            auto pos = w.get_component<Position>(entity);
+            if (pos && pos->x == _selectedX && pos->y == _selectedZ) {
+                foundPlayer = true;
+                auto level = w.get_component<Level>(entity);
+                auto team = w.get_component<TeamName>(entity);
+
+                std::string pInfo = "Player " + std::to_string(entity.id());
+                if (level) {
+                    pInfo += " (Lvl " + std::to_string(level->level) + ")";
+                }
+                DrawText(pInfo.c_str(), 30, yOffset, 16, RED);
+                yOffset += 18;
+                if (team) {
+                    DrawText(team->team_name.c_str(), 45, yOffset, 14, RAYWHITE);
+                    yOffset += 16;
+                }
+            }
+        }
+    }
+
+    if (!foundPlayer) {
+        DrawText("None", 30, yOffset, 16, LIGHTGRAY);
     }
 }
 
