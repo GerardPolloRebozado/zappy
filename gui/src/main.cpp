@@ -1,10 +1,7 @@
-#include "ECS/Register.hpp"
 #include "NetworkManager.hpp"
 #include "Systems/RenderSystem.hpp"
-#include "raylib-cpp.hpp"
 #include <iostream>
 #include <string>
-#include <vector>
 
 void print_usage() {
     std::cout << "USAGE: ./zappy_gui -p port -h machine\n\n";
@@ -16,7 +13,7 @@ void print_usage() {
 int main(int argc, char** argv) {
     std::string portStr;
     std::string machine;
-    zappy::Register registry;
+    zappy::World registry;
     zappy::RenderSystem renderSys;
 
     for (int i = 1; i < argc; ++i) {
@@ -41,7 +38,7 @@ int main(int argc, char** argv) {
 
     try {
         int port = std::stoi(portStr);
-        zappy::NetworkManager network(registry, renderSys);
+        zappy::NetworkManager network;
 
         if (!network.connect(machine, port)) {
             std::cerr << "Failed to connect to " << machine << ":" << port << "\n";
@@ -57,7 +54,7 @@ int main(int argc, char** argv) {
 
         while (!window.ShouldClose()) {
 
-            network.update();
+            network.update(registry);
 
             window.BeginDrawing();
             window.ClearBackground(BLACK);

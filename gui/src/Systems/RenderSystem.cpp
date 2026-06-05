@@ -11,6 +11,10 @@
  */
 
 #include "Systems/RenderSystem.hpp"
+#include "Components/ComponentInhabitant.hpp"
+#include "Components/ComponentShared.hpp"
+#include "Components/ComponentTile.hpp"
+#include "ECS/World.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -31,14 +35,14 @@ void RenderSystem::centerCamera(int width, int height) {
                                          (float)height + 10.0f};
 }
 
-void RenderSystem::update(Register& r) {
+void RenderSystem::update(World& w) {
     _lazyLoadAssets();
     _handleInput();
     _updateHoverState();
 
     _camera.BeginMode();
-    _renderTerrain(r);
-    _renderInhabitants(r);
+    _renderTerrain(w);
+    _renderInhabitants(w);
     _camera.EndMode();
 
     _renderUI();
@@ -143,8 +147,8 @@ void RenderSystem::_handleInput() {
 
 void RenderSystem::_updateHoverState() {
     Ray mouseRay = GetMouseRay(GetMousePosition(), _camera);
-    _hoveredX = -999999;
-    _hoveredZ = -999999;
+    _hoveredX = InvalidTileCoord;
+    _hoveredZ = InvalidTileCoord;
     if (mouseRay.direction.y != 0) {
         float t = (2.0f - mouseRay.position.y) / mouseRay.direction.y;
         if (t > 0) {
@@ -156,14 +160,19 @@ void RenderSystem::_updateHoverState() {
     }
 }
 
-void RenderSystem::_renderTerrain(Register& r) {
-    for (auto const& [entity, type] : r._terrainTypes) {
-        if (r._positions.find(entity) != r._positions.end()) {
-            auto const& pos = r._positions.at(entity);
-            raylib::Vector3 vpos(pos.x, 1.5f, pos.y);
+void RenderSystem::_renderTerrain(World& w) {
+    auto terrainStorage = w.get_storage<TerrainType>();
+    if (!terrainStorage) {
+        return;
+    }
+
+    for (auto const& [entity, type] : *terrainStorage) {
+        auto pos = w.get_component<Position>(entity);
+        if (pos) {
+            raylib::Vector3 vpos(pos->x, 1.5f, pos->y);
 
             raylib::Color color = GRAY;
-            switch (type.current_type) {
+            switch (type->current_type) {
                 case TerrainType::GRASS:
                     color = raylib::Color::Green();
                     break;
@@ -194,18 +203,23 @@ void RenderSystem::_renderTerrain(Register& r) {
             }
             DrawCube(vpos, 1.0f, 1.0f, 1.0f, color);
 
-            if (pos.x == _hoveredX && pos.y == _hoveredZ) {
-                _renderHoverEffect(pos.x, pos.y);
+            if (pos->x == _hoveredX && pos->y == _hoveredZ) {
+                _renderHoverEffect(pos->x, pos->y);
             }
         }
     }
 }
 
-void RenderSystem::_renderInhabitants(Register& r) {
-    for (auto const& [entity, inhabitant] : r._bots) {
-        if (r._positions.find(entity) != r._positions.end()) {
-            auto const& pos = r._positions.at(entity);
-            raylib::Vector3 vpos(pos.x, 0.5f, pos.y);
+void RenderSystem::_renderInhabitants(World& w) {
+    auto orientationStorage = w.get_storage<Orientation>();
+    if (!orientationStorage) {
+        return;
+    }
+
+    for (auto const& [entity, orientationPtr] : *orientationStorage) {
+        auto pos = w.get_component<Position>(entity);
+        if (pos) {
+            raylib::Vector3 vpos(pos->x, 2.5f, pos->y);
             DrawSphere(vpos, 0.3f, RED);
         }
     }

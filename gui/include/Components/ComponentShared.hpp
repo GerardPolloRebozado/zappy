@@ -7,26 +7,36 @@
 #ifndef ZAPPY_GUI_COMPONENTSHARED_HPP
 #define ZAPPY_GUI_COMPONENTSHARED_HPP
 #include "raylib-cpp.hpp"
+
 namespace zappy {
-    struct Position {
-        int x;
-        int y;
-    };
+struct Position {
+    int x;
+    int y;
+};
 
-    struct Inventory {
-        int food;
-        int linemate;
-        int deraumere;
-        int sibur;
-        int mendiane;
-        int phiras;
-        int thystame;
-    };
+struct Size {
+    int width;
+    int height;
+};
 
-    struct Renderable3D {
-        std::string model_id;
-        raylib::Color color;
-    };
-}
+struct Inventory {
+    int food;
+    int linemate;
+    int deraumere;
+    int sibur;
+    int mendiane;
+    int phiras;
+    int thystame;
+};
 
-#endif //ZAPPY_GUI_COMPONENTSHARED_HPP
+struct Renderable3D {
+    std::string model_id;
+    raylib::Color color;
+};
+
+struct TimeUnit {
+    int frequency;
+};
+} // namespace zappy
+
+#endif // ZAPPY_GUI_COMPONENTSHARED_HPP

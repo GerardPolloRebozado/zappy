@@ -13,13 +13,9 @@
 #ifndef NETWORK_MANAGER_HPP_
 #define NETWORK_MANAGER_HPP_
 
+#include "ECS/World.hpp"
 #include "Network/TcpSocket.hpp"
-#include "Systems/RenderSystem.hpp"
-#include <functional>
-#include <map>
-#include <queue>
 #include <string>
-
 namespace zappy {
 /**
  * @class NetworkManager
@@ -33,7 +29,7 @@ class NetworkManager {
     /**
      * @brief Default constructor.
      */
-    NetworkManager(Register& registry, RenderSystem& renderSystem);
+    NetworkManager() = default;
 
     /**
      * @brief Destructor. Ensures disconnection.
@@ -59,7 +55,7 @@ class NetworkManager {
      * This method should be called once per frame in the main application loop.
      * It performs polling, flushes outgoing data, and handles incoming commands.
      */
-    void update();
+    void update(World& world);
 
     /**
      * @brief Sends a protocol command to the server.
@@ -73,17 +69,70 @@ class NetworkManager {
      */
     bool isConnected() const;
 
+    /**
+     * @brief Requests the logical map size from the server.
+     * Sends the "msz" command. The server will respond asynchronously.
+     */
+    void requestMapSize();
+
+    /**
+     * @brief Requests the content of all tiles on the map from the server.
+     * Sends the "mct" command. Useful for the initial world load.
+     */
+    void requestMapContent();
+
+    /**
+     * @brief Requests the names of all participating teams from the server.
+     * Sends the "tna" command.
+     */
+    void requestTeamNames();
+
+    /**
+     * @brief Requests to modify the server's time unit (frequency).
+     * Sends the "sst" command.
+     * @param newTime The new time unit to set.
+     */
+    void requestTimeUpdate(int newTime);
+
+    /**
+     * @brief Requests the exact position of a specific player.
+     * Sends the "ppo" command.
+     * @param playerId The unique ID of the player (humanoid).
+     */
+    void requestPlayerPosition(int playerId);
+
+    /**
+     * @brief Requests the current level of a specific player.
+     * Sends the "plv" command.
+     * @param playerId The unique ID of the player (humanoid).
+     */
+    void requestPlayerLevel(int playerId);
+
+    /**
+     * @brief Requests the inventory content of a specific player.
+     * Sends the "pin" command. Useful when the user clicks on a humanoid.
+     * @param playerId The unique ID of the player (humanoid).
+     */
+    void requestPlayerInventory(int playerId);
+
+    /**
+     * @brief Requests the resource content of a specific tile.
+     * Sends the "bct" command.
+     * @param x Horizontal coordinate of the tile.
+     * @param y Vertical coordinate of the tile.
+     */
+    void requestTileContent(int x, int y);
+
   private:
-    TcpSocket _socket;           /**< The underlying TCP socket. */
-    bool _isHandshakeDone;       /**< Flag indicating if the Zappy handshake is complete. */
-    Register& _registry;         /**< The ECS registry for managing game entities and components. */
-    RenderSystem& _renderSystem; /**< Rendering system for updating visual state (camera, etc.) */
+    TcpSocket _socket;             /**< The underlying TCP socket. */
+    bool _isHandshakeDone = false; /**< Flag indicating if the Zappy handshake is complete. */
 
     /**
      * @brief Routes a received protocol message to the appropriate handler.
      * @param message The raw message string from the server.
+     * @param world The ECS world instance to update based on the message content.
      */
-    void _handleProtocolMessage(const std::string& message);
+    void _handleProtocolMessage(const std::string& message, World& world);
 
     /**
      * @brief Processes the initial "WELCOME" handshake.
@@ -93,14 +142,8 @@ class NetworkManager {
 
     /** @name Protocol Handlers */
     /** @{ */
-    /** @brief Handles map size update (msz). */
-    void _handleMapSize(const std::string& args);
-    /** @brief Handles tile content update (bct). */
-    void _handleTileContent(const std::string& args);
-    /** @brief Handles team names list (tna). */
-    void _handleTeamNames(const std::string& args);
     /** @brief Handles new player connection (pnw). */
-    void _handlePlayerConnection(const std::string& args);
+    void _handlePlayerConnection(const std::string& args, World& world);
     /** @} */
 };
 } // namespace zappy
