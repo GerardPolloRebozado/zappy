@@ -53,6 +53,12 @@ pub struct Entity {
     generation: u32,
 }
 
+impl std::fmt::Display for Entity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ID: {} Generation: {}", self.id(), self.generation())
+    }
+}
+
 impl Entity {
     pub fn id(&self) -> u32 {
         self.id

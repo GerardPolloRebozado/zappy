@@ -2,7 +2,7 @@ use crate::{
     ecs::{
         components::{
             inventory::Inventory, level::Level, life::Life, network::NetworkData,
-            position::Position, task::TaskList,
+            position::Position, task::TaskList, team::Team,
         },
         storage::{Entity, World},
     },
@@ -24,6 +24,7 @@ pub fn build_inhabitant(
     world.add_component(new_inhabitant, Life::new(world.freq));
     world.add_component(new_inhabitant, RelativeOrientation::Forward);
     world.add_component(new_inhabitant, network_data);
+    world.add_component(new_inhabitant, Team::default());
 
     let position = world.get_component_mut::<Position>(new_inhabitant).unwrap();
     position.x = x;
