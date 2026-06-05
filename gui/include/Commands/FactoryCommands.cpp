@@ -17,6 +17,8 @@
 #include "Commands/CommandPlayerInventory.hpp"
 #include "Commands/CommandPlayerLevel.hpp"
 #include "Commands/CommandPlayerPosition.hpp"
+#include "Commands/CommandResourceCollect.hpp"
+#include "Commands/CommandResourceDrop.hpp"
 #include "Commands/CommandTeamNames.hpp"
 #include "Commands/CommandTileContent.hpp"
 
@@ -36,7 +38,9 @@ const std::unordered_map<std::string, FactoryCommands::CommandCreator> FactoryCo
      {"enw", []() { return std::make_unique<CommandEggLayed>(); }},
      {"ebo", []() { return std::make_unique<CommandEggConnection>(); }},
      {"edi", []() { return std::make_unique<CommandEggDeath>(); }},
-     {"pfk", []() { return std::make_unique<CommandPlayerFork>(); }}};
+     {"pfk", []() { return std::make_unique<CommandPlayerFork>(); }},
+     {"pgt", []() { return std::make_unique<CommandResourceCollect>(); }},
+     {"pdr", []() { return std::make_unique<CommandResourceDrop>(); }}};
 
 std::unique_ptr<ACommand> FactoryCommands::createCommand(const std::string& commandName) {
     auto it = _creators.find(commandName);
