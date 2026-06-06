@@ -42,7 +42,21 @@ pub fn handle_ai_command(server: &mut Server, entity: Entity, request: Request) 
             let resource = resource.unwrap();
             queue_task(server, entity, TaskType::Take(resource))
         }
-        Command::Set(_) => queue_task(server, entity, TaskType::Drop),
+        Command::Set(s) => {
+            let resource = Resource::new_from_str(s.as_str());
+            if resource.is_none() {
+                let network_data = server.world.get_component_mut::<NetworkData>(entity);
+                if network_data.is_none() {
+                    return;
+                }
+                let network_data = network_data.unwrap();
+                network_data
+                    .pending_responses
+                    .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
+            }
+            let resource = resource.unwrap();
+            queue_task(server, entity, TaskType::Set(resource))
+        }
         Command::Incantation => queue_task(server, entity, TaskType::Incantation),
         Command::Unknown(_) => {
             let network_data = server.world.get_component_mut::<NetworkData>(entity);
