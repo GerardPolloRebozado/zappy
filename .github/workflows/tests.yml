@@ -57,7 +57,8 @@ jobs:
             libxinerama-dev \
             libwayland-dev \
             libxkbcommon-dev \
-            wayland-protocols
+            wayland-protocols \
+            xvfb
       - name: Build and Test
         run: |
           mkdir build
@@ -65,7 +66,7 @@ jobs:
           cmake ..
           cd ..
           cmake --build build --target unit_tests
-          ./build/unit_tests
+          xvfb-run ./build/unit_tests
 
   test-server:
     name: Server Tests
