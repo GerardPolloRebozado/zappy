@@ -20,6 +20,7 @@ class AssetManager {
     static AssetManager& getInstance();
 
     void loadAll();
+    void unloadAll();
 
     // Models
     raylib::Model& getModel(const std::string& name);
