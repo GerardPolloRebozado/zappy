@@ -9,6 +9,9 @@
 #define ZAPPY_GUI_RENDERSYSTEM_HPP
 
 #include "ECS/World.hpp"
+#include "Graphics/AssetManager.hpp"
+#include <cstdint>
+#include <limits>
 #include <map>
 #include <raylib-cpp.hpp>
 #include <raymath.h>
@@ -39,14 +42,24 @@ class RenderSystem {
     ~RenderSystem() = default;
 
     /**
-     * @brief Main update loop for the rendering system.
+     * @brief Logic update loop for the rendering system.
      *
-     * Orchestrates input handling, state updates, and the full rendering pipeline
-     * (3D world followed by 2D UI).
+     * Handles input and state updates (camera, hover state).
+     * Should be called before render().
+     *
+     * @param w the ECS world instance
+     * @param dt delta time since last frame
+     */
+    void update(World& w, float dt);
+
+    /**
+     * @brief Main draw loop for the rendering system.
+     *
+     * Orchestrates the full rendering pipeline (3D world followed by 2D UI).
      *
      * @param w the ECS world instance to query entities and components
      */
-    void update(World& w);
+    void render(World& w);
 
     /**
      * @brief Centers the camera on the map based on dimensions.
@@ -74,8 +87,9 @@ class RenderSystem {
 
     /**
      * @brief Processes user input for camera movement (WASD), rotation (QE/RF), and zoom.
+     * @param dt delta time
      */
-    void _handleInput();
+    void _handleInput(float dt);
 
     /**
      * @brief Renders the terrain tiles based on their types and positions.
@@ -90,6 +104,18 @@ class RenderSystem {
     void _renderInhabitants(World& w);
 
     /**
+     * @brief Renders the resources on the tiles.
+     * @param w The world to fetch resource data from.
+     */
+    void _renderResources(World& w);
+
+    /**
+     * @brief Renders landmarks like monoliths and fissures.
+     * @param w The world to fetch landmark data from.
+     */
+    void _renderLandmarks(World& w);
+
+    /**
      * @brief Draws a visual highlight (muro) around a specific tile.
      * @param x The X coordinate of the tile.
      * @param z The Z coordinate of the tile.
@@ -98,8 +124,15 @@ class RenderSystem {
 
     /**
      * @brief Renders 2D UI elements, including the custom mouse cursor.
+     * @param w The world to fetch HUD data from.
      */
-    void _renderUI();
+    void _renderUI(World& w);
+
+    /**
+     * @brief Renders the details of a specific tile (inventory, etc.)
+     * @param w The world to fetch tile data from.
+     */
+    void _renderTileDetails(World& w);
 
     /**
      * @brief Updates the internal state of which tile is currently under the mouse cursor.
@@ -109,12 +142,11 @@ class RenderSystem {
 
     raylib::Camera3D _camera; ///< The 3D camera used for world rendering.
 
-    raylib::Texture2D _mouseTex;        ///< Standard mouse cursor texture.
-    raylib::Texture2D _mousePressedTex; ///< Pressed state mouse cursor texture.
-
     static constexpr int InvalidTileCoord = std::numeric_limits<int>::min();
     int _hoveredX = InvalidTileCoord;
     int _hoveredZ = InvalidTileCoord;
+    int _selectedX = InvalidTileCoord;
+    int _selectedZ = InvalidTileCoord;
 };
 } // namespace zappy
 
