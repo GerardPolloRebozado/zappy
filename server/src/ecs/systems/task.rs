@@ -30,24 +30,21 @@
 //!    [`broadcast_event`] so every AI receives `message k, text`
 //!    and the GUI receives `pbc #n text` (see [`ServerEvent::to_ai_string`]).
 
-use log::error;
-
 use crate::{
     ecs::{
         components::{
-            inventory::Inventory,
             network::NetworkData,
             position::Position,
             task::{TASK_NOT_STARTED, TaskList, TaskType},
             team::Team,
-            tile::Tile,
         },
         storage::{Entity, World},
+        systems::task::take_set::take_task,
     },
     game::{Date, Inhabitant},
     protocol::{
         Response, ResponseCode,
-        ServerEvent::{self, ResourceCollect},
+        ServerEvent::{self},
         StatusCode::{self},
     },
     utils::orientation::RelativeOrientation,
@@ -55,6 +52,7 @@ use crate::{
 
 pub mod inventory;
 pub mod look;
+pub mod take_set;
 
 /// Advances queued tasks, applies effects when a timer elapses, starts the next
 /// task's timer, and handles command replies and broadcast events.
@@ -236,55 +234,7 @@ fn execute_task(
             }
             (ok, event)
         }
-        TaskType::Take(resource) => {
-            let player_position = world.get_component::<Position>(entity).unwrap().clone();
-            let tile_entity = Tile::find_tile_by_pos(&player_position, world);
-            if tile_entity.is_none() {
-                error!(
-                    "Could not find tile at position ({}, {})",
-                    player_position.x, player_position.y
-                );
-                return (
-                    Response::new(ResponseCode::Status(StatusCode::Ko), None),
-                    None,
-                );
-            }
-            let tile_entity = tile_entity.unwrap();
-            let tile_component = world.get_component_mut::<Inventory>(tile_entity);
-            if tile_component.is_none() {
-                error!("Could not get inventory of tile {}", tile_entity);
-                return (
-                    Response::new(ResponseCode::Status(StatusCode::Ko), None),
-                    None,
-                );
-            }
-            let tile_component = tile_component.unwrap();
-            let extracted_resource = tile_component.remove_item(*resource);
-            if !extracted_resource {
-                error!("Could not get resource {}", resource);
-                return (
-                    Response::new(ResponseCode::Status(StatusCode::Ko), None),
-                    None,
-                );
-            }
-            let player_inventory = world.get_component_mut::<Inventory>(entity);
-            if player_inventory.is_none() {
-                error!("Could not get inventory of player {}", entity);
-                return (
-                    Response::new(ResponseCode::Status(StatusCode::Ko), None),
-                    None,
-                );
-            }
-            let player_invetory = player_inventory.unwrap();
-            player_invetory.add_item(*resource);
-            (
-                ok,
-                Some(ResourceCollect {
-                    player_id: entity.id(),
-                    resource: *resource as u8,
-                }),
-            )
-        }
+        TaskType::Take(resource) => take_task(world, entity, resource),
         _ => (ok, None),
     }
 }
