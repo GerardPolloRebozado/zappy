@@ -13,6 +13,8 @@ use crate::{
     },
 };
 
+/// Handles the "set" task, allowing a player to drop a resource on the tile they are currently on
+/// It checks if the player has the resource in their inventory, removes it from there, and adds it to the tile's inventory then returns the reply and event to send to the clients
 pub fn set_task(
     world: &mut World,
     entity: Entity,
@@ -72,6 +74,8 @@ pub fn set_task(
     )
 }
 
+/// Handles the "take" task, allowing a player to take a resource from the tile they are currently on
+/// It checks if the tile has the resource in its inventory, removes it from there, and adds it to the player's inventory then returns the reply and event to send to the clients
 pub fn take_task(
     world: &mut World,
     entity: Entity,

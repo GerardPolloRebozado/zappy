@@ -8,6 +8,7 @@ use crate::ecs::{
 pub struct Tile;
 
 impl Tile {
+    /// Finds a tile entity at the given position in the world and returns it if found
     pub fn find_tile_by_pos(position: &Position, world: &mut World) -> Option<Entity> {
         let tile_storage = world.get_storage::<Tile>()?;
         for (entity, _) in tile_storage.iter() {
