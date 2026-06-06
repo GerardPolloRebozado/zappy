@@ -7,9 +7,11 @@
 
 #include "Commands/CommandPlayerConnection.hpp"
 #include "Commands/CommandPlayerDeath.hpp"
+#include "Commands/CommandPlayerExpulsion.hpp"
 #include "Commands/CommandPlayerInventory.hpp"
 #include "Commands/CommandPlayerLevel.hpp"
 #include "Commands/CommandPlayerPosition.hpp"
+#include "Commands/FactoryCommands.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
@@ -115,4 +117,85 @@ Test(CommandPlayerDeathTest, ValidPlayerDeath) {
     cmd.execute("77", world);
 
     cr_assert(!world.is_alive(player));
+}
+
+static void setupMap(World& world, int width, int height) {
+    Entity mapEntity = world.spawn();
+    world.add_component<Size>(mapEntity, Size{width, height});
+    world.add_component<MapTag>(mapEntity, MapTag{});
+}
+
+Test(CommandPlayerExpulsionTest, FactoryCreatesPex) {
+    auto cmd = FactoryCommands::createCommand("pex");
+    cr_assert_not_null(cmd.get());
+}
+
+Test(CommandPlayerExpulsionTest, EjectEast) {
+    World world;
+    setupMap(world, 10, 10);
+
+    Entity victim = world.spawn_at_id(1);
+    world.add_component<Position>(victim, Position{5, 5});
+    world.add_component<InhabitantTag>(victim, InhabitantTag{});
+
+    Entity ejector = world.spawn_at_id(2);
+    world.add_component<Position>(ejector, Position{5, 5});
+    world.add_component<InhabitantTag>(ejector, InhabitantTag{});
+    world.add_component<Orientation>(ejector, Orientation{Orientation::E});
+
+    CommandPlayerExpulsion cmd;
+    cmd.execute("#1", world);
+
+    auto pos = world.get_component<Position>(victim);
+    cr_assert_not_null(pos.get());
+    cr_assert_eq(pos->x, 6);
+    cr_assert_eq(pos->y, 5);
+}
+
+Test(CommandPlayerExpulsionTest, EjectNorthWithWrap) {
+    World world;
+    setupMap(world, 10, 10);
+
+    Entity victim = world.spawn_at_id(10);
+    world.add_component<Position>(victim, Position{3, 0});
+    world.add_component<InhabitantTag>(victim, InhabitantTag{});
+
+    Entity ejector = world.spawn_at_id(11);
+    world.add_component<Position>(ejector, Position{3, 0});
+    world.add_component<InhabitantTag>(ejector, InhabitantTag{});
+    world.add_component<Orientation>(ejector, Orientation{Orientation::N});
+
+    CommandPlayerExpulsion cmd;
+    cmd.execute("10", world);
+
+    auto pos = world.get_component<Position>(victim);
+    cr_assert_not_null(pos.get());
+    cr_assert_eq(pos->x, 3);
+    cr_assert_eq(pos->y, 9);
+}
+
+Test(CommandPlayerExpulsionTest, NoCoTileInhabitant) {
+    World world;
+    setupMap(world, 10, 10);
+
+    Entity victim = world.spawn_at_id(20);
+    world.add_component<Position>(victim, Position{7, 7});
+    world.add_component<InhabitantTag>(victim, InhabitantTag{});
+
+    CommandPlayerExpulsion cmd;
+    cmd.execute("#20", world);
+
+    auto pos = world.get_component<Position>(victim);
+    cr_assert_not_null(pos.get());
+    cr_assert_eq(pos->x, 7);
+    cr_assert_eq(pos->y, 7);
+}
+
+Test(CommandPlayerExpulsionTest, InvalidId) {
+    World world;
+    setupMap(world, 10, 10);
+
+    CommandPlayerExpulsion cmd;
+    cmd.execute("#999", world);
+    cmd.execute("not_an_id", world);
 }
