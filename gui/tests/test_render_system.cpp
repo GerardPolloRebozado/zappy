@@ -1,4 +1,5 @@
 #include "ECS/World.hpp"
+#include "Graphics/AssetManager.hpp"
 #include "Systems/RenderSystem.hpp"
 #include <criterion/criterion.h>
 #include <raylib.h>
@@ -10,7 +11,10 @@ void setup_headless_gui() {
     InitWindow(100, 100, "Headless Test");
 }
 
-void teardown_headless_gui() { CloseWindow(); }
+void teardown_headless_gui() {
+    zappy::AssetManager::getInstance().unloadAll();
+    CloseWindow();
+}
 
 Test(render_system, initial_camera_state, .init = setup_headless_gui,
      .fini = teardown_headless_gui) {
