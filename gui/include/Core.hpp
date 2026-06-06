@@ -1,0 +1,73 @@
+/*
+** EPITECH PROJECT, 2026
+** zappy_gui
+** File description:
+** Core.hpp
+*/
+
+#ifndef ZAPPY_CORE_HPP
+#define ZAPPY_CORE_HPP
+
+#include "ECS/World.hpp"
+#include "NetworkManager.hpp"
+#include "Systems/RenderSystem.hpp"
+#include <memory>
+#include <raylib-cpp.hpp>
+#include <string>
+
+namespace zappy {
+
+/**
+ * @class Core
+ * @brief Main orchestration class for the Zappy GUI.
+ *
+ * Encapsulates the application lifecycle, including initialization,
+ * the main game loop, and the coordination between network and rendering systems.
+ */
+class Core {
+  public:
+    /**
+     * @brief Construct a new Core object.
+     * @param port The server port to connect to.
+     * @param host The server hostname or IP.
+     */
+    Core(int port, const std::string& host);
+
+    /**
+     * @brief Destroy the Core object.
+     */
+    ~Core() = default;
+
+    /**
+     * @brief Starts the application and enters the main loop.
+     */
+    void run();
+
+  private:
+    /**
+     * @brief Performs a single update of the application state.
+     */
+    void _update();
+
+    /**
+     * @brief Renders the current state of the application.
+     */
+    void _render();
+
+    /**
+     * @brief Populates the world with dummy data for testing/demo purposes.
+     * @todo Remove once server integration is complete.
+     */
+    void _setupTestingData();
+
+    World _world;                            ///< The ECS world instance.
+    NetworkManager _network;                 ///< Handles server communication.
+    RenderSystem _renderSystem;              ///< Handles world and UI rendering.
+    std::unique_ptr<raylib::Window> _window; ///< The Raylib window instance.
+    int _port;                               ///< Server port.
+    std::string _host;                       ///< Server host.
+};
+
+} // namespace zappy
+
+#endif // ZAPPY_CORE_HPP
