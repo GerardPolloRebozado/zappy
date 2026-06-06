@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [ "*" ]
+    branches: ["*"]
   pull_request:
-    branches: [ "*" ]
+    branches: ["*"]
 
 permissions:
   contents: read
@@ -60,11 +60,12 @@ jobs:
             wayland-protocols
       - name: Build and Test
         run: |
-          cmake -S gui -B gui/build -DBUILD_TESTING=ON
-          cmake --build gui/build --target unit_tests
-          mkdir -p gui/build/tests
-          ln -s ../../../assets gui/build/tests/assets
-          cd gui/build && ctest --output-on-failure
+          mkdir build
+          cd build
+          cmake ..
+          cd ..
+          cmake --build build --target unit_tests
+          ./build/unit_tests
 
   test-server:
     name: Server Tests
@@ -90,7 +91,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python_version: '3.x'
+          python_version: "3.x"
       - name: Run tests
         run: |
           cd ai
