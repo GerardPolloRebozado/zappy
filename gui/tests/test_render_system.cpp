@@ -35,10 +35,11 @@ Test(render_system, asset_lazy_loading, .init = setup_headless_gui, .fini = tear
     zappy::RenderSystem renderer;
     zappy::World world;
 
-    // update() should trigger lazy loading.
+    // update() and render() should trigger lazy loading.
     // in a headless context with InitWindow, LoadTexture won't crash
     // even if it might fail to find the file (it just logs an error).
-    renderer.update(world);
+    renderer.update(world, 0.016f);
+    renderer.render(world);
 
     cr_assert(true, "update() should run without crashing in headless context");
 }

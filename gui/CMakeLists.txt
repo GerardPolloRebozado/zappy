@@ -34,16 +34,18 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(raylib raylib-cpp)
 
-set(SOURCES
-        src/main.cpp
+set(CORE_SOURCES
         src/NetworkManager.cpp
         src/Network/TcpSocket.cpp
         src/Systems/RenderSystem.cpp
+        src/Graphics/AssetManager.cpp
+        src/Core.cpp
         include/Components/ComponentShared.hpp
         include/Components/ComponentInhabitant.hpp
         include/Components/ComponentTile.hpp
         include/Systems/RenderSystem.hpp
         include/Graphics/AssetManager.hpp
+        include/Core.hpp
         include/Commands/ACommand.hpp
         include/Commands/FactoryCommands.hpp
         include/Commands/CommandTimeUpdate.hpp
@@ -60,17 +62,22 @@ set(SOURCES
         include/ECS/World.hpp
 )
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+# Create a core library to avoid redundant compilation
+add_library(zappy_gui_core STATIC ${CORE_SOURCES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE
+target_include_directories(zappy_gui_core PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${raylib-cpp_SOURCE_DIR}/include
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
+target_link_libraries(zappy_gui_core PUBLIC raylib)
+
+add_executable(${PROJECT_NAME} src/main.cpp)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE zappy_gui_core)
 
 if (APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
+  target_link_libraries(zappy_gui_core PUBLIC
             "-framework IOKit"
             "-framework Cocoa"
             "-framework OpenGL"
@@ -81,6 +88,7 @@ include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported OUTPUT error)
 
 if(ipo_supported)
+  set_property(TARGET zappy_gui_core PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
   set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 

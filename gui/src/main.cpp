@@ -1,5 +1,11 @@
-#include "NetworkManager.hpp"
-#include "Systems/RenderSystem.hpp"
+/*
+** EPITECH PROJECT, 2026
+** zappy_gui
+** File description:
+** main.cpp
+*/
+
+#include "Core.hpp"
 #include <iostream>
 #include <string>
 
@@ -13,8 +19,6 @@ void print_usage() {
 int main(int argc, char** argv) {
     std::string portStr;
     std::string machine;
-    zappy::World registry;
-    zappy::RenderSystem renderSys;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -38,41 +42,10 @@ int main(int argc, char** argv) {
 
     try {
         int port = std::stoi(portStr);
-        zappy::NetworkManager network;
-
-        if (!network.connect(machine, port)) {
-            std::cerr << "Failed to connect to " << machine << ":" << port << "\n";
-        } else {
-            std::cout << "Connected to " << machine << ":" << port << "\n";
-        }
-
-        raylib::Window window(1280, 720, "Zappy GUI");
-        SetTargetFPS(60);
-
-        // Map will be populated via network (mct command)
-        // renderSys.camera position will be adjusted once msz is received
-
-        while (!window.ShouldClose()) {
-
-            network.update(registry);
-
-            window.BeginDrawing();
-            window.ClearBackground(BLACK);
-
-            if (!network.isConnected()) {
-                DrawText("Disconnected from server", 10, 10, 20, RED);
-            } else {
-                DrawText("Connected to server", 10, 10, 20, GREEN);
-                renderSys.update(registry);
-            }
-
-            window.EndDrawing();
-        }
+        zappy::Core core(port, machine);
+        core.run();
     } catch (const std::invalid_argument&) {
         std::cerr << "Error: Invalid port number.\n";
-        return 84;
-    } catch (const raylib::RaylibException& e) {
-        std::cerr << "Raylib error: " << e.what() << "\n";
         return 84;
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
