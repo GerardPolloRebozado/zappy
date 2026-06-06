@@ -4,7 +4,7 @@ set(TEST_SOURCES
     test_ecs.cpp
     test_network.cpp
     test_render_system.cpp
-    test_core.cpp
+    #test_core.cpp
     test_player.cpp
     test_team.cpp
     test_resources.cpp

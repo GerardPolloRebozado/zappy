@@ -1,0 +1,84 @@
+name: Tests
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      gui: ${{ steps.filter.outputs.gui }}
+      server: ${{ steps.filter.outputs.server }}
+      ai: ${{ steps.filter.outputs.ai }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            gui:
+              - 'gui/**'
+            server:
+              - 'server/**'
+            ai:
+              - 'ai/**'
+
+  test-gui:
+    name: GUI Tests
+    needs: changes
+    if: ${{ needs.changes.outputs.gui == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcriterion-dev \
+            libasound2-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libxcursor-dev \
+            libxinerama-dev
+      - name: Build and Test
+        run: |
+          cmake -S gui -B gui/build -DBUILD_TESTING=ON
+          cmake --build gui/build --target unit_tests
+          cd gui/build && ctest --output-on-failure
+
+  test-server:
+    name: Server Tests
+    needs: changes
+    if: ${{ needs.changes.outputs.server == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run tests
+        run: |
+          cd server
+          cargo test
+
+  test-ai:
+    name: AI Tests
+    needs: changes
+    if: ${{ needs.changes.outputs.ai == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python_version: '3.x'
+      - name: Run tests
+        run: |
+          cd ai
+          python3 -m unittest discover tests
