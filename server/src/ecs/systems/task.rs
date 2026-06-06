@@ -30,18 +30,26 @@
 //!    [`broadcast_event`] so every AI receives `message k, text`
 //!    and the GUI receives `pbc #n text` (see [`ServerEvent::to_ai_string`]).
 
+use log::error;
+
 use crate::{
     ecs::{
         components::{
+            inventory::Inventory,
             network::NetworkData,
             position::Position,
             task::{TASK_NOT_STARTED, TaskList, TaskType},
             team::Team,
+            tile::Tile,
         },
         storage::{Entity, World},
     },
     game::{Date, Inhabitant},
-    protocol::{Response, ResponseCode, ServerEvent, StatusCode},
+    protocol::{
+        Response, ResponseCode,
+        ServerEvent::{self, ResourceCollect},
+        StatusCode::{self},
+    },
     utils::orientation::RelativeOrientation,
 };
 
@@ -228,19 +236,72 @@ fn execute_task(
             }
             (ok, event)
         }
+        TaskType::Take(resource) => {
+            let player_position = world.get_component::<Position>(entity).unwrap().clone();
+            let tile_entity = Tile::find_tile_by_pos(&player_position, world);
+            if tile_entity.is_none() {
+                error!(
+                    "Could not find tile at position ({}, {})",
+                    player_position.x, player_position.y
+                );
+                return (
+                    Response::new(ResponseCode::Status(StatusCode::Ko), None),
+                    None,
+                );
+            }
+            let tile_entity = tile_entity.unwrap();
+            let tile_component = world.get_component_mut::<Inventory>(tile_entity);
+            if tile_component.is_none() {
+                error!("Could not get inventory of tile {}", tile_entity);
+                return (
+                    Response::new(ResponseCode::Status(StatusCode::Ko), None),
+                    None,
+                );
+            }
+            let tile_component = tile_component.unwrap();
+            let extracted_resource = tile_component.remove_item(*resource);
+            if !extracted_resource {
+                error!("Could not get resource {}", resource);
+                return (
+                    Response::new(ResponseCode::Status(StatusCode::Ko), None),
+                    None,
+                );
+            }
+            let player_inventory = world.get_component_mut::<Inventory>(entity);
+            if player_inventory.is_none() {
+                error!("Could not get inventory of player {}", entity);
+                return (
+                    Response::new(ResponseCode::Status(StatusCode::Ko), None),
+                    None,
+                );
+            }
+            let player_invetory = player_inventory.unwrap();
+            player_invetory.add_item(*resource);
+            (
+                ok,
+                Some(ResourceCollect {
+                    player_id: entity.id(),
+                    resource: *resource as u8,
+                }),
+            )
+        }
         _ => (ok, None),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::ecs::builders::inhabitants::build_inhabitant;
+    use crate::ecs::builders::tile::build_tile;
     use crate::ecs::components::inventory::Inventory;
     use crate::ecs::components::level::Level;
     use crate::ecs::components::life::Life;
     use crate::ecs::components::task::{Task, TaskType};
     use crate::ecs::storage::World;
-    use crate::ecs::systems::inventory_system::add_item;
+    use crate::ecs::systems::inventory_system::{add_item, get_item_count};
+    use crate::ecs::{self, storage};
     use crate::game::Resource;
+    use crate::server::Server;
 
     use super::*;
 
@@ -439,5 +500,74 @@ mod tests {
             let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
             assert_eq!(task_list.vector.len(), 0);
         }
+    }
+
+    /// gets an existing resource using tasks
+    #[test]
+    fn get_resource() {
+        let mut server = Server {
+            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
+            _users: std::collections::HashMap::new(),
+            _freq: 100,
+            game_start: 0,
+            world: storage::World::new(
+                ecs::map_size::MapSize {
+                    width: 10,
+                    height: 10,
+                },
+                100,
+            ),
+            clients_nb: 1,
+            team_names: vec!["existing_team".to_string()],
+        };
+
+        let (mock_socket, _) = crate::ecs::components::network::MockSocket::new(vec![]);
+        let network_data = NetworkData::new(mock_socket);
+        let inhabitant = build_inhabitant(
+            0,
+            0,
+            crate::utils::orientation::RelativeOrientation::Forward,
+            &mut server.world,
+            network_data,
+        );
+        let tile_entity = build_tile(Position { x: 0, y: 0 }, &mut server.world);
+        server
+            .world
+            .get_component_mut::<Inventory>(tile_entity)
+            .unwrap()
+            .add_item(Resource::Food);
+
+        let task = Task {
+            task_type: TaskType::Take(Resource::Food),
+            finish_on: 1,
+        };
+        let task_list = server
+            .world
+            .get_component_mut::<TaskList>(inhabitant)
+            .unwrap();
+        task_list.vector.push(task.clone());
+
+        any_finished_task(&mut server.world);
+        let task_list = server
+            .world
+            .get_component_mut::<TaskList>(inhabitant)
+            .unwrap();
+        assert_eq!(task_list.vector.len(), 0);
+
+        let player_inventory = server.world.get_component::<Inventory>(inhabitant).unwrap();
+        assert_eq!(get_item_count(&player_inventory, Resource::Food), 1);
+        let tile_inventory = server
+            .world
+            .get_component::<Inventory>(tile_entity)
+            .unwrap();
+        assert_eq!(get_item_count(&tile_inventory, Resource::Food), 0);
+
+        let network_data = server
+            .world
+            .get_component_mut::<NetworkData>(inhabitant)
+            .unwrap();
+        assert_eq!(network_data.pending_responses.len(), 1);
+        let response = &network_data.pending_responses[0];
+        assert_eq!(response.code, ResponseCode::Status(StatusCode::Ok));
     }
 }

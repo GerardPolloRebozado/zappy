@@ -1,3 +1,5 @@
+use env_logger::Builder;
+use log::LevelFilter;
 use std::io;
 use zappy_server::server::Server;
 use zappy_server::server::signal::{SIGNAL_RECEIVED, install_sigint_handler};
@@ -6,6 +8,9 @@ use zappy_server::utils::parse_server_args;
 
 fn main() -> io::Result<()> {
     install_sigint_handler();
+    Builder::from_default_env()
+        .filter_level(LevelFilter::Info)
+        .init();
 
     let args: Vec<String> = std::env::args().collect();
     let config = match parse_server_args(&args) {
