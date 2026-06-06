@@ -16,6 +16,7 @@
 #include "Commands/CommandPlayerBroadcast.hpp"
 #include "Commands/CommandPlayerConnection.hpp"
 #include "Commands/CommandPlayerDeath.hpp"
+#include "Commands/CommandPlayerExpulsion.hpp"
 #include "Commands/CommandPlayerFork.hpp"
 #include "Commands/CommandPlayerInventory.hpp"
 #include "Commands/CommandPlayerLevel.hpp"
@@ -43,6 +44,7 @@ const std::unordered_map<std::string, FactoryCommands::CommandCreator> FactoryCo
      {"pic", []() { return std::make_unique<CommandIncantationStart>(); }},
      {"pie", []() { return std::make_unique<CommandIncantationEnd>(); }},
      {"pfk", []() { return std::make_unique<CommandPlayerFork>(); }},
+     {"pex", []() { return std::make_unique<CommandPlayerExpulsion>(); }},
      {"pdr", []() { return std::make_unique<CommandResourceDrop>(); }},
      {"pgt", []() { return std::make_unique<CommandResourceCollect>(); }},
      {"pdi", []() { return std::make_unique<CommandPlayerDeath>(); }},
