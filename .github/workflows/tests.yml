@@ -58,14 +58,30 @@ jobs:
             libwayland-dev \
             libxkbcommon-dev \
             wayland-protocols \
-            xvfb
+            xvfb \
+            ccache
+
+      - name: ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-ccache-${{ hashFiles('gui/CMakeLists.txt') }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-${{ hashFiles('gui/CMakeLists.txt') }}-
+            ${{ runner.os }}-ccache-
+
       - name: Build and Test
         run: |
-          mkdir build
+          export CCACHE_DIR=$HOME/.ccache
+          ccache -s
+          mkdir -p build
           cd build
-          cmake ..
+          cmake .. -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DBUILD_TESTING=ON
           cd ..
           cmake --build build --target unit_tests
+          # Create symlink so tests can find assets/ folder relative to execution
+          mkdir -p build/tests
+          ln -sf ../../assets build/tests/assets
           xvfb-run ./build/unit_tests
 
   test-server:
@@ -77,6 +93,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server -> target
       - name: Run tests
         run: |
           cd server
@@ -93,6 +113,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python_version: "3.x"
+          cache: "pip"
       - name: Run tests
         run: |
           cd ai
