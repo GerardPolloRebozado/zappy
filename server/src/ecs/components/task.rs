@@ -19,7 +19,7 @@ pub enum TaskType {
     Eject,
     Take(Resource),
     ///< Get the resource type and the entity of the tile
-    Drop,
+    Set(Resource),
     Incantation,
     Death,
 }
@@ -37,7 +37,7 @@ impl TaskType {
             TaskType::Fork => 42,
             TaskType::Eject => 7,
             TaskType::Take(_) => 7,
-            TaskType::Drop => 7,
+            TaskType::Set(_) => 7,
             TaskType::Incantation => 300,
             TaskType::Death => 0,
         }
