@@ -39,11 +39,13 @@ set(CORE_SOURCES
         src/Network/TcpSocket.cpp
         src/Systems/RenderSystem.cpp
         src/Graphics/AssetManager.cpp
+        src/Core.cpp
         include/Components/ComponentShared.hpp
         include/Components/ComponentInhabitant.hpp
         include/Components/ComponentTile.hpp
         include/Systems/RenderSystem.hpp
         include/Graphics/AssetManager.hpp
+        include/Core.hpp
         include/Commands/ACommand.hpp
         include/Commands/FactoryCommands.hpp
         include/Commands/CommandTimeUpdate.hpp
