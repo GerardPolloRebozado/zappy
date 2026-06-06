@@ -35,4 +35,11 @@ mod tests {
         let found_entity = Tile::find_tile_by_pos(&Position { x: 0, y: 0 }, &mut world);
         assert_eq!(found_entity, Some(tile_entity));
     }
+
+    #[test]
+    fn find_nonexistent_tile() {
+        let mut world = World::default();
+        let found_entity = Tile::find_tile_by_pos(&Position { x: 0, y: 0 }, &mut world);
+        assert_eq!(found_entity, None);
+    }
 }
