@@ -59,7 +59,8 @@ jobs:
             libxkbcommon-dev \
             wayland-protocols \
             xvfb \
-            ccache
+            ccache \
+            libgl1-mesa-dri
 
       - name: ccache
         uses: actions/cache@v4

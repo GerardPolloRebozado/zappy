@@ -21,6 +21,12 @@ void AssetManager::loadAll() {
     _loadShaders();
 }
 
+void AssetManager::unloadAll() {
+    _models.clear();
+    _textures.clear();
+    _shaders.clear();
+}
+
 raylib::Model& AssetManager::getModel(const std::string& name) {
     if (_models.find(name) == _models.end()) {
         std::cerr << "AssetManager: Model " << name << " not found, returning empty model"
