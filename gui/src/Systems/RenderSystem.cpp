@@ -35,10 +35,14 @@ void RenderSystem::centerCamera(int width, int height) {
         (raylib::Vector3){(float)width / 2.0f + 10.0f, 15.0f, (float)height / 2.0f + 10.0f};
 }
 
-void RenderSystem::update(World& w) {
-    _lazyLoadAssets();
-    _handleInput();
+void RenderSystem::update(World& w, float dt) {
+    (void)w;
+    _handleInput(dt);
     _updateHoverState();
+}
+
+void RenderSystem::render(World& w) {
+    _lazyLoadAssets();
 
     _camera.BeginMode();
     _renderTerrain(w);
@@ -59,8 +63,7 @@ void RenderSystem::_lazyLoadAssets() {
     }
 }
 
-void RenderSystem::_handleInput() {
-    float dt = GetFrameTime();
+void RenderSystem::_handleInput(float dt) {
     float moveSpeed = 20.0f * dt;
     float rotateSpeed = 2.0f * dt;
 
