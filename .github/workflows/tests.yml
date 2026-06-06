@@ -1,0 +1,121 @@
+name: Tests
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["*"]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    if: github.repository != 'EpitechPGE2-2025/G-YEP-400-BAR-4-1-zappy-1'
+    outputs:
+      gui: ${{ steps.filter.outputs.gui }}
+      server: ${{ steps.filter.outputs.server }}
+      ai: ${{ steps.filter.outputs.ai }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            gui:
+              - 'gui/**'
+            server:
+              - 'server/**'
+            ai:
+              - 'ai/**'
+
+  test-gui:
+    name: GUI Tests
+    needs: changes
+    if: needs.changes.outputs.gui == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcriterion-dev \
+            libasound2-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libxcursor-dev \
+            libxinerama-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            wayland-protocols \
+            xvfb \
+            ccache \
+            libgl1-mesa-dri
+
+      - name: ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-ccache-${{ hashFiles('gui/CMakeLists.txt') }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-${{ hashFiles('gui/CMakeLists.txt') }}-
+            ${{ runner.os }}-ccache-
+
+      - name: Build and Test
+        run: |
+          export CCACHE_DIR=$HOME/.ccache
+          ccache -s
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DBUILD_TESTING=ON
+          cd ..
+          cmake --build build --target unit_tests
+          # Create symlink so tests can find assets/ folder relative to execution
+          mkdir -p build/tests
+          ln -sf ../../assets build/tests/assets
+          xvfb-run ./build/unit_tests
+
+  test-server:
+    name: Server Tests
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server -> target
+      - name: Run tests
+        run: |
+          cd server
+          cargo test
+
+  test-ai:
+    name: AI Tests
+    needs: changes
+    if: needs.changes.outputs.ai == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python_version: "3.x"
+          cache: "pip"
+      - name: Run tests
+        run: |
+          cd ai
+          python3 -m unittest discover tests
