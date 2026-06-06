@@ -47,7 +47,10 @@ jobs:
             libgl1-mesa-dev \
             libglu1-mesa-dev \
             libxcursor-dev \
-            libxinerama-dev
+            libxinerama-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            wayland-protocols
       - name: Build and Test
         run: |
           cmake -S gui -B gui/build -DBUILD_TESTING=ON
