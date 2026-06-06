@@ -42,14 +42,24 @@ class RenderSystem {
     ~RenderSystem() = default;
 
     /**
-     * @brief Main update loop for the rendering system.
+     * @brief Logic update loop for the rendering system.
      *
-     * Orchestrates input handling, state updates, and the full rendering pipeline
-     * (3D world followed by 2D UI).
+     * Handles input and state updates (camera, hover state).
+     * Should be called before render().
+     *
+     * @param w the ECS world instance
+     * @param dt delta time since last frame
+     */
+    void update(World& w, float dt);
+
+    /**
+     * @brief Main draw loop for the rendering system.
+     *
+     * Orchestrates the full rendering pipeline (3D world followed by 2D UI).
      *
      * @param w the ECS world instance to query entities and components
      */
-    void update(World& w);
+    void render(World& w);
 
     /**
      * @brief Centers the camera on the map based on dimensions.
@@ -77,8 +87,9 @@ class RenderSystem {
 
     /**
      * @brief Processes user input for camera movement (WASD), rotation (QE/RF), and zoom.
+     * @param dt delta time
      */
-    void _handleInput();
+    void _handleInput(float dt);
 
     /**
      * @brief Renders the terrain tiles based on their types and positions.
