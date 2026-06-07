@@ -102,12 +102,74 @@ void Core::_setupMainMenu() {
     // Settings Button
     _uiManager.addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 100, (float)cy + 20, 200, 50}, "Settings",
-        []() { std::cout << "Settings clicked" << std::endl; }, 1));
+        [this]() { this->_setupSettingsMenu(); }, 1));
 
     // Quit Button
     _uiManager.addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 100, (float)cy + 90, 200, 50}, "Quit",
         [this]() { this->_window->Close(); }, 1));
+}
+
+void Core::_setupSettingsMenu() {
+    _clearMenuUI();
+
+    int cx = _window->GetWidth() / 2;
+    int cy = _window->GetHeight() / 2;
+
+    // Background panel
+    _uiManager.addComponent(std::make_shared<UIPanel>(
+        raylib::Rectangle{0, 0, (float)_window->GetWidth(), (float)_window->GetHeight()},
+        raylib::Color(20, 20, 30, 255), 0));
+
+    // Title
+    _uiManager.addComponent(
+        std::make_shared<UIText>(raylib::Rectangle{(float)cx - 100, (float)cy - 250, 200, 50},
+                                 "SETTINGS", 40, raylib::Color::RayWhite(), 1));
+
+    // Resolution 1280x720 Button
+    _uiManager.addComponent(std::make_shared<UIButton>(
+        raylib::Rectangle{(float)cx - 100, (float)cy - 130, 200, 40}, "1280x720",
+        [this]() {
+            this->_window->SetSize(1280, 720);
+            this->_setupSettingsMenu(); // Re-center UI
+        },
+        1));
+
+    // Resolution 1920x1080 Button
+    _uiManager.addComponent(std::make_shared<UIButton>(
+        raylib::Rectangle{(float)cx - 100, (float)cy - 70, 200, 40}, "1920x1080",
+        [this]() {
+            this->_window->SetSize(1920, 1080);
+            this->_setupSettingsMenu(); // Re-center UI
+        },
+        1));
+
+    // Fullscreen Button
+    _uiManager.addComponent(std::make_shared<UIButton>(
+        raylib::Rectangle{(float)cx - 100, (float)cy - 10, 200, 40}, "Toggle Fullscreen",
+        [this]() {
+            this->_window->ToggleFullscreen();
+            this->_setupSettingsMenu(); // Re-center UI
+        },
+        1));
+
+    // Volume Controls (Placeholder)
+    _uiManager.addComponent(
+        std::make_shared<UIText>(raylib::Rectangle{(float)cx - 100, (float)cy + 50, 200, 30},
+                                 "Volume:", 20, raylib::Color::RayWhite(), 1));
+
+    _uiManager.addComponent(std::make_shared<UIButton>(
+        raylib::Rectangle{(float)cx - 100, (float)cy + 80, 90, 40}, "-",
+        []() { std::cout << "Volume Down" << std::endl; }, 1));
+
+    _uiManager.addComponent(std::make_shared<UIButton>(
+        raylib::Rectangle{(float)cx + 10, (float)cy + 80, 90, 40}, "+",
+        []() { std::cout << "Volume Up" << std::endl; }, 1));
+
+    // Back Button
+    _uiManager.addComponent(std::make_shared<UIButton>(
+        raylib::Rectangle{(float)cx - 100, (float)cy + 150, 200, 50}, "Back",
+        [this]() { this->_setupMainMenu(); }, 1));
 }
 
 void Core::_showConnectionOverlay() {

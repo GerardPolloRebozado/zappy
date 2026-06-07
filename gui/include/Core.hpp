@@ -65,6 +65,7 @@ class Core {
 
     void _setupMainMenu();
     void _showConnectionOverlay();
+    void _setupSettingsMenu();
     void _setupGameUI();
     void _clearMenuUI();
     void _connectToServer(const std::string& host, int port);
