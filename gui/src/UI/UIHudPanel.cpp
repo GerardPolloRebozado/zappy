@@ -12,6 +12,8 @@
 #include <raylib.h>
 #include <string>
 
+#include <limits>
+
 namespace zappy {
 
 UIHudPanel::UIHudPanel(raylib::Rectangle bounds, World& world, const RenderSystem& renderSystem,
@@ -21,9 +23,7 @@ UIHudPanel::UIHudPanel(raylib::Rectangle bounds, World& world, const RenderSyste
 void UIHudPanel::render() {
     auto [selX, selZ] = _renderSystem.getSelectedTile();
 
-    // InvalidTileCoord is INT_MIN, but since it's private in RenderSystem, we check a rough bound
-    // Or we can just check if selX is < -99999
-    if (selX < -99999) {
+    if (selX == std::numeric_limits<int>::min()) {
         return;
     }
 
