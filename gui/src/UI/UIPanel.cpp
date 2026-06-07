@@ -6,13 +6,12 @@
 */
 
 #include "UI/UIPanel.hpp"
-#include <raylib.h>
 
 namespace zappy {
 
 UIPanel::UIPanel(raylib::Rectangle bounds, raylib::Color color, int zIndex)
     : AUIComponent(bounds, zIndex), _color(color) {}
 
-void UIPanel::render() { DrawRectangleRec(_bounds, _color); }
+void UIPanel::render() { _bounds.Draw(_color); }
 
 } // namespace zappy

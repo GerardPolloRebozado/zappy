@@ -9,7 +9,6 @@
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
-#include <raylib.h>
 #include <string>
 
 #include <limits>
@@ -27,11 +26,12 @@ void UIHudPanel::render() {
         return;
     }
 
-    DrawRectangleRec(_bounds, Fade(DARKGRAY, 0.85f));
-    DrawRectangleLinesEx(_bounds, 2.0f, GOLD);
+    _bounds.Draw(raylib::Color(DARKGRAY).Fade(0.85f));
+    _bounds.DrawLines(GOLD, 2.0f);
 
-    std::string info = "Tile [" + std::to_string(selX) + ", " + std::to_string(selZ) + "]";
-    ::DrawText(info.c_str(), _bounds.x + 15, _bounds.y + 15, 20, GOLD);
+    raylib::Text infoText("Tile [" + std::to_string(selX) + ", " + std::to_string(selZ) + "]", 20,
+                          GOLD, GetFontDefault(), 1.5f);
+    infoText.Draw(_bounds.x + 15, _bounds.y + 15);
 
     auto terrainStorage = _world.get_storage<TerrainType>();
     std::shared_ptr<Inventory> inv = nullptr;
@@ -48,9 +48,10 @@ void UIHudPanel::render() {
 
     int yOffset = _bounds.y + 50;
     if (inv) {
-        auto drawResource = [&](const std::string& name, int count, Color col) {
+        auto drawResource = [&](const std::string& name, int count, raylib::Color col) {
             std::string text = name + ": " + std::to_string(count);
-            ::DrawText(text.c_str(), _bounds.x + 20, yOffset, 16, col);
+            raylib::Text(text, 16, col, GetFontDefault(), 1.5f)
+                .Draw(_bounds.x + 20, (float)yOffset);
             yOffset += 20;
         };
 
@@ -64,7 +65,8 @@ void UIHudPanel::render() {
     }
 
     yOffset += 10;
-    ::DrawText("Entities:", _bounds.x + 15, yOffset, 18, GOLD);
+    raylib::Text("Entities:", 18, GOLD, GetFontDefault(), 1.5f)
+        .Draw(_bounds.x + 15, (float)yOffset);
     yOffset += 25;
 
     bool foundPlayer = false;
@@ -84,10 +86,12 @@ void UIHudPanel::render() {
                 if (level) {
                     pInfo += " (Lvl " + std::to_string(level->level) + ")";
                 }
-                ::DrawText(pInfo.c_str(), _bounds.x + 20, yOffset, 16, RED);
+                raylib::Text(pInfo, 16, RED, GetFontDefault(), 1.5f)
+                    .Draw(_bounds.x + 20, (float)yOffset);
                 yOffset += 18;
                 if (team) {
-                    ::DrawText(team->team_name.c_str(), _bounds.x + 35, yOffset, 14, RAYWHITE);
+                    raylib::Text(team->team_name, 14, RAYWHITE, GetFontDefault(), 1.5f)
+                        .Draw(_bounds.x + 35, (float)yOffset);
                     yOffset += 16;
                 }
             }
@@ -95,7 +99,7 @@ void UIHudPanel::render() {
     }
 
     if (!foundPlayer) {
-        ::DrawText("None", _bounds.x + 20, yOffset, 16, GRAY);
+        raylib::Text("None", 16, GRAY, GetFontDefault(), 1.5f).Draw(_bounds.x + 20, (float)yOffset);
     }
 }
 

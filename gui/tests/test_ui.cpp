@@ -1,13 +1,27 @@
+#include "Graphics/AssetManager.hpp"
 #include "UI/UIButton.hpp"
 #include "UI/UIInput.hpp"
 #include "UI/UIManager.hpp"
 #include "UI/UIPanel.hpp"
 #include "UI/UIText.hpp"
 #include <criterion/criterion.h>
+#include <raylib.h>
 
 using namespace zappy;
 
-Test(ui_component, basic_properties) {
+// initialize a headless window for testing GPU-dependent logic
+void setup_ui_tests() {
+    SetTraceLogLevel(LOG_NONE); // Keep output clean
+    SetConfigFlags(FLAG_WINDOW_HIDDEN);
+    InitWindow(100, 100, "Headless UI Test");
+}
+
+void teardown_ui_tests() {
+    zappy::AssetManager::getInstance().unloadAll();
+    CloseWindow();
+}
+
+Test(ui_component, basic_properties, .init = setup_ui_tests, .fini = teardown_ui_tests) {
     UIPanel panel({10, 20, 100, 50}, raylib::Color::Red(), 5);
 
     // Test Bounds
@@ -32,13 +46,13 @@ Test(ui_component, basic_properties) {
     cr_assert_eq(panel.isVisible(), false);
 }
 
-Test(ui_input, default_state) {
+Test(ui_input, default_state, .init = setup_ui_tests, .fini = teardown_ui_tests) {
     UIInput input({0, 0, 100, 20}, "Test", "Placeholder", 256, 0);
 
     cr_assert_eq(input.getText(), "Test");
 }
 
-Test(ui_manager, manage_components) {
+Test(ui_manager, manage_components, .init = setup_ui_tests, .fini = teardown_ui_tests) {
     UIManager manager;
 
     auto panel1 =
@@ -50,8 +64,6 @@ Test(ui_manager, manage_components) {
     manager.addComponent(panel2);
 
     // Not crashing on update/render is a basic health check
-    // We mock a very basic update without open window context
-    // Note: Calling render() requires Raylib Window context, so we avoid it in unit tests.
     manager.update(0.16f);
 
     manager.clear();

@@ -22,14 +22,14 @@ namespace zappy {
 
 Core::Core(int port, const std::string& host) : _port(port), _host(host) {
     _window = std::make_unique<raylib::Window>(1280, 720, "Zappy GUI");
-    SetTargetFPS(60);
+    _window->SetTargetFPS(60);
 
     // Prevent ESC from instantly closing the entire application
-    SetExitKey(0);
+    _window->SetExitKey(0);
 
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
-    HideCursor();
+    raylib::Window::HideCursor();
 
     _appState = AppState::MENU;
     _setupMainMenu();
@@ -47,7 +47,7 @@ void Core::_update() {
     _uiManager.update(dt);
 
     if (_appState == AppState::PLAYING) {
-        if (IsKeyPressed(KEY_ESCAPE)) {
+        if (raylib::Keyboard::IsKeyPressed(KEY_ESCAPE)) {
             _network.disconnect();
             _appState = AppState::MENU;
             _setupMainMenu();
@@ -77,10 +77,12 @@ void Core::_render() {
 
     // Draw custom cursor on top of everything
     auto& am = AssetManager::getInstance();
-    raylib::Texture2D& tex = IsMouseButtonDown(MOUSE_BUTTON_LEFT) ? am.getTexture("mouse_pressed")
-                                                                  : am.getTexture("mouse");
+    raylib::Texture2D& tex = raylib::Mouse::IsButtonDown(MOUSE_BUTTON_LEFT)
+                                 ? am.getTexture("mouse_pressed")
+                                 : am.getTexture("mouse");
     if (tex.id != 0) {
-        DrawTextureEx(tex, {(float)GetMouseX(), (float)GetMouseY()}, 0.0f, 3.0f, WHITE);
+        tex.Draw(raylib::Vector2((float)raylib::Mouse::GetX(), (float)raylib::Mouse::GetY()), 0.0f,
+                 3.0f, WHITE);
     }
 
     _window->EndDrawing();
@@ -134,7 +136,7 @@ void Core::_setupSettingsMenu() {
     // Title
     _uiManager.addComponent(
         std::make_shared<UIText>(raylib::Rectangle{(float)cx - 100, (float)cy - 250, 200, 50},
-                                 "SETTINGS", 40, raylib::Color::RayWhite(), 1));
+                                 "SETTINGS", 40, raylib::Color::RayWhite(), 1, 4.0f));
 
     // Resolution 1280x720 Button
     _uiManager.addComponent(std::make_shared<UIButton>(
@@ -232,7 +234,7 @@ void Core::_connectToServer(const std::string& host, int port) {
         int cy = _window->GetHeight() / 2;
         _uiManager.addComponent(
             std::make_shared<UIText>(raylib::Rectangle{(float)cx - 150, (float)cy + 110, 300, 30},
-                                     "Connection Failed!", 20, raylib::Color::Red(), 12));
+                                     "Connection Failed!", 20, raylib::Color::Red(), 12, 2.0f));
     }
 }
 

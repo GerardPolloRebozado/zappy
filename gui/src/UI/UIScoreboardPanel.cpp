@@ -9,7 +9,6 @@
 #include "Components/ComponentInhabitant.hpp"
 #include <algorithm>
 #include <map>
-#include <raylib.h>
 #include <string>
 #include <vector>
 
@@ -19,10 +18,10 @@ UIScoreboardPanel::UIScoreboardPanel(raylib::Rectangle bounds, World& world, int
     : AUIComponent(bounds, zIndex), _world(world) {}
 
 void UIScoreboardPanel::render() {
-    DrawRectangleRec(_bounds, Fade(DARKGRAY, 0.85f));
-    DrawRectangleLinesEx(_bounds, 2.0f, RAYWHITE);
+    _bounds.Draw(raylib::Color(DARKGRAY).Fade(0.85f));
+    _bounds.DrawLines(RAYWHITE, 2.0f);
 
-    ::DrawText("SCOREBOARD", _bounds.x + 15, _bounds.y + 15, 22, RAYWHITE);
+    raylib::Text("SCOREBOARD", 22, RAYWHITE).Draw(_bounds.x + 15, _bounds.y + 15);
 
     // Collect team sizes and max levels
     std::map<std::string, int> teamSizes;
@@ -48,7 +47,7 @@ void UIScoreboardPanel::render() {
     int yOffset = _bounds.y + 50;
 
     if (teamSizes.empty()) {
-        ::DrawText("No players connected.", _bounds.x + 15, yOffset, 16, GRAY);
+        raylib::Text("No players connected.", 16, GRAY).Draw(_bounds.x + 15, (float)yOffset);
         return;
     }
 
@@ -62,9 +61,11 @@ void UIScoreboardPanel::render() {
         std::string stats = "Players: " + std::to_string(size) +
                             " | Max Lvl: " + std::to_string(teamMaxLevel[teamName]);
 
-        ::DrawText(tName.c_str(), _bounds.x + 15, yOffset, 18, SKYBLUE);
+        raylib::Text(tName, 18, SKYBLUE, GetFontDefault(), 1.5f)
+            .Draw(_bounds.x + 15, (float)yOffset);
         yOffset += 20;
-        ::DrawText(stats.c_str(), _bounds.x + 25, yOffset, 14, LIGHTGRAY);
+        raylib::Text(stats, 14, LIGHTGRAY, GetFontDefault(), 1.5f)
+            .Draw(_bounds.x + 25, (float)yOffset);
         yOffset += 25;
     }
 }

@@ -8,7 +8,10 @@
 #ifndef ZAPPY_IUICOMPONENT_HPP
 #define ZAPPY_IUICOMPONENT_HPP
 
+#include "UIEvent.hpp"
+#include <memory>
 #include <raylib-cpp.hpp>
+#include <vector>
 
 namespace zappy {
 
@@ -24,11 +27,13 @@ class IUIComponent {
     virtual ~IUIComponent() = default;
 
     /**
-     * @brief Updates the component's internal state.
+     * @brief Updates the component's internal state and handles events.
      * @param dt The time elapsed since the last frame (delta time).
      * @param mousePos The current 2D position of the mouse cursor.
+     * @param events A shared pointer to the list of UI events for the current frame.
      */
-    virtual void update(float dt, raylib::Vector2 mousePos) = 0;
+    virtual void update(float dt, raylib::Vector2 mousePos,
+                        std::shared_ptr<std::vector<UIEvent>> events) = 0;
 
     /**
      * @brief Renders the component to the screen.

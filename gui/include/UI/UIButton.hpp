@@ -22,7 +22,8 @@ class UIButton : public AUIComponent {
              int zIndex = 0);
     ~UIButton() override = default;
 
-    void update(float dt, raylib::Vector2 mousePos) override;
+    void update(float dt, raylib::Vector2 mousePos,
+                std::shared_ptr<std::vector<UIEvent>> events) override;
     void render() override;
 
     void setBounds(raylib::Rectangle bounds) override;

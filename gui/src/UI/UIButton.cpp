@@ -6,7 +6,6 @@
 */
 
 #include "UI/UIButton.hpp"
-#include <raylib.h>
 
 namespace zappy {
 
@@ -15,26 +14,36 @@ UIButton::UIButton(raylib::Rectangle bounds, const std::string& text, std::funct
     : AUIComponent(bounds, zIndex), _onClick(onClick), _isHovered(false), _isPressed(false),
       _normalColor(raylib::Color::LightGray()), _hoverColor(raylib::Color::Gray()),
       _pressedColor(raylib::Color::DarkGray()) {
-    _label = std::make_unique<UIText>(bounds, text, 20, raylib::Color::Black(), zIndex);
+    _label = std::make_unique<UIText>(bounds, text, 20, raylib::Color::Black(), zIndex, 1.5f);
 }
 
-void UIButton::update(float dt, raylib::Vector2 mousePos) {
+void UIButton::update(float dt, raylib::Vector2 mousePos,
+                      std::shared_ptr<std::vector<UIEvent>> events) {
     (void)dt;
-    _isHovered = CheckCollisionPointRec(mousePos, _bounds);
+    _isHovered = _bounds.CheckCollision(mousePos);
 
-    if (_isHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        _isPressed = true;
-    }
+    for (auto it = events->begin(); it != events->end();) {
+        bool consumed = false;
 
-    if (_isPressed && IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-        _isPressed = false;
-        if (_isHovered && _onClick) {
-            _onClick();
+        if (it->type == UIEventType::MOUSE_PRESSED_LEFT && _isHovered) {
+            _isPressed = true;
+            consumed = true;
         }
-    }
 
-    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-        _isPressed = false;
+        if (it->type == UIEventType::MOUSE_RELEASED_LEFT) {
+            if (_isPressed && _isHovered && _onClick) {
+                _onClick();
+            }
+            _isPressed = false;
+            // Always consume release if we were pressed, to avoid releasing onto something else
+            consumed = true;
+        }
+
+        if (consumed) {
+            it = events->erase(it);
+        } else {
+            ++it;
+        }
     }
 }
 
@@ -46,8 +55,8 @@ void UIButton::render() {
         btnColor = _hoverColor;
     }
 
-    DrawRectangleRec(_bounds, btnColor);
-    DrawRectangleLinesEx(_bounds, 2.0f, DARKGRAY);
+    _bounds.Draw(btnColor);
+    _bounds.DrawLines(DARKGRAY, 2.0f);
 
     if (_label) {
         _label->render();

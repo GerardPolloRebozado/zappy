@@ -16,15 +16,19 @@ namespace zappy {
 class UIText : public AUIComponent {
   public:
     UIText(raylib::Rectangle bounds, const std::string& text, int fontSize, raylib::Color color,
-           int zIndex = 0);
+           int zIndex = 0, float spacing = 1.5f);
     ~UIText() override = default;
 
     void render() override;
+
+    void setSpacing(float spacing);
+    float getSpacing() const;
 
   private:
     std::string _text;
     int _fontSize;
     raylib::Color _color;
+    float _spacing;
 };
 
 } // namespace zappy
