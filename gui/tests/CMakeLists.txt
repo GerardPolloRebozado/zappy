@@ -11,6 +11,7 @@ set(TEST_SOURCES
     test_incantation.cpp
     test_egg.cpp
     test_misc.cpp
+    test_ui.cpp
 )
 
 add_executable(unit_tests ${TEST_SOURCES})
