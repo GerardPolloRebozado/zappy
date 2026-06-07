@@ -31,12 +31,13 @@ void UIButton::update(float dt, raylib::Vector2 mousePos,
         }
 
         if (it->type == UIEventType::MOUSE_RELEASED_LEFT) {
-            if (_isPressed && _isHovered && _onClick) {
-                _onClick();
+            if (_isPressed) {
+                if (_isHovered && _onClick) {
+                    _onClick();
+                }
+                _isPressed = false;
+                consumed = true;
             }
-            _isPressed = false;
-            // Always consume release if we were pressed, to avoid releasing onto something else
-            consumed = true;
         }
 
         if (consumed) {
