@@ -80,9 +80,7 @@ jobs:
           cmake .. -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DBUILD_TESTING=ON
           cd ..
           cmake --build build --target unit_tests
-          # Create symlink so tests can find assets/ folder relative to execution
           mkdir -p build/tests
-          ln -sf ../../assets build/tests/assets
           xvfb-run ./build/unit_tests
 
   test-server:
