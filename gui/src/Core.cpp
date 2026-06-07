@@ -24,6 +24,9 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
     _window = std::make_unique<raylib::Window>(1280, 720, "Zappy GUI");
     SetTargetFPS(60);
 
+    // Prevent ESC from instantly closing the entire application
+    SetExitKey(0);
+
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
     HideCursor();
@@ -44,11 +47,18 @@ void Core::_update() {
     _uiManager.update(dt);
 
     if (_appState == AppState::PLAYING) {
+        if (IsKeyPressed(KEY_ESCAPE)) {
+            _network.disconnect();
+            _appState = AppState::MENU;
+            _setupMainMenu();
+            return;
+        }
+
         _network.update(_world);
         if (_network.isConnected()) {
             _renderSystem.update(_world, dt);
         } else {
-            // Server disconnected, go back to menu?
+            // Server disconnected, go back to menu
             _appState = AppState::MENU;
             _setupMainMenu();
         }
