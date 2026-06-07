@@ -13,6 +13,7 @@ use crate::game::*;
 use crate::protocol::{Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::utils::Config;
 use crate::utils::orientation;
+use log::info;
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
@@ -42,6 +43,7 @@ impl Server {
         listener
             .set_nonblocking(true)
             .expect("Cannot set non-blocking");
+        info!("Server started on port: {}", config.port);
         Server {
             listener,
             _users: HashMap::new(),
