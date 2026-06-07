@@ -35,8 +35,10 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
     _setupMainMenu();
 }
 
+Core::~Core() { AssetManager::getInstance().unloadAll(); }
+
 void Core::run() {
-    while (!_window->ShouldClose()) {
+    while (!_window->ShouldClose() && !_shouldClose) {
         _update();
         _render();
     }
@@ -119,7 +121,7 @@ void Core::_setupMainMenu() {
     // Quit Button
     _uiManager.addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 100, (float)cy + 90, 200, 50}, "Quit",
-        [this]() { this->_window->Close(); }, 1));
+        [this]() { this->_shouldClose = true; }, 1));
 }
 
 void Core::_setupSettingsMenu() {
