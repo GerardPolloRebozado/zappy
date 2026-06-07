@@ -9,14 +9,16 @@ Test(core, initialization) {
     try {
         zappy::Core core(0, "127.0.0.1");
         cr_assert(true, "Core initialized successfully");
+        // Must unload assets while the Window (owned by core) is still open
+        zappy::AssetManager::getInstance().unloadAll();
     } catch (...) {
         cr_assert(false, "Core initialization threw an exception");
     }
-    zappy::AssetManager::getInstance().unloadAll();
 }
 
 Test(core, run_loop_exit) {
     zappy::Core core(0, "127.0.0.1");
     cr_assert(true);
+    // Must unload assets while the Window (owned by core) is still open
     zappy::AssetManager::getInstance().unloadAll();
 }

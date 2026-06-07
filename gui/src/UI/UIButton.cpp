@@ -12,10 +12,11 @@ namespace zappy {
 
 UIButton::UIButton(raylib::Rectangle bounds, const std::string& text, std::function<void()> onClick,
                    int zIndex)
-    : AUIComponent(bounds, zIndex), _text(text), _onClick(onClick), _isHovered(false),
-      _isPressed(false), _normalColor(raylib::Color::LightGray()),
-      _hoverColor(raylib::Color::Gray()), _pressedColor(raylib::Color::DarkGray()),
-      _textColor(raylib::Color::Black()) {}
+    : AUIComponent(bounds, zIndex), _onClick(onClick), _isHovered(false), _isPressed(false),
+      _normalColor(raylib::Color::LightGray()), _hoverColor(raylib::Color::Gray()),
+      _pressedColor(raylib::Color::DarkGray()) {
+    _label = std::make_unique<UIText>(bounds, text, 20, raylib::Color::Black(), zIndex);
+}
 
 void UIButton::update(float dt, raylib::Vector2 mousePos) {
     (void)dt;
@@ -48,11 +49,23 @@ void UIButton::render() {
     DrawRectangleRec(_bounds, btnColor);
     DrawRectangleLinesEx(_bounds, 2.0f, DARKGRAY);
 
-    int fontSize = 20;
-    int textW = MeasureText(_text.c_str(), fontSize);
-    int textX = (int)(_bounds.x) + ((int)_bounds.width - textW) / 2;
-    int textY = (int)(_bounds.y) + ((int)_bounds.height - fontSize) / 2;
-    ::DrawText(_text.c_str(), textX, textY, fontSize, _textColor);
+    if (_label) {
+        _label->render();
+    }
+}
+
+void UIButton::setBounds(raylib::Rectangle bounds) {
+    _bounds = bounds;
+    if (_label) {
+        _label->setBounds(bounds);
+    }
+}
+
+void UIButton::setZIndex(int zIndex) {
+    _zIndex = zIndex;
+    if (_label) {
+        _label->setZIndex(zIndex);
+    }
 }
 
 } // namespace zappy
