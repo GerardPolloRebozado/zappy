@@ -23,3 +23,18 @@ impl std::fmt::Display for Resource {
         write!(f, "{}", name)
     }
 }
+
+impl Resource {
+    pub fn new_from_str(s: &str) -> Option<Resource> {
+        match s {
+            "food" => Some(Resource::Food),
+            "linemate" => Some(Resource::Linemate),
+            "deraumere" => Some(Resource::Deraumere),
+            "sibur" => Some(Resource::Sibur),
+            "mendiane" => Some(Resource::Mendiane),
+            "phiras" => Some(Resource::Phiras),
+            "thystame" => Some(Resource::Thystame),
+            _ => None,
+        }
+    }
+}
