@@ -12,9 +12,11 @@ namespace zappy {
 AUIComponent::AUIComponent(raylib::Rectangle bounds, int zIndex)
     : _bounds(bounds), _zIndex(zIndex), _isVisible(true) {}
 
-void AUIComponent::update(float dt, raylib::Vector2 mousePos) {
+void AUIComponent::update(float dt, raylib::Vector2 mousePos,
+                          std::shared_ptr<std::vector<UIEvent>> events) {
     (void)dt;
     (void)mousePos;
+    (void)events;
 }
 
 int AUIComponent::getZIndex() const { return _zIndex; }

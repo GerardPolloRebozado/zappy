@@ -19,7 +19,8 @@ class UIInput : public AUIComponent {
             const std::string& placeholder, size_t maxLength = 256, int zIndex = 0);
     ~UIInput() override = default;
 
-    void update(float dt, raylib::Vector2 mousePos) override;
+    void update(float dt, raylib::Vector2 mousePos,
+                std::shared_ptr<std::vector<UIEvent>> events) override;
     void render() override;
 
     std::string getText() const;

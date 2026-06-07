@@ -6,7 +6,6 @@
 */
 
 #include "UI/UIInput.hpp"
-#include <raylib.h>
 
 namespace zappy {
 
@@ -17,41 +16,58 @@ UIInput::UIInput(raylib::Rectangle bounds, const std::string& initialText,
       _focusedColor(raylib::Color::White()), _textColor(raylib::Color::Black()),
       _placeholderColor(GRAY) {}
 
-void UIInput::update(float dt, raylib::Vector2 mousePos) {
+void UIInput::update(float dt, raylib::Vector2 mousePos,
+                     std::shared_ptr<std::vector<UIEvent>> events) {
     (void)dt;
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        _isFocused = CheckCollisionPointRec(mousePos, _bounds);
-    }
+    for (auto it = events->begin(); it != events->end();) {
+        bool consumed = false;
 
-    if (_isFocused) {
-        int key = GetCharPressed();
-        while (key > 0) {
-            if ((key >= 32) && (key <= 125) && (_text.size() < _maxLength)) {
-                _text += (char)key;
+        if (it->type == UIEventType::MOUSE_PRESSED_LEFT) {
+            _isFocused = _bounds.CheckCollision(mousePos);
+            if (_isFocused) {
+                consumed = true;
             }
-            key = GetCharPressed();
         }
 
-        if (IsKeyPressed(KEY_BACKSPACE)) {
-            if (!_text.empty()) {
-                _text.pop_back();
+        if (_isFocused) {
+            if (it->type == UIEventType::CHAR_PRESSED) {
+                int charCode = it->charCode;
+                if ((charCode >= 32) && (charCode <= 125) && (_text.size() < _maxLength)) {
+                    _text += (char)charCode;
+                }
+                consumed = true;
             }
+
+            if (it->type == UIEventType::KEY_PRESSED) {
+                if (it->keyCode == KEY_BACKSPACE) {
+                    if (!_text.empty()) {
+                        _text.pop_back();
+                    }
+                }
+                consumed = true;
+            }
+        }
+
+        if (consumed) {
+            it = events->erase(it);
+        } else {
+            ++it;
         }
     }
 }
 
 void UIInput::render() {
     raylib::Color bgColor = _isFocused ? _focusedColor : _normalColor;
-    DrawRectangleRec(_bounds, bgColor);
-    DrawRectangleLinesEx(_bounds, _isFocused ? 3.0f : 1.0f, DARKGRAY);
+    _bounds.Draw(bgColor);
+    _bounds.DrawLines(DARKGRAY, _isFocused ? 3.0f : 1.0f);
 
     int padding = 5;
     std::string displayTxt = _text.empty() && !_isFocused ? _placeholder : _text;
     raylib::Color txtColor = _text.empty() && !_isFocused ? _placeholderColor : _textColor;
 
-    ::DrawText(displayTxt.c_str(), (int)(_bounds.x) + padding,
-               (int)(_bounds.y + _bounds.height / 2) - 10, 20, txtColor);
+    raylib::Text(displayTxt, 20, txtColor, GetFontDefault(), 1.5f)
+        .Draw(_bounds.x + padding, _bounds.y + _bounds.height / 2 - 10);
 }
 
 std::string UIInput::getText() const { return _text; }

@@ -17,7 +17,8 @@ class AUIComponent : public IUIComponent {
     AUIComponent(raylib::Rectangle bounds, int zIndex = 0);
     virtual ~AUIComponent() = default;
 
-    virtual void update(float dt, raylib::Vector2 mousePos) override;
+    virtual void update(float dt, raylib::Vector2 mousePos,
+                        std::shared_ptr<std::vector<UIEvent>> events) override;
     virtual void render() override = 0;
 
     int getZIndex() const override;

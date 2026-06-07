@@ -53,6 +53,7 @@ set(CORE_SOURCES
         include/Components/ComponentTile.hpp
         include/UI/IUIComponent.hpp
         include/UI/AUIComponent.hpp
+        include/UI/UIEvent.hpp
         include/UI/UIManager.hpp
         include/UI/UIButton.hpp
         include/UI/UIInput.hpp
