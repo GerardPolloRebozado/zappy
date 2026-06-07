@@ -11,11 +11,14 @@
 #include "ECS/World.hpp"
 #include "NetworkManager.hpp"
 #include "Systems/RenderSystem.hpp"
+#include "UI/UIManager.hpp"
 #include <memory>
 #include <raylib-cpp.hpp>
 #include <string>
 
 namespace zappy {
+
+enum class AppState { MENU, PLAYING };
 
 /**
  * @class Core
@@ -60,12 +63,20 @@ class Core {
      */
     void _setupTestingData();
 
+    void _setupMainMenu();
+    void _showConnectionOverlay();
+    void _setupGameUI();
+    void _clearMenuUI();
+    void _connectToServer(const std::string& host, int port);
+
     World _world;                            ///< The ECS world instance.
     NetworkManager _network;                 ///< Handles server communication.
     RenderSystem _renderSystem;              ///< Handles world and UI rendering.
+    UIManager _uiManager;                    ///< Handles OOP UI.
     std::unique_ptr<raylib::Window> _window; ///< The Raylib window instance.
     int _port;                               ///< Server port.
     std::string _host;                       ///< Server host.
+    AppState _appState = AppState::MENU;     ///< Current application state.
 };
 
 } // namespace zappy
