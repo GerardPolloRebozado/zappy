@@ -44,7 +44,7 @@ pub fn set_task(
         );
     }
     let tile_component = tile_component.unwrap();
-    tile_component.add_item(*resource);
+    tile_component.add_item(*resource, 1);
     let player_inventory = world.get_component_mut::<Inventory>(entity);
     if player_inventory.is_none() {
         error!("Could not get inventory of player {}", entity);
@@ -54,7 +54,7 @@ pub fn set_task(
         );
     }
     let player_invetory = player_inventory.unwrap();
-    let removed_resource = player_invetory.remove_item(*resource);
+    let removed_resource = player_invetory.remove_item(*resource, 1);
     if !removed_resource {
         error!(
             "Could not remove resource {} from player {}",
@@ -105,7 +105,7 @@ pub fn take_task(
         );
     }
     let tile_component = tile_component.unwrap();
-    let extracted_resource = tile_component.remove_item(*resource);
+    let extracted_resource = tile_component.remove_item(*resource, 1);
     if !extracted_resource {
         error!("Could not get resource {}", resource);
         return (
@@ -122,7 +122,7 @@ pub fn take_task(
         );
     }
     let player_invetory = player_inventory.unwrap();
-    player_invetory.add_item(*resource);
+    player_invetory.add_item(*resource, 1);
     (
         ok,
         Some(ResourceCollect {
@@ -139,7 +139,6 @@ mod tests {
     use crate::ecs::builders::tile::build_tile;
     use crate::ecs::components::network::NetworkData;
     use crate::ecs::components::task::{Task, TaskList, TaskType};
-    use crate::ecs::systems::inventory_system::get_item_count;
     use crate::ecs::systems::task::any_finished_task;
     use crate::ecs::{self, storage};
     use crate::server::Server;
@@ -177,7 +176,7 @@ mod tests {
             .world
             .get_component_mut::<Inventory>(tile_entity)
             .unwrap()
-            .add_item(Resource::Food);
+            .add_item(Resource::Food, 1);
 
         let task = Task {
             task_type: TaskType::Take(Resource::Food),
@@ -197,12 +196,12 @@ mod tests {
         assert_eq!(task_list.vector.len(), 0);
 
         let inhabitant_invetory = server.world.get_component::<Inventory>(inhabitant).unwrap();
-        assert_eq!(get_item_count(&inhabitant_invetory, Resource::Food), 1);
+        assert_eq!(inhabitant_invetory.get_item_count(Resource::Food), 1);
         let tile_inventory = server
             .world
             .get_component::<Inventory>(tile_entity)
             .unwrap();
-        assert_eq!(get_item_count(&tile_inventory, Resource::Food), 0);
+        assert_eq!(tile_inventory.get_item_count(Resource::Food), 0);
 
         let network_data = server
             .world
@@ -245,7 +244,7 @@ mod tests {
             .world
             .get_component_mut::<Inventory>(inhabitant)
             .unwrap()
-            .add_item(Resource::Food);
+            .add_item(Resource::Food, 1);
 
         let task = Task {
             task_type: TaskType::Set(Resource::Food),
@@ -265,11 +264,11 @@ mod tests {
         assert_eq!(task_list.vector.len(), 0);
 
         let inhabitant_invetory = server.world.get_component::<Inventory>(inhabitant).unwrap();
-        assert_eq!(get_item_count(&inhabitant_invetory, Resource::Food), 0);
+        assert_eq!(inhabitant_invetory.get_item_count(Resource::Food), 0);
         let tile_inventory = server
             .world
             .get_component::<Inventory>(tile_entity)
             .unwrap();
-        assert_eq!(get_item_count(&tile_inventory, Resource::Food), 1);
+        assert_eq!(tile_inventory.get_item_count(Resource::Food), 1);
     }
 }

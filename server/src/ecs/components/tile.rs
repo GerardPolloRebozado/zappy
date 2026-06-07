@@ -1,12 +1,9 @@
 use crate::{
     ecs::{
-        components::inventory::Inventory,
+        components::{inventory::Inventory, position::Position},
         storage::{Entity, World},
     },
     game::Resource,
-use crate::ecs::{
-    components::position::Position,
-    storage::{Entity, World},
 };
 
 /// Marker component to identify a Tile entity.
@@ -52,6 +49,8 @@ impl Tile {
         let tile_inventory = world.get_component_mut::<Inventory>(tile).unwrap();
         tile_inventory.remove_item(resource, 1);
         world.resources_amount.remove_item(resource, 1);
+    }
+
     /// Finds a tile entity at the given position in the world and returns it if found
     pub fn find_tile_by_pos(position: &Position, world: &mut World) -> Option<Entity> {
         let tile_storage = world.get_storage::<Tile>()?;

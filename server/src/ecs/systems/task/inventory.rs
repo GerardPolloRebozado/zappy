@@ -1,7 +1,6 @@
 use crate::ecs::{
     components::inventory::Inventory,
     storage::{Entity, World},
-    systems::inventory_system::format_inventory_response,
 };
 
 /// Runs the AI `Inventory` task for `entity`.
