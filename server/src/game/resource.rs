@@ -56,4 +56,16 @@ impl Resource {
     pub fn get_resource_max_quantity(&self, map_size: MapSize) -> u64 {
         (map_size.height as f32 * map_size.width as f32 * self.get_density()).ceil() as u64
     }
+    pub fn new_from_str(s: &str) -> Option<Resource> {
+        match s {
+            "food" => Some(Resource::Food),
+            "linemate" => Some(Resource::Linemate),
+            "deraumere" => Some(Resource::Deraumere),
+            "sibur" => Some(Resource::Sibur),
+            "mendiane" => Some(Resource::Mendiane),
+            "phiras" => Some(Resource::Phiras),
+            "thystame" => Some(Resource::Thystame),
+            _ => None,
+        }
+    }
 }

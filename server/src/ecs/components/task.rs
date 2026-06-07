@@ -4,7 +4,7 @@
 //! string until the 7/f action completes and [`crate::ecs::systems::task`] builds
 //! a [`crate::protocol::ServerEvent::Message`] for fan-out.
 
-use crate::game::Date;
+use crate::game::{Date, Resource};
 
 #[derive(Clone)]
 pub enum TaskType {
@@ -17,8 +17,9 @@ pub enum TaskType {
     BroadcastText(String),
     Fork,
     Eject,
-    Take,
-    Drop,
+    Take(Resource),
+    ///< Get the resource type and the entity of the tile
+    Set(Resource),
     Incantation,
     Death,
 }
@@ -35,8 +36,8 @@ impl TaskType {
             TaskType::BroadcastText(_) => 7,
             TaskType::Fork => 42,
             TaskType::Eject => 7,
-            TaskType::Take => 7,
-            TaskType::Drop => 7,
+            TaskType::Take(_) => 7,
+            TaskType::Set(_) => 7,
             TaskType::Incantation => 300,
             TaskType::Death => 0,
         }

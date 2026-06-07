@@ -39,14 +39,20 @@ use crate::{
             team::Team,
         },
         storage::{Entity, World},
+        systems::task::take_set::take_task,
     },
     game::{Date, Inhabitant},
-    protocol::{Response, ResponseCode, ServerEvent, StatusCode},
+    protocol::{
+        Response, ResponseCode,
+        ServerEvent::{self},
+        StatusCode::{self},
+    },
     utils::orientation::RelativeOrientation,
 };
 
 pub mod inventory;
 pub mod look;
+pub mod take_set;
 
 /// Advances queued tasks, applies effects when a timer elapses, starts the next
 /// task's timer, and handles command replies and broadcast events.
@@ -228,12 +234,15 @@ fn execute_task(
             }
             (ok, event)
         }
+        TaskType::Take(resource) => take_task(world, entity, resource),
+        TaskType::Set(resource) => take_set::set_task(world, entity, resource),
         _ => (ok, None),
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use crate::ecs::components::inventory::Inventory;
     use crate::ecs::components::level::Level;
     use crate::ecs::components::life::Life;
