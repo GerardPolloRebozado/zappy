@@ -25,6 +25,7 @@ void AssetManager::unloadAll() {
     _models.clear();
     _textures.clear();
     _shaders.clear();
+    CloseWindow();
 }
 
 raylib::Model& AssetManager::getModel(const std::string& name) {
