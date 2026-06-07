@@ -50,15 +50,13 @@ void RenderSystem::render(World& w) {
     _renderResources(w);
     _renderInhabitants(w);
     _camera.EndMode();
-
-    _renderUI(w);
 }
 
 void RenderSystem::_lazyLoadAssets() {
     static bool loaded = false;
     if (!loaded) {
         AssetManager::getInstance().loadAll();
-        HideCursor();
+        raylib::Window::HideCursor();
         loaded = true;
     }
 }
@@ -68,36 +66,36 @@ void RenderSystem::_handleInput(float dt) {
     float rotateSpeed = 2.0f * dt;
 
     raylib::Vector3 forward = (raylib::Vector3)_camera.target - (raylib::Vector3)_camera.position;
-    raylib::Vector3 right = Vector3Normalize(Vector3CrossProduct(forward, _camera.up));
+    raylib::Vector3 right = forward.CrossProduct(_camera.up).Normalize();
 
     // Yaw Rotation (Q/E)
-    if (IsKeyDown(KEY_Q)) {
+    if (raylib::Keyboard::IsKeyDown(KEY_Q)) {
         raylib::Vector3 relPos =
             (raylib::Vector3)_camera.position - (raylib::Vector3)_camera.target;
-        relPos = Vector3RotateByAxisAngle(relPos, {0, 1, 0}, rotateSpeed);
+        relPos = ::Vector3RotateByAxisAngle(relPos, {0, 1, 0}, rotateSpeed);
         _camera.position = (raylib::Vector3)_camera.target + relPos;
     }
-    if (IsKeyDown(KEY_E)) {
+    if (raylib::Keyboard::IsKeyDown(KEY_E)) {
         raylib::Vector3 relPos =
             (raylib::Vector3)_camera.position - (raylib::Vector3)_camera.target;
-        relPos = Vector3RotateByAxisAngle(relPos, {0, 1, 0}, -rotateSpeed);
+        relPos = ::Vector3RotateByAxisAngle(relPos, {0, 1, 0}, -rotateSpeed);
         _camera.position = (raylib::Vector3)_camera.target + relPos;
     }
 
     // Pitch Rotation (R/F)
-    if (IsKeyDown(KEY_R)) {
+    if (raylib::Keyboard::IsKeyDown(KEY_R)) {
         raylib::Vector3 relPos =
             (raylib::Vector3)_camera.position - (raylib::Vector3)_camera.target;
-        raylib::Vector3 nextRelPos = Vector3RotateByAxisAngle(relPos, right, -rotateSpeed);
-        if (Vector3Angle(nextRelPos, {0, 1, 0}) > 0.1f) {
+        raylib::Vector3 nextRelPos = ::Vector3RotateByAxisAngle(relPos, right, -rotateSpeed);
+        if (::Vector3Angle(nextRelPos, {0, 1, 0}) > 0.1f) {
             _camera.position = (raylib::Vector3)_camera.target + nextRelPos;
         }
     }
-    if (IsKeyDown(KEY_F)) {
+    if (raylib::Keyboard::IsKeyDown(KEY_F)) {
         raylib::Vector3 relPos =
             (raylib::Vector3)_camera.position - (raylib::Vector3)_camera.target;
-        raylib::Vector3 nextRelPos = Vector3RotateByAxisAngle(relPos, right, rotateSpeed);
-        if (Vector3Angle(nextRelPos, {0, 1, 0}) < 1.5f) {
+        raylib::Vector3 nextRelPos = ::Vector3RotateByAxisAngle(relPos, right, rotateSpeed);
+        if (::Vector3Angle(nextRelPos, {0, 1, 0}) < 1.5f) {
             _camera.position = (raylib::Vector3)_camera.target + nextRelPos;
         }
     }
@@ -105,35 +103,35 @@ void RenderSystem::_handleInput(float dt) {
     // Panning (WASD)
     forward = (raylib::Vector3)_camera.target - (raylib::Vector3)_camera.position;
     forward.y = 0;
-    forward = Vector3Normalize(forward);
-    right = Vector3CrossProduct(forward, _camera.up);
+    forward = forward.Normalize();
+    right = forward.CrossProduct(_camera.up);
 
-    if (IsKeyDown(KEY_W)) {
+    if (raylib::Keyboard::IsKeyDown(KEY_W)) {
         _camera.position = (raylib::Vector3)_camera.position + forward * moveSpeed;
         _camera.target = (raylib::Vector3)_camera.target + forward * moveSpeed;
     }
-    if (IsKeyDown(KEY_S)) {
+    if (raylib::Keyboard::IsKeyDown(KEY_S)) {
         _camera.position = (raylib::Vector3)_camera.position - forward * moveSpeed;
         _camera.target = (raylib::Vector3)_camera.target - forward * moveSpeed;
     }
-    if (IsKeyDown(KEY_A)) {
+    if (raylib::Keyboard::IsKeyDown(KEY_A)) {
         _camera.position = (raylib::Vector3)_camera.position - right * moveSpeed;
         _camera.target = (raylib::Vector3)_camera.target - right * moveSpeed;
     }
-    if (IsKeyDown(KEY_D)) {
+    if (raylib::Keyboard::IsKeyDown(KEY_D)) {
         _camera.position = (raylib::Vector3)_camera.position + right * moveSpeed;
         _camera.target = (raylib::Vector3)_camera.target + right * moveSpeed;
     }
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+    if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT)) {
         _selectedX = _hoveredX;
         _selectedZ = _hoveredZ;
     }
 
     // Zoom (Mouse Wheel)
-    float wheel = GetMouseWheelMove();
+    float wheel = raylib::Mouse::GetWheelMove();
     if (wheel != 0) {
-        Ray ray = GetMouseRay(GetMousePosition(), _camera);
+        raylib::Ray ray = _camera.GetMouseRay(raylib::Mouse::GetPosition());
         if (ray.direction.y != 0) {
             float t = (1.5f - ray.position.y) / ray.direction.y;
             if (t > 0) {
@@ -141,8 +139,7 @@ void RenderSystem::_handleInput(float dt) {
                     (raylib::Vector3)ray.position + (raylib::Vector3)ray.direction * t;
                 raylib::Vector3 zoomVec =
                     (mousePoint - (raylib::Vector3)_camera.position) * (wheel * 0.1f);
-                float nextDist =
-                    Vector3Distance((raylib::Vector3)_camera.position + zoomVec, mousePoint);
+                float nextDist = ((raylib::Vector3)_camera.position + zoomVec).Distance(mousePoint);
                 if (nextDist > 2.0f && nextDist < 100.0f) {
                     _camera.position = (raylib::Vector3)_camera.position + zoomVec;
                     _camera.target = (raylib::Vector3)_camera.target + zoomVec;
@@ -153,7 +150,7 @@ void RenderSystem::_handleInput(float dt) {
 }
 
 void RenderSystem::_updateHoverState() {
-    Ray mouseRay = GetMouseRay(GetMousePosition(), _camera);
+    raylib::Ray mouseRay = _camera.GetMouseRay(raylib::Mouse::GetPosition());
     _hoveredX = InvalidTileCoord;
     _hoveredZ = InvalidTileCoord;
     if (mouseRay.direction.y != 0) {
@@ -185,7 +182,7 @@ void RenderSystem::_renderTerrain(World& w) {
                 continue;
             }
 
-            raylib::Vector3 vpos(pos->x, 1.5f, pos->y);
+            raylib::Vector3 vpos((float)pos->x, 1.5f, (float)pos->y);
 
             raylib::Color color = GRAY;
             switch (type->current_type) {
@@ -217,7 +214,7 @@ void RenderSystem::_renderTerrain(World& w) {
                     color = raylib::Color::SkyBlue();
                     break;
             }
-            DrawCube(vpos, 1.0f, 1.0f, 1.0f, color);
+            vpos.DrawCube(1.0f, 1.0f, 1.0f, color);
 
             if (pos->x == _hoveredX && pos->y == _hoveredZ) {
                 _renderHoverEffect(pos->x, pos->y);
@@ -311,25 +308,29 @@ void RenderSystem::_renderResources(World& w) {
             float startZ = (float)pos->y - 0.3f;
             float size = 0.12f;
 
-            // Use DrawCube instead of DrawSphere for resources - much faster
+            // Use Vector3::DrawCube instead of DrawCube for resources - much faster
             if (inv->linemate > 0) {
-                DrawCube({startX, yBase + size / 2, startZ}, size, size, size, WHITE);
+                raylib::Vector3(startX, yBase + size / 2, startZ).DrawCube(size, size, size, WHITE);
             }
             if (inv->deraumere > 0) {
-                DrawCube({startX + 0.2f, yBase + size / 2, startZ}, size, size, size, SKYBLUE);
+                raylib::Vector3(startX + 0.2f, yBase + size / 2, startZ)
+                    .DrawCube(size, size, size, SKYBLUE);
             }
             if (inv->sibur > 0) {
-                DrawCube({startX + 0.4f, yBase + size / 2, startZ}, size, size, size, DARKBLUE);
+                raylib::Vector3(startX + 0.4f, yBase + size / 2, startZ)
+                    .DrawCube(size, size, size, DARKBLUE);
             }
             if (inv->mendiane > 0) {
-                DrawCube({startX, yBase + size / 2, startZ + 0.2f}, size, size, size, PINK);
+                raylib::Vector3(startX, yBase + size / 2, startZ + 0.2f)
+                    .DrawCube(size, size, size, PINK);
             }
             if (inv->phiras > 0) {
-                DrawCube({startX + 0.2f, yBase + size / 2, startZ + 0.2f}, size, size, size,
-                         DARKPURPLE);
+                raylib::Vector3(startX + 0.2f, yBase + size / 2, startZ + 0.2f)
+                    .DrawCube(size, size, size, DARKPURPLE);
             }
             if (inv->thystame > 0) {
-                DrawCube({startX + 0.4f, yBase + size / 2, startZ + 0.2f}, size, size, size, GOLD);
+                raylib::Vector3(startX + 0.4f, yBase + size / 2, startZ + 0.2f)
+                    .DrawCube(size, size, size, GOLD);
             }
         }
     }
@@ -345,105 +346,10 @@ void RenderSystem::_renderHoverEffect(int x, int z) {
     float wT = 0.05f;
     float yB = 2.0f;
 
-    DrawCube({(float)x, yB + wH / 2, (float)z + 0.5f}, 1.0f + wT, wH, wT, hCol);
-    DrawCube({(float)x, yB + wH / 2, (float)z - 0.5f}, 1.0f + wT, wH, wT, hCol);
-    DrawCube({(float)x + 0.5f, yB + wH / 2, (float)z}, wT, wH, 1.0f + wT, hCol);
-    DrawCube({(float)x - 0.5f, yB + wH / 2, (float)z}, wT, wH, 1.0f + wT, hCol);
-}
-
-void RenderSystem::_renderUI(World& w) {
-    auto& am = AssetManager::getInstance();
-    raylib::Texture2D& tex = IsMouseButtonDown(MOUSE_BUTTON_LEFT) ? am.getTexture("mouse_pressed")
-                                                                  : am.getTexture("mouse");
-
-    if (tex.id != 0) {
-        DrawTextureEx(tex, {(float)GetMouseX(), (float)GetMouseY()}, 0.0f, 3.0f, WHITE);
-    }
-
-    // Basic HUD for selected tile
-    if (_selectedX != InvalidTileCoord) {
-        std::string info =
-            "Tile [" + std::to_string(_selectedX) + ", " + std::to_string(_selectedZ) + "]";
-        DrawRectangle(10, 50, 240, 350, Fade(DARKGRAY, 0.85f));
-        DrawRectangleLines(10, 50, 240, 350, GOLD);
-        DrawText(info.c_str(), 25, 65, 20, GOLD);
-
-        _renderTileDetails(w);
-    }
-}
-
-// Helper to find tile entity and render its specific details
-void RenderSystem::_renderTileDetails(World& w) {
-    if (_selectedX == InvalidTileCoord) {
-        return;
-    }
-
-    auto terrainStorage = w.get_storage<TerrainType>();
-    auto orientationStorage = w.get_storage<Orientation>();
-
-    std::shared_ptr<Inventory> inv = nullptr;
-    if (terrainStorage) {
-        for (auto const& [entity, type] : *terrainStorage) {
-            auto pos = w.get_component<Position>(entity);
-            if (pos && pos->x == _selectedX && pos->y == _selectedZ) {
-                inv = w.get_component<Inventory>(entity);
-                break;
-            }
-        }
-    }
-
-    int yOffset = 100;
-    if (inv) {
-        auto drawResource = [&](const std::string& name, int count, Color col) {
-            std::string text = name + ": " + std::to_string(count);
-            DrawText(text.c_str(), 30, yOffset, 16, col);
-            yOffset += 20;
-        };
-
-        drawResource("Food", inv->food, ORANGE);
-        drawResource("Linemate", inv->linemate, WHITE);
-        drawResource("Deraumere", inv->deraumere, SKYBLUE);
-        drawResource("Sibur", inv->sibur, DARKBLUE);
-        drawResource("Mendiane", inv->mendiane, PINK);
-        drawResource("Phiras", inv->phiras, DARKPURPLE);
-        drawResource("Thystame", inv->thystame, GOLD);
-    } else {
-        DrawText("Resources: No data", 30, yOffset, 16, LIGHTGRAY);
-        yOffset += 20;
-    }
-
-    yOffset += 10;
-    DrawLine(20, yOffset, 230, yOffset, GRAY);
-    yOffset += 10;
-    DrawText("Players:", 25, yOffset, 18, GOLD);
-    yOffset += 25;
-
-    bool foundPlayer = false;
-    if (orientationStorage) {
-        for (auto const& [entity, orient] : *orientationStorage) {
-            auto pos = w.get_component<Position>(entity);
-            if (pos && pos->x == _selectedX && pos->y == _selectedZ) {
-                foundPlayer = true;
-                auto level = w.get_component<Level>(entity);
-                auto team = w.get_component<TeamName>(entity);
-
-                std::string pInfo = "Player " + std::to_string(entity.id());
-                if (level) {
-                    pInfo += " (Lvl " + std::to_string(level->level) + ")";
-                }
-                DrawText(pInfo.c_str(), 30, yOffset, 16, RED);
-                yOffset += 18;
-                if (team) {
-                    DrawText(team->team_name.c_str(), 45, yOffset, 14, RAYWHITE);
-                    yOffset += 16;
-                }
-            }
-        }
-    }
-
-    if (!foundPlayer) {
-        DrawText("None", 30, yOffset, 16, LIGHTGRAY);
-    }
+    raylib::Vector3((float)x, yB + wH / 2, (float)z + 0.5f).DrawCube(1.0f + wT, wH, wT, hCol);
+    raylib::Vector3((float)x, yB + wH / 2, (float)z - 0.5f).DrawCube(1.0f + wT, wH, wT, hCol);
+    raylib::Vector3((float)x + 0.5f, yB + wH / 2, (float)z).DrawCube(wT, wH, 1.0f + wT, hCol);
+    raylib::Vector3((float)x - 0.5f, yB + wH / 2, (float)z).DrawCube(wT, wH, 1.0f + wT, hCol);
 }
 
 } // namespace zappy
