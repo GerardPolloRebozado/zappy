@@ -39,9 +39,11 @@
 //! world.despawn(player);
 //! ```
 
+use crate::ecs::components::inventory::Inventory;
 use crate::ecs::map_size::MapSize;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
+use std::hash::Hash;
 
 /// An `Entity` is a unique identifier used to associate components
 /// It consists of an `id` and a `generation` to allow for ID reuse
@@ -79,6 +81,7 @@ pub trait ComponentStorage: Any {
 }
 
 /// a simple storage for a component using a HashMap
+#[derive(Clone)]
 pub struct ComponentMap<T> {
     /// Maps an Entity to its component data
     entries: HashMap<Entity, T>,
@@ -156,6 +159,9 @@ pub struct World {
     storages: HashMap<TypeId, Box<dyn ComponentStorage>>,
     /// curent frequency used to calculate time for instance, if f=1, ”forward” takes 7 / 1 = 7 seconds.
     pub freq: u64,
+    /// used to know when to spawn new resources
+    pub last_resource_spawn: u64,
+    pub resources_amount: Inventory,
 }
 
 impl Default for World {
@@ -179,6 +185,8 @@ impl World {
             free_ids: Vec::new(),
             storages: HashMap::new(),
             freq,
+            last_resource_spawn: 1,
+            resources_amount: Inventory::new(),
         }
     }
 
