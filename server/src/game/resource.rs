@@ -1,3 +1,12 @@
+use crate::{
+    ecs::map_size::MapSize,
+    game::Resource::{Deraumere, Food, Linemate, Mendiane, Phiras, Sibur, Thystame},
+    utils::constants::{
+        DERAUMERE_DENSITY, FOOD_DENSITY, LINEMATE_DENSITY, MENDIANE_DENSITY, PHIRAS_DENSITY,
+        SIBUR_DENSITY, THYSTAME_DENSITY,
+    },
+};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Resource {
     Food,
@@ -21,5 +30,30 @@ impl std::fmt::Display for Resource {
             Resource::Thystame => "thystame",
         };
         write!(f, "{}", name)
+    }
+}
+
+impl Resource {
+    pub fn iter() -> impl Iterator<Item = Resource> {
+        [Food, Linemate, Deraumere, Sibur, Mendiane, Phiras, Thystame]
+            .iter()
+            .copied()
+    }
+
+    pub fn get_density(&self) -> f32 {
+        match self {
+            Resource::Food => FOOD_DENSITY,
+            Resource::Linemate => LINEMATE_DENSITY,
+            Resource::Deraumere => DERAUMERE_DENSITY,
+            Resource::Sibur => SIBUR_DENSITY,
+            Resource::Mendiane => MENDIANE_DENSITY,
+            Resource::Phiras => PHIRAS_DENSITY,
+            Resource::Thystame => THYSTAME_DENSITY,
+        }
+    }
+
+    /// returns the maximum quantity of this resource that can be present on the map at once, based on the map size and resource density
+    pub fn get_resource_max_quantity(&self, map_size: MapSize) -> u64 {
+        (map_size.height as f32 * map_size.width as f32 * self.get_density()).ceil() as u64
     }
 }

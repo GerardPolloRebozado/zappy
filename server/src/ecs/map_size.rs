@@ -6,6 +6,7 @@
 use crate::ecs::storage::World;
 use crate::game::Resource;
 
+#[derive(Clone, Copy)]
 pub struct MapSize {
     pub width: u32,
     pub height: u32,
