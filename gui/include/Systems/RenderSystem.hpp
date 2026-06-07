@@ -79,6 +79,12 @@ class RenderSystem {
      */
     std::pair<int, int> getHoveredTile() const { return {_hoveredX, _hoveredZ}; }
 
+    /**
+     * @brief Returns the coordinates of the currently selected tile.
+     * @return std::pair<int, int> A pair containing the X and Z coordinates.
+     */
+    std::pair<int, int> getSelectedTile() const { return {_selectedX, _selectedZ}; }
+
   private:
     /**
      * @brief Lazily loads textures and models once the OpenGL context is ready.
@@ -121,18 +127,6 @@ class RenderSystem {
      * @param z The Z coordinate of the tile.
      */
     void _renderHoverEffect(int x, int z);
-
-    /**
-     * @brief Renders 2D UI elements, including the custom mouse cursor.
-     * @param w The world to fetch HUD data from.
-     */
-    void _renderUI(World& w);
-
-    /**
-     * @brief Renders the details of a specific tile (inventory, etc.)
-     * @param w The world to fetch tile data from.
-     */
-    void _renderTileDetails(World& w);
 
     /**
      * @brief Updates the internal state of which tile is currently under the mouse cursor.

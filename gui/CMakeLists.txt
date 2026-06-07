@@ -39,10 +39,28 @@ set(CORE_SOURCES
         src/Network/TcpSocket.cpp
         src/Systems/RenderSystem.cpp
         src/Graphics/AssetManager.cpp
+        src/UI/AUIComponent.cpp
+        src/UI/UIManager.cpp
+        src/UI/UIButton.cpp
+        src/UI/UIInput.cpp
+        src/UI/UIPanel.cpp
+        src/UI/UIText.cpp
+        src/UI/UIHudPanel.cpp
+        src/UI/UIScoreboardPanel.cpp
         src/Core.cpp
         include/Components/ComponentShared.hpp
         include/Components/ComponentInhabitant.hpp
         include/Components/ComponentTile.hpp
+        include/UI/IUIComponent.hpp
+        include/UI/AUIComponent.hpp
+        include/UI/UIEvent.hpp
+        include/UI/UIManager.hpp
+        include/UI/UIButton.hpp
+        include/UI/UIInput.hpp
+        include/UI/UIPanel.hpp
+        include/UI/UIText.hpp
+        include/UI/UIHudPanel.hpp
+        include/UI/UIScoreboardPanel.hpp
         include/Systems/RenderSystem.hpp
         include/Graphics/AssetManager.hpp
         include/Core.hpp
