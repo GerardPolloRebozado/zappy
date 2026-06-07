@@ -50,8 +50,6 @@ void RenderSystem::render(World& w) {
     _renderResources(w);
     _renderInhabitants(w);
     _camera.EndMode();
-
-    _renderUI(w);
 }
 
 void RenderSystem::_lazyLoadAssets() {
@@ -349,101 +347,6 @@ void RenderSystem::_renderHoverEffect(int x, int z) {
     DrawCube({(float)x, yB + wH / 2, (float)z - 0.5f}, 1.0f + wT, wH, wT, hCol);
     DrawCube({(float)x + 0.5f, yB + wH / 2, (float)z}, wT, wH, 1.0f + wT, hCol);
     DrawCube({(float)x - 0.5f, yB + wH / 2, (float)z}, wT, wH, 1.0f + wT, hCol);
-}
-
-void RenderSystem::_renderUI(World& w) {
-    auto& am = AssetManager::getInstance();
-    raylib::Texture2D& tex = IsMouseButtonDown(MOUSE_BUTTON_LEFT) ? am.getTexture("mouse_pressed")
-                                                                  : am.getTexture("mouse");
-
-    if (tex.id != 0) {
-        DrawTextureEx(tex, {(float)GetMouseX(), (float)GetMouseY()}, 0.0f, 3.0f, WHITE);
-    }
-
-    // Basic HUD for selected tile
-    if (_selectedX != InvalidTileCoord) {
-        std::string info =
-            "Tile [" + std::to_string(_selectedX) + ", " + std::to_string(_selectedZ) + "]";
-        DrawRectangle(10, 50, 240, 350, Fade(DARKGRAY, 0.85f));
-        DrawRectangleLines(10, 50, 240, 350, GOLD);
-        DrawText(info.c_str(), 25, 65, 20, GOLD);
-
-        _renderTileDetails(w);
-    }
-}
-
-// Helper to find tile entity and render its specific details
-void RenderSystem::_renderTileDetails(World& w) {
-    if (_selectedX == InvalidTileCoord) {
-        return;
-    }
-
-    auto terrainStorage = w.get_storage<TerrainType>();
-    auto orientationStorage = w.get_storage<Orientation>();
-
-    std::shared_ptr<Inventory> inv = nullptr;
-    if (terrainStorage) {
-        for (auto const& [entity, type] : *terrainStorage) {
-            auto pos = w.get_component<Position>(entity);
-            if (pos && pos->x == _selectedX && pos->y == _selectedZ) {
-                inv = w.get_component<Inventory>(entity);
-                break;
-            }
-        }
-    }
-
-    int yOffset = 100;
-    if (inv) {
-        auto drawResource = [&](const std::string& name, int count, Color col) {
-            std::string text = name + ": " + std::to_string(count);
-            DrawText(text.c_str(), 30, yOffset, 16, col);
-            yOffset += 20;
-        };
-
-        drawResource("Food", inv->food, ORANGE);
-        drawResource("Linemate", inv->linemate, WHITE);
-        drawResource("Deraumere", inv->deraumere, SKYBLUE);
-        drawResource("Sibur", inv->sibur, DARKBLUE);
-        drawResource("Mendiane", inv->mendiane, PINK);
-        drawResource("Phiras", inv->phiras, DARKPURPLE);
-        drawResource("Thystame", inv->thystame, GOLD);
-    } else {
-        DrawText("Resources: No data", 30, yOffset, 16, LIGHTGRAY);
-        yOffset += 20;
-    }
-
-    yOffset += 10;
-    DrawLine(20, yOffset, 230, yOffset, GRAY);
-    yOffset += 10;
-    DrawText("Players:", 25, yOffset, 18, GOLD);
-    yOffset += 25;
-
-    bool foundPlayer = false;
-    if (orientationStorage) {
-        for (auto const& [entity, orient] : *orientationStorage) {
-            auto pos = w.get_component<Position>(entity);
-            if (pos && pos->x == _selectedX && pos->y == _selectedZ) {
-                foundPlayer = true;
-                auto level = w.get_component<Level>(entity);
-                auto team = w.get_component<TeamName>(entity);
-
-                std::string pInfo = "Player " + std::to_string(entity.id());
-                if (level) {
-                    pInfo += " (Lvl " + std::to_string(level->level) + ")";
-                }
-                DrawText(pInfo.c_str(), 30, yOffset, 16, RED);
-                yOffset += 18;
-                if (team) {
-                    DrawText(team->team_name.c_str(), 45, yOffset, 14, RAYWHITE);
-                    yOffset += 16;
-                }
-            }
-        }
-    }
-
-    if (!foundPlayer) {
-        DrawText("None", 30, yOffset, 16, LIGHTGRAY);
-    }
 }
 
 } // namespace zappy
