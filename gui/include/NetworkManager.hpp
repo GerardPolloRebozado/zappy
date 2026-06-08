@@ -139,12 +139,6 @@ class NetworkManager {
      * @param message The message received during the handshake phase.
      */
     void _processHandshake(const std::string& message);
-
-    /** @name Protocol Handlers */
-    /** @{ */
-    /** @brief Handles new player connection (pnw). */
-    void _handlePlayerConnection(const std::string& args, World& world);
-    /** @} */
 };
 } // namespace zappy
 

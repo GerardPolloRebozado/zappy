@@ -61,6 +61,19 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
             }
         }
 
+        Command::Sgt => {
+            let freq = server.world.freq;
+            let network_data = server.world.get_component_mut::<NetworkData>(entity);
+            if network_data.is_none() {
+                return;
+            }
+            let network_data = network_data.unwrap();
+            network_data.pending_responses.push(Response::new(
+                ResponseCode::Status(StatusCode::Ok),
+                Some(format!("sgt {}", freq)),
+            ));
+        }
+
         Command::Unknown(_) => {
             let network_data = server.world.get_component_mut::<NetworkData>(entity);
             if network_data.is_none() {
