@@ -89,7 +89,7 @@ impl Default for Config {
             port: 8080,
             width: 100,
             height: 100,
-            names: vec!["team".to_string()],
+            names: vec!["TeamA".to_string(), "TeamB".to_string()],
             clients_nb: 1,
             freq: 100,
         }
