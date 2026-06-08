@@ -139,7 +139,7 @@ mod tests {
             team_names: vec!["existing_team".to_string()],
         };
 
-        let (mock_socket, output) = crate::ecs::components::network::MockSocket::new(vec![]);
+        let (mock_socket, output) = network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
         let inhabitant = build_inhabitant(
             0,
