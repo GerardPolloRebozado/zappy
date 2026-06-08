@@ -15,6 +15,10 @@ COMMANDS_MAP = {
 
 
 def print_manual_commands():
+    """
+    Prints the list of commands
+    :return: N/A
+    """
     print("\n--- Manual Mode Commands ---")
     for num, cmd in COMMANDS_MAP.items():
         if cmd in ["Broadcast", "Take", "Set"]:
