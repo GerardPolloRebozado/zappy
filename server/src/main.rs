@@ -9,7 +9,7 @@ use zappy_server::utils::parse_server_args;
 fn main() -> io::Result<()> {
     install_sigint_handler();
     Builder::from_default_env()
-        .filter_level(LevelFilter::Info)
+        .filter_level(LevelFilter::Trace)
         .init();
 
     let args: Vec<String> = std::env::args().collect();
