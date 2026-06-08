@@ -1,5 +1,6 @@
 import subprocess
 import time
+import socket
 
 
 class ServerManager:
@@ -8,7 +9,7 @@ class ServerManager:
         port=4242,
         width=10,
         height=10,
-        teams=["Team1"],
+        teams=["TeamAI"],
         binary_path="./zappy_server",
     ):
         self.port = port
@@ -18,7 +19,18 @@ class ServerManager:
         self.binary_path = binary_path
         self.process = None
 
+    def get_free_port(self, current_port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("", current_port))
+                return current_port
+            except OSError:
+                s.bind(("", 0))
+                return s.getsockname()[1]
+
     def start(self):
+        self.port = self.get_free_port(self.port)
+
         cmd = [
             self.binary_path,
             "-p",
