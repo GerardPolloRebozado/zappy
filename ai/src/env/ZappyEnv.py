@@ -102,21 +102,55 @@ class ZappyEnv(gym.Env):
     def _get_real_observation(self):
         obs = np.zeros(657, dtype=np.int32)
 
+        resources = [
+            "player",
+            "food",
+            "linemate",
+            "deraumere",
+            "sibur",
+            "mendiane",
+            "phiras",
+            "thystame",
+        ]
         inv = self.client.inventory()
-        res = inv.split(" ")
-        i = 0
-        for item in res:
-            obs[i] = int(item)
-            i += 1
-        if inv and type(inv) is not str:
-            pass
+        if isinstance(inv, str) and inv.startswith("[") and inv.endswith("]"):
+            items = inv.strip("[]").split(",")
+            for item in items:
+                parts = item.strip().split(" ")
+                if len(parts) == 2:
+                    name = parts[0]
+                    quantity = int(parts[1])
+                    if name in resources:
+                        idx = resources.index(name) - 1
+                        if idx >= 0:
+                            obs[idx] = quantity
+            obs[656] = obs[0]
+
+        elif hasattr(inv, "food"):
+            obs[0] = inv.food
+            obs[1] = inv.linemate
+            obs[2] = getattr(inv, "deraumere", 0)
+            obs[3] = getattr(inv, "sibur", 0)
+            obs[4] = getattr(inv, "mendiane", 0)
+            obs[5] = getattr(inv, "phiras", 0)
+            obs[6] = getattr(inv, "thystame", 0)
+            obs[656] = inv.food
 
         vision_list = self.client.look()
-        if vision_list and type(vision_list) is list:
-            pass
+        if isinstance(vision_list, list):
+            base_index = 7
 
+            for i, tile_str in enumerate(vision_list):
+                if i >= 81:
+                    break
+
+                entities = tile_str.strip().split(" ")
+
+                for entity in entities:
+                    if entity in resources:
+                        offset_resource = resources.index(entity)
+                        obs[base_index + (i * 8) + offset_resource] += 1
         obs[655] = self.client.level
-        obs[656] = inv.food
 
         return obs
 
