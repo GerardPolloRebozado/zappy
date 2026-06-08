@@ -39,7 +39,7 @@ class Core {
     /**
      * @brief Destroy the Core object.
      */
-    ~Core() = default;
+    ~Core();
 
     /**
      * @brief Starts the application and enters the main loop.
@@ -70,14 +70,15 @@ class Core {
     void _clearMenuUI();
     void _connectToServer(const std::string& host, int port);
 
+    std::unique_ptr<raylib::Window> _window; ///< The Raylib window instance.
     World _world;                            ///< The ECS world instance.
     NetworkManager _network;                 ///< Handles server communication.
     RenderSystem _renderSystem;              ///< Handles world and UI rendering.
     UIManager _uiManager;                    ///< Handles OOP UI.
-    std::unique_ptr<raylib::Window> _window; ///< The Raylib window instance.
     int _port;                               ///< Server port.
     std::string _host;                       ///< Server host.
     AppState _appState = AppState::MENU;     ///< Current application state.
+    bool _shouldClose = false;               ///< Flag to request application shutdown.
 };
 
 } // namespace zappy
