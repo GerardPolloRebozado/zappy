@@ -8,6 +8,8 @@
 #define ZAPPY_COMMANDRESOURCEDROP_HPP
 
 #include "AResourceCommand.hpp"
+#include "Logging/Logger.hpp"
+#include <string>
 
 namespace zappy {
 class CommandResourceDrop : public AResourceCommand {
@@ -30,8 +32,8 @@ class CommandResourceDrop : public AResourceCommand {
         updateInventory(playerInv.get(), resourceId, -1);
         updateTileInventory(playerPos, resourceId, 1, world);
 
-        std::cout << "Protocol: Player #" << playerId << " dropped resource " << resourceId
-                  << std::endl;
+        ZAPPY_LOG_I("Protocol: Player #" + std::to_string(playerId) + " dropped resource " +
+                    std::to_string(resourceId));
     }
 };
 } // namespace zappy

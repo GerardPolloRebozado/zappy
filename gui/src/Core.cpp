@@ -16,7 +16,10 @@
 #include "UI/UIPanel.hpp"
 #include "UI/UIScoreboardPanel.hpp"
 #include "UI/UIText.hpp"
-#include <iostream>
+#include "CoreErrors.hpp"
+#include "Logging/Logger.hpp"
+#include "Network/NetworkErrors.hpp"
+#include "errors/IError.hpp"
 
 namespace zappy {
 
@@ -174,11 +177,11 @@ void Core::_setupSettingsMenu() {
 
     _uiManager.addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 100, (float)cy + 80, 90, 40}, "-",
-        []() { std::cout << "Volume Down" << std::endl; }, 1));
+        []() { ZAPPY_LOG_D("Volume Down"); }, 1));
 
     _uiManager.addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx + 10, (float)cy + 80, 90, 40}, "+",
-        []() { std::cout << "Volume Up" << std::endl; }, 1));
+        []() { ZAPPY_LOG_D("Volume Up"); }, 1));
 
     // Back Button
     _uiManager.addComponent(std::make_shared<UIButton>(
@@ -213,9 +216,9 @@ void Core::_showConnectionOverlay() {
             std::string h = hostInput->getText();
             int p = 0;
             try {
-                p = std::stoi(portInput->getText());
-            } catch (...) {
-                p = 0;
+                p = parsePort(portInput->getText());
+            } catch (const IError& e) {
+                ZAPPY_LOG_E(e.what());
             }
             this->_connectToServer(h, p);
         },
@@ -224,14 +227,15 @@ void Core::_showConnectionOverlay() {
 
 void Core::_connectToServer(const std::string& host, int port) {
     if (_network.connect(host, port)) {
-        std::cout << "Core: Connected to " << host << ":" << port << std::endl;
+        ZAPPY_LOG_I("Core: Connected to " + host + ":" + std::to_string(port));
         _appState = AppState::PLAYING;
         _clearMenuUI();
         _setupTestingData();
         _setupGameUI();
         _renderSystem.centerCamera(10, 10);
     } else {
-        std::cerr << "Core: Failed to connect to " << host << ":" << port << std::endl;
+        ZAPPY_LOG_E(
+            ErrorNetwork("Failed to connect to " + host + ":" + std::to_string(port)).what());
         int cx = _window->GetWidth() / 2;
         int cy = _window->GetHeight() / 2;
         _uiManager.addComponent(

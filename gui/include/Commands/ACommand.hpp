@@ -7,7 +7,6 @@
 #ifndef ZAPPY_ACOMMAND_HPP
 #define ZAPPY_ACOMMAND_HPP
 #include "ECS/World.hpp"
-#include <iostream>
 #include <sstream>
 
 namespace zappy {

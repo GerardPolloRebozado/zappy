@@ -15,8 +15,10 @@
 #include "ECS/ComponentMap.hpp"
 #include "ECS/World.hpp"
 
+#include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 namespace zappy {
 class CommandPlayerPosition : public ACommand {
@@ -37,6 +39,7 @@ class CommandPlayerPosition : public ACommand {
         int playerId, x, y, orientation;
 
         if (!(iss >> playerId >> x >> y >> orientation)) {
+            ZAPPY_LOG_E("Protocol: failed to parse player position args: " + args);
             return;
         }
         auto positionsStorage = world.get_storage<Position>();

@@ -8,7 +8,8 @@
 #define ZAPPY_COMMANDUNKNOWN_HPP
 
 #include "ACommand.hpp"
-#include <iostream>
+#include "Logging/Logger.hpp"
+#include <string>
 
 namespace zappy {
 class CommandUnknown : public ACommand {
@@ -17,7 +18,7 @@ class CommandUnknown : public ACommand {
     ~CommandUnknown() override = default;
 
     void execute(const std::string& args, World& world) override {
-        std::cout << "Protocol Error: Unknown command or bad parameters received" << std::endl;
+        ZAPPY_LOG_E("Protocol Error: Unknown command or bad parameters received");
     }
 };
 } // namespace zappy

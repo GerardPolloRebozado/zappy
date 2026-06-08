@@ -11,8 +11,10 @@
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
+#include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 namespace zappy {
 class CommandEggLayed : public ACommand {
@@ -33,6 +35,7 @@ class CommandEggLayed : public ACommand {
         int eggId, playerId, x, y;
 
         if (!(iss >> eggId >> playerId >> x >> y)) {
+            ZAPPY_LOG_E("Protocol: failed to parse egg layed args: " + args);
             return;
         }
 
@@ -41,8 +44,9 @@ class CommandEggLayed : public ACommand {
         world.add_component<Egg>(egg, {eggId});
         world.add_component<EggTag>(egg, EggTag{});
 
-        std::cout << "Protocol: Egg #" << eggId << " layed by player #" << playerId << " at (" << x
-                  << ", " << y << ")" << std::endl;
+        ZAPPY_LOG_I("Protocol: Egg #" + std::to_string(eggId) + " layed by player #" +
+                    std::to_string(playerId) + " at (" + std::to_string(x) + ", " +
+                    std::to_string(y) + ")");
     }
 };
 } // namespace zappy
