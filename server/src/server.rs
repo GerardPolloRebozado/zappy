@@ -3,16 +3,15 @@
 pub mod commands;
 pub mod signal;
 
-use crate::ecs::builders::inhabitants::build_inhabitant;
 use crate::ecs::components::network::NetworkData;
 use crate::ecs::components::task::TaskType;
+use crate::ecs::components::team::Team;
 use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::network::network_system;
 use crate::ecs::systems::run::run_systems;
 use crate::game::*;
 use crate::protocol::{Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::utils::Config;
-use crate::utils::orientation;
 use log::info;
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
@@ -73,13 +72,12 @@ impl Server {
             let mut socket = socket;
             let _ = socket.write_all(b"WELCOME\n");
             let network_data = NetworkData::new(socket);
-            build_inhabitant(
-                0,
-                0,
-                orientation::RelativeOrientation::Forward,
-                &mut self.world,
-                network_data,
-            );
+            let entity = self.world.spawn();
+            self.world
+                .add_component::<NetworkData>(entity, network_data);
+            self.world
+                .add_component::<Team>(entity, Team::WaitingForTeamName);
+            info!("New client connected: entity {}", entity.id());
         }
     }
 
