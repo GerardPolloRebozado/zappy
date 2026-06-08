@@ -50,7 +50,10 @@ void NetworkManager::update(World& world) {
     }
 }
 
-void NetworkManager::sendCommand(const std::string& cmd) { _socket.send(cmd + "\n"); }
+void NetworkManager::sendCommand(const std::string& cmd) {
+    std::cout << "Sending new command: " << cmd << std::endl;
+    _socket.send(cmd + "\n");
+}
 
 bool NetworkManager::isConnected() const { return _socket.isConnected(); }
 
@@ -103,10 +106,6 @@ void NetworkManager::_handleProtocolMessage(const std::string& message, World& w
     } else {
         std::cout << "Wrong command: " << cmd << std::endl;
     }
-}
-
-void NetworkManager::_handlePlayerConnection(const std::string& args, World& world) {
-    // Parse #n X Y O L N
 }
 
 } // namespace zappy

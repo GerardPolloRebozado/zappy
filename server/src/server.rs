@@ -182,6 +182,11 @@ impl Server {
     }
 
     pub fn handle_response(&mut self, entity: Entity, response: Response) {
+        info!(
+            "Handling response for entity {}: {:?}",
+            entity.id(),
+            response
+        );
         let network_data = self.world.get_component_mut::<NetworkData>(entity);
         if network_data.is_none() {
             return;
