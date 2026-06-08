@@ -8,7 +8,8 @@
 #define ZAPPY_COMMANDSERVERMESSAGE_HPP
 
 #include "ACommand.hpp"
-#include <iostream>
+#include "Logging/Logger.hpp"
+#include <string>
 
 namespace zappy {
 class CommandServerMessage : public ACommand {
@@ -17,7 +18,7 @@ class CommandServerMessage : public ACommand {
     ~CommandServerMessage() override = default;
 
     void execute(const std::string& args, World& world) override {
-        std::cout << "Server message: " << args << std::endl;
+        ZAPPY_LOG_I("Server message: " + args);
     }
 };
 } // namespace zappy

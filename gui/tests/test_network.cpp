@@ -1,5 +1,7 @@
 #include "Commands/ACommand.hpp"
+#include "Commands/CommandsErrors.hpp"
 #include "Commands/FactoryCommands.hpp"
+#include "errors/IError.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
 #include "Components/ComponentTile.hpp"
@@ -11,11 +13,18 @@ using namespace zappy;
 Test(FactoryCommandsTest, CreateValidCommands) {
     auto cmdMsz = FactoryCommands::createCommand("msz");
     auto cmdBct = FactoryCommands::createCommand("bct");
-    auto cmdInvalid = FactoryCommands::createCommand("comando_inventado");
 
     cr_assert_not_null(cmdMsz.get());
     cr_assert_not_null(cmdBct.get());
-    cr_assert_null(cmdInvalid.get());
+}
+
+Test(FactoryCommandsTest, CreateInvalidCommandThrows) {
+    try {
+        FactoryCommands::createCommand("comando_inventado");
+        cr_assert_fail("Expected ErrorProtocol to be thrown");
+    } catch (const IError& e) {
+        cr_assert_not_null(e.what());
+    }
 }
 
 Test(CommandMapSizeTest, ExecuteValidMapSize) {

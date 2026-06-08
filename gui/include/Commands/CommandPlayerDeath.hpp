@@ -8,8 +8,10 @@
 #define ZAPPY_COMMANDPLAYERDEATH_HPP
 
 #include "ACommand.hpp"
+#include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 namespace zappy {
 class CommandPlayerDeath : public ACommand {
@@ -25,6 +27,7 @@ class CommandPlayerDeath : public ACommand {
         int playerId;
 
         if (!(iss >> playerId)) {
+            ZAPPY_LOG_E("Protocol: failed to parse player death args: " + args);
             return;
         }
 
@@ -33,7 +36,7 @@ class CommandPlayerDeath : public ACommand {
             for (auto const& [entity, pos] : *posStorage) {
                 if (entity.id() == (uint32_t)playerId && !world.get_component<TileTag>(entity)) {
                     world.despawn(entity);
-                    std::cout << "Protocol: Player #" << playerId << " died" << std::endl;
+                    ZAPPY_LOG_I("Protocol: Player #" + std::to_string(playerId) + " died");
                     break;
                 }
             }

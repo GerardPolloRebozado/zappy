@@ -11,8 +11,10 @@
 #include "ACommand.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
+#include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 namespace zappy {
 class AResourceCommand : public ACommand {
@@ -29,6 +31,7 @@ class AResourceCommand : public ACommand {
         std::istringstream iss(cleanArgs);
         int pId, rId;
         if (!(iss >> pId >> rId)) {
+            ZAPPY_LOG_E("Protocol: failed to parse resource command args: " + args);
             return {0, 0, false};
         }
         return {pId, rId, true};

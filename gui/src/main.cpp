@@ -6,6 +6,9 @@
 */
 
 #include "Core.hpp"
+#include "CoreErrors.hpp"
+#include "Logging/Logger.hpp"
+#include "errors/IError.hpp"
 #include <iostream>
 #include <string>
 
@@ -41,14 +44,11 @@ int main(int argc, char** argv) {
     }
 
     try {
-        int port = std::stoi(portStr);
+        int port = zappy::parsePort(portStr);
         zappy::Core core(port, machine);
         core.run();
-    } catch (const std::invalid_argument&) {
-        std::cerr << "Error: Invalid port number.\n";
-        return 84;
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
+    } catch (const zappy::IError& e) {
+        ZAPPY_LOG_E(e.what());
         return 84;
     }
 

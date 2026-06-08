@@ -10,8 +10,9 @@
 #include "ACommand.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentTags.hpp"
+#include "Logging/Logger.hpp"
 #include <algorithm>
-#include <iostream>
+#include <string>
 
 namespace zappy {
 class CommandTeamNames : public ACommand {
@@ -32,6 +33,7 @@ class CommandTeamNames : public ACommand {
         teamName.erase(teamName.find_last_not_of(" \t\n\r") + 1);
 
         if (teamName.empty()) {
+            ZAPPY_LOG_E("Protocol: failed to parse team name args: " + args);
             return;
         }
 
@@ -48,7 +50,7 @@ class CommandTeamNames : public ACommand {
         world.add_component<TeamName>(teamEntity, {teamName});
         world.add_component<TeamTag>(teamEntity, TeamTag{});
 
-        std::cout << "Protocol: Team added: " << teamName << std::endl;
+        ZAPPY_LOG_I("Protocol: Team added: " + teamName);
     };
 };
 } // namespace zappy

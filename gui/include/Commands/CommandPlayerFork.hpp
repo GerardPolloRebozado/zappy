@@ -8,8 +8,10 @@
 #define ZAPPY_COMMANDPLAYERFORK_HPP
 
 #include "ACommand.hpp"
+#include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 namespace zappy {
 class CommandPlayerFork : public ACommand {
@@ -30,9 +32,10 @@ class CommandPlayerFork : public ACommand {
         int playerId;
 
         if (!(iss >> playerId)) {
+            ZAPPY_LOG_E("Protocol: failed to parse player fork args: " + args);
             return;
         }
-        std::cout << "Protocol: Player #" << playerId << " is laying an egg (forking)" << std::endl;
+        ZAPPY_LOG_I("Protocol: Player #" + std::to_string(playerId) + " is laying an egg (forking)");
     }
 };
 } // namespace zappy

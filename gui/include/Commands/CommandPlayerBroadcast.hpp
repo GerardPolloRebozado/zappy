@@ -8,8 +8,10 @@
 #define ZAPPY_COMMANDPLAYERBROADCAST_HPP
 
 #include "ACommand.hpp"
+#include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 namespace zappy {
 class CommandPlayerBroadcast : public ACommand {
@@ -20,6 +22,7 @@ class CommandPlayerBroadcast : public ACommand {
     void execute(const std::string& args, World& world) override {
         size_t firstSpace = args.find(' ');
         if (firstSpace == std::string::npos) {
+            ZAPPY_LOG_E("Protocol: failed to parse player broadcast args: " + args);
             return;
         }
 
@@ -27,9 +30,15 @@ class CommandPlayerBroadcast : public ACommand {
         std::string message = args.substr(firstSpace + 1);
 
         idPart.erase(std::remove(idPart.begin(), idPart.end(), '#'), idPart.end());
-        int playerId = std::stoi(idPart);
 
-        std::cout << "Protocol: Player #" << playerId << " broadcasted: " << message << std::endl;
+        std::istringstream iss(idPart);
+        int playerId;
+        if (!(iss >> playerId)) {
+            ZAPPY_LOG_E("Protocol: failed to parse player broadcast args: " + args);
+            return;
+        }
+
+        ZAPPY_LOG_I("Protocol: Player #" + std::to_string(playerId) + " broadcasted: " + message);
     }
 };
 } // namespace zappy

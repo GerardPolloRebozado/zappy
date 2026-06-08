@@ -10,6 +10,7 @@
 namespace zappy {
     class FactoryCommands {
     public:
+        // Throws ErrorProtocol if commandName is unknown.
         static std::unique_ptr<ACommand> createCommand(const std::string& commandName);
 
     private:
