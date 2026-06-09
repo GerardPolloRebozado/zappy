@@ -5,6 +5,11 @@
 ** NetworkErrors.hpp
 */
 
+/**
+ * @file NetworkErrors.hpp
+ * @brief Network-layer exceptions for TCP and protocol I/O failures.
+ */
+
 #ifndef ZAPPY_NETWORKERRORS_HPP
 #define ZAPPY_NETWORKERRORS_HPP
 
@@ -13,6 +18,10 @@
 
 namespace zappy {
 
+/**
+ * @class ErrorNetwork
+ * @brief Exception thrown when a network operation fails (connect, send, receive).
+ */
 class ErrorNetwork : public AError {
   public:
     explicit ErrorNetwork(const std::string& detail,

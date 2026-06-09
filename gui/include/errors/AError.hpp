@@ -5,6 +5,11 @@
 ** AError.hpp
 */
 
+/**
+ * @file AError.hpp
+ * @brief Abstract implementation of @ref zappy::IError with formatted messages.
+ */
+
 #ifndef ZAPPY_AERROR_HPP
 #define ZAPPY_AERROR_HPP
 
@@ -13,6 +18,14 @@
 
 namespace zappy {
 
+/**
+ * @class AError
+ * @brief Base class for concrete GUI errors.
+ *
+ * Stores a formatted message and severity. Domain-specific error types
+ * (network, protocol, assets, etc.) inherit from this class and pass a
+ * type prefix and detail string to the constructor.
+ */
 class AError : public IError {
   public:
     AError(const std::string& typePrefix, const std::string& detail,

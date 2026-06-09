@@ -5,6 +5,15 @@
 ** Logger.hpp
 */
 
+/**
+ * @file Logger.hpp
+ * @brief Compile-time filtered logging macros for the GUI.
+ *
+ * Provides @ref log_error, @ref log_debug and @ref log_info macros that print
+ * tagged messages to the terminal. Macros below the configured @c ZAPPY_LOG_LEVEL
+ * are stripped at compile time and produce no code.
+ */
+
 #ifndef ZAPPY_LOGGER_HPP
 #define ZAPPY_LOGGER_HPP
 
