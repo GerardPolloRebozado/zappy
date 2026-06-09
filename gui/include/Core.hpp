@@ -16,6 +16,11 @@
 #include <raylib-cpp.hpp>
 #include <string>
 
+#define LOG_LEVEL 1 2 3
+#define ERROR 1
+#define WARNING 2
+#define INFO 3
+
 namespace zappy {
 
 enum class AppState { MENU, PLAYING };

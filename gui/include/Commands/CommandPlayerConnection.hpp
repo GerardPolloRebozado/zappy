@@ -32,8 +32,8 @@ class CommandPlayerConnection : public ACommand {
         std::istringstream iss(cleanArgs);
         int playerId, x, y, orientation, level;
         std::string teamName;
-
         if (!(iss >> playerId >> x >> y >> orientation >> level >> teamName)) {
+            std::cout << "Error parsing pnw command: " << args << std::endl;
             return;
         }
 
