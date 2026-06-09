@@ -9,7 +9,9 @@
 
 #include "ACommand.hpp"
 #include "Components/ComponentShared.hpp"
+#include "Logging/Logger.hpp"
 #include <sstream>
+#include <string>
 
 namespace zappy {
 class CommandTimeUpdate : public ACommand {
@@ -27,6 +29,7 @@ class CommandTimeUpdate : public ACommand {
         int frequency;
 
         if (!(iss >> frequency)) {
+            log_error("Protocol: failed to parse time update args: " + args);
             return;
         }
 
@@ -45,7 +48,7 @@ class CommandTimeUpdate : public ACommand {
             world.add_component<TimeUnit>(timeEntity, {frequency});
         }
 
-        std::cout << "Protocol: Time unit updated to " << frequency << std::endl;
+        log_info("Protocol: Time unit updated to " + std::to_string(frequency));
     }
 };
 } // namespace zappy

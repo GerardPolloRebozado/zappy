@@ -9,8 +9,10 @@
 
 #include "ACommand.hpp"
 #include "Components/ComponentInhabitant.hpp"
+#include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 namespace zappy {
 class CommandPlayerLevel : public ACommand {
@@ -31,6 +33,7 @@ class CommandPlayerLevel : public ACommand {
         int playerId, level;
 
         if (!(iss >> playerId >> level)) {
+            log_error("Protocol: failed to parse player level args: " + args);
             return;
         }
 
@@ -42,8 +45,8 @@ class CommandPlayerLevel : public ACommand {
         for (auto& [entity, levelComp] : *levelStorage) {
             if (entity.id() == (uint32_t)playerId) {
                 levelComp->level = level;
-                std::cout << "Protocol: Player #" << playerId << " level updated to " << level
-                          << std::endl;
+                log_info("Protocol: Player #" + std::to_string(playerId) +
+                            " level updated to " + std::to_string(level));
                 break;
             }
         }
