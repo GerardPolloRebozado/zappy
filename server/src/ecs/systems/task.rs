@@ -49,7 +49,7 @@ use crate::{
     },
     utils::orientation::RelativeOrientation,
 };
-use log::debug;
+use log::{debug, info};
 
 pub mod inventory;
 pub mod look;
@@ -185,6 +185,7 @@ fn execute_task(
 
     match task_type {
         TaskType::Forward => {
+            info!("Moving forward entity: {}", entity.id());
             let map_width = world.map_size.width;
             let map_height = world.map_size.height;
             let orientation = world.get_component::<RelativeOrientation>(entity).copied();

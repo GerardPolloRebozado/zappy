@@ -24,6 +24,7 @@ pub fn queue_task(server: &mut Server, entity: Entity, task_type: TaskType) {
         return;
     }
 
+    info!("Adding new task {}", task_type);
     task_list.vector.push(Task {
         task_type,
         finish_on: TASK_NOT_STARTED,
@@ -64,6 +65,7 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
         team_name = match request.command {
             Command::Unknown(team_name) => team_name,
             _ => {
+                error!("Team not found: {}", request.command);
                 network_data
                     .pending_responses
                     .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
@@ -86,6 +88,7 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
         }
     }
 
+    // check if the team if full
     let team_members = Team::team_members(team_name.clone(), &server.world);
 
     if team_members.iter().len() >= usize::try_from(server.clients_nb).unwrap() {
@@ -98,6 +101,8 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
             .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
         return;
     }
+    //
+
     let team_component = server.world.get_component_mut::<Team>(entity).unwrap();
     *team_component = Team::AuthenticatedAI(team_name.clone());
 
@@ -226,5 +231,41 @@ mod tests {
 
         let team = server.world.get_component::<Team>(inhabitant).unwrap();
         assert_eq!(*team, Team::AuthenticatedGUI);
+    }
+
+    #[test]
+    fn test_ai_auth() {
+        let mut server = Server {
+            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
+            _users: std::collections::HashMap::new(),
+            _freq: 100,
+            game_start: 0,
+            world: crate::ecs::storage::World::new(
+                crate::ecs::map_size::MapSize {
+                    width: 10,
+                    height: 10,
+                },
+                100,
+            ),
+            clients_nb: 10,
+            team_names: vec!["existing_team".to_string()],
+        };
+
+        let (mock_socket, _) = network::MockSocket::new(vec![]);
+        let network_data = NetworkData::new(mock_socket);
+        let inhabitant = server.world.spawn();
+        server.world.add_component(inhabitant, network_data);
+        server
+            .world
+            .add_component(inhabitant, Team::WaitingForTeamName);
+
+        let request = Request {
+            command: Command::Unknown("existing_team".to_string()),
+        };
+
+        handle_auth_request(&mut server, inhabitant, request);
+
+        let team = server.world.get_component::<Team>(inhabitant).unwrap();
+        assert_eq!(*team, Team::AuthenticatedAI("existing_team".to_string()));
     }
 }
