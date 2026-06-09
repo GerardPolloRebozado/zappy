@@ -5,6 +5,11 @@
 ** CommandsErrors.hpp
 */
 
+/**
+ * @file CommandsErrors.hpp
+ * @brief Protocol command parsing exceptions.
+ */
+
 #ifndef ZAPPY_COMMANDSERRORS_HPP
 #define ZAPPY_COMMANDSERRORS_HPP
 
@@ -13,6 +18,10 @@
 
 namespace zappy {
 
+/**
+ * @class ErrorProtocol
+ * @brief Exception thrown when a server command payload cannot be parsed.
+ */
 class ErrorProtocol : public AError {
   public:
     explicit ErrorProtocol(const std::string& detail,

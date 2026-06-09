@@ -5,6 +5,11 @@
 ** GraphicsErrors.hpp
 */
 
+/**
+ * @file GraphicsErrors.hpp
+ * @brief Asset and graphics-related exceptions.
+ */
+
 #ifndef ZAPPY_GRAPHICSERRORS_HPP
 #define ZAPPY_GRAPHICSERRORS_HPP
 
@@ -13,6 +18,10 @@
 
 namespace zappy {
 
+/**
+ * @class ErrorAsset
+ * @brief Exception thrown when a model, texture or shader cannot be loaded or found.
+ */
 class ErrorAsset : public AError {
   public:
     explicit ErrorAsset(const std::string& detail,

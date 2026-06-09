@@ -5,6 +5,11 @@
 ** UtilsErrors.hpp
 */
 
+/**
+ * @file UtilsErrors.hpp
+ * @brief Utility-layer configuration exceptions.
+ */
+
 #ifndef ZAPPY_UTILSERRORS_HPP
 #define ZAPPY_UTILSERRORS_HPP
 
@@ -13,6 +18,10 @@
 
 namespace zappy {
 
+/**
+ * @class ErrorConfig
+ * @brief Exception thrown when a utility or helper receives invalid configuration input.
+ */
 class ErrorConfig : public AError {
   public:
     explicit ErrorConfig(const std::string& detail,
