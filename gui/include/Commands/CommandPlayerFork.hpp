@@ -32,10 +32,10 @@ class CommandPlayerFork : public ACommand {
         int playerId;
 
         if (!(iss >> playerId)) {
-            ZAPPY_LOG_E("Protocol: failed to parse player fork args: " + args);
+            log_error("Protocol: failed to parse player fork args: " + args);
             return;
         }
-        ZAPPY_LOG_I("Protocol: Player #" + std::to_string(playerId) + " is laying an egg (forking)");
+        log_info("Protocol: Player #" + std::to_string(playerId) + " is laying an egg (forking)");
     }
 };
 } // namespace zappy

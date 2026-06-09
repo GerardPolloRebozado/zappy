@@ -22,7 +22,7 @@ class CommandPlayerBroadcast : public ACommand {
     void execute(const std::string& args, World& world) override {
         size_t firstSpace = args.find(' ');
         if (firstSpace == std::string::npos) {
-            ZAPPY_LOG_E("Protocol: failed to parse player broadcast args: " + args);
+            log_error("Protocol: failed to parse player broadcast args: " + args);
             return;
         }
 
@@ -34,11 +34,11 @@ class CommandPlayerBroadcast : public ACommand {
         std::istringstream iss(idPart);
         int playerId;
         if (!(iss >> playerId)) {
-            ZAPPY_LOG_E("Protocol: failed to parse player broadcast args: " + args);
+            log_error("Protocol: failed to parse player broadcast args: " + args);
             return;
         }
 
-        ZAPPY_LOG_I("Protocol: Player #" + std::to_string(playerId) + " broadcasted: " + message);
+        log_info("Protocol: Player #" + std::to_string(playerId) + " broadcasted: " + message);
     }
 };
 } // namespace zappy

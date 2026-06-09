@@ -18,7 +18,7 @@ class CommandServerMessage : public ACommand {
     ~CommandServerMessage() override = default;
 
     void execute(const std::string& args, World& world) override {
-        ZAPPY_LOG_I("Server message: " + args);
+        log_info("Server message: " + args);
     }
 };
 } // namespace zappy

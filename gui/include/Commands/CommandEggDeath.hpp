@@ -33,7 +33,7 @@ class CommandEggDeath : public ACommand {
         int eggId;
 
         if (!(iss >> eggId)) {
-            ZAPPY_LOG_E("Protocol: failed to parse egg death args: " + args);
+            log_error("Protocol: failed to parse egg death args: " + args);
             return;
         }
 
@@ -42,7 +42,7 @@ class CommandEggDeath : public ACommand {
             for (auto const& [entity, egg] : *storage) {
                 if (egg->id == eggId) {
                     world.despawn(entity);
-                    ZAPPY_LOG_I("Protocol: Egg #" + std::to_string(eggId) + " died");
+                    log_info("Protocol: Egg #" + std::to_string(eggId) + " died");
                     break;
                 }
             }

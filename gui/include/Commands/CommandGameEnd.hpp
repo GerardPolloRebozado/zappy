@@ -18,7 +18,7 @@ class CommandGameEnd : public ACommand {
     ~CommandGameEnd() override = default;
 
     void execute(const std::string& args, World& world) override {
-        ZAPPY_LOG_I("Game ended. Winning team: " + args);
+        log_info("Game ended. Winning team: " + args);
     }
 };
 } // namespace zappy

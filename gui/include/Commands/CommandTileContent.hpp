@@ -29,7 +29,7 @@ class CommandTileContent : public ACommand {
         std::istringstream iss(args);
         int x, y, q0, q1, q2, q3, q4, q5, q6;
         if (!(iss >> x >> y >> q0 >> q1 >> q2 >> q3 >> q4 >> q5 >> q6)) {
-            ZAPPY_LOG_E("Protocol: failed to parse tile content args: " + args);
+            log_error("Protocol: failed to parse tile content args: " + args);
             return;
         }
 
@@ -62,7 +62,7 @@ class CommandTileContent : public ACommand {
             world.add_component<TerrainType>(tileEntity, {static_cast<TerrainType::Type>(t_type)});
         }
 
-        ZAPPY_LOG_I("Protocol: Tile (" + std::to_string(x) + ", " + std::to_string(y) +
+        log_info("Protocol: Tile (" + std::to_string(x) + ", " + std::to_string(y) +
                     ") content updated");
     }
 };

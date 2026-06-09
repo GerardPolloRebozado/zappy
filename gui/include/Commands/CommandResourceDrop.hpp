@@ -32,7 +32,7 @@ class CommandResourceDrop : public AResourceCommand {
         updateInventory(playerInv.get(), resourceId, -1);
         updateTileInventory(playerPos, resourceId, 1, world);
 
-        ZAPPY_LOG_I("Protocol: Player #" + std::to_string(playerId) + " dropped resource " +
+        log_info("Protocol: Player #" + std::to_string(playerId) + " dropped resource " +
                     std::to_string(resourceId));
     }
 };

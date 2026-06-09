@@ -27,7 +27,7 @@ class CommandMapSize : public ACommand {
         std::istringstream iss(args);
         int width, height;
         if (!(iss >> width >> height)) {
-            ZAPPY_LOG_E("Protocol: failed to parse map size args: " + args);
+            log_error("Protocol: failed to parse map size args: " + args);
             return;
         }
 
@@ -49,7 +49,7 @@ class CommandMapSize : public ACommand {
             world.add_component<Size>(mapEntity, {width, height});
             world.add_component<MapTag>(mapEntity, MapTag{});
         }
-        ZAPPY_LOG_I("Protocol: Map size update [" + args + "]");
+        log_info("Protocol: Map size update [" + args + "]");
     }
 };
 } // namespace zappy

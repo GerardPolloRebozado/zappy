@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
         zappy::Core core(port, machine);
         core.run();
     } catch (const zappy::IError& e) {
-        ZAPPY_LOG_E(e.what());
+        log_error(e.what());
         return 84;
     }
 

@@ -35,7 +35,7 @@ class CommandEggLayed : public ACommand {
         int eggId, playerId, x, y;
 
         if (!(iss >> eggId >> playerId >> x >> y)) {
-            ZAPPY_LOG_E("Protocol: failed to parse egg layed args: " + args);
+            log_error("Protocol: failed to parse egg layed args: " + args);
             return;
         }
 
@@ -44,7 +44,7 @@ class CommandEggLayed : public ACommand {
         world.add_component<Egg>(egg, {eggId});
         world.add_component<EggTag>(egg, EggTag{});
 
-        ZAPPY_LOG_I("Protocol: Egg #" + std::to_string(eggId) + " layed by player #" +
+        log_info("Protocol: Egg #" + std::to_string(eggId) + " layed by player #" +
                     std::to_string(playerId) + " at (" + std::to_string(x) + ", " +
                     std::to_string(y) + ")");
     }

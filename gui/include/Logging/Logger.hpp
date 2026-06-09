@@ -14,45 +14,39 @@
 
 namespace zappy {
 
-enum class log_level_e {
-    Error,
-    Debug,
-    Info
-};
-
-inline void logPrint(log_level_e level, const std::string& msg)
+inline void log_error(const std::string& msg)
 {
-    switch (level) {
-        case log_level_e::Error:
-            std::cerr << "[ERROR] " << msg << std::endl;
-            break;
-        case log_level_e::Debug:
-            std::cout << "[DEBUG] " << msg << std::endl;
-            break;
-        case log_level_e::Info:
-            std::cout << "[INFO] " << msg << std::endl;
-            break;
-    }
+    std::cerr << "[ERROR] " << msg << std::endl;
+}
+
+inline void log_debug(const std::string& msg)
+{
+    std::cout << "[DEBUG] " << msg << std::endl;
+}
+
+inline void log_info(const std::string& msg)
+{
+    std::cout << "[INFO] " << msg << std::endl;
 }
 
 } // namespace zappy
 
 #if ZAPPY_LOG_LEVEL >= ERROR
-#define ZAPPY_LOG_E(msg) zappy::logPrint(zappy::log_level_e::Error, (msg))
+#define log_error(msg) zappy::log_error((msg))
 #else
-#define ZAPPY_LOG_E(msg) ((void)0)
+#define log_error(msg) ((void)0)
 #endif
 
 #if ZAPPY_LOG_LEVEL >= DEBUG
-#define ZAPPY_LOG_D(msg) zappy::logPrint(zappy::log_level_e::Debug, (msg))
+#define log_debug(msg) zappy::log_debug((msg))
 #else
-#define ZAPPY_LOG_D(msg) ((void)0)
+#define log_debug(msg) ((void)0)
 #endif
 
 #if ZAPPY_LOG_LEVEL >= INFO
-#define ZAPPY_LOG_I(msg) zappy::logPrint(zappy::log_level_e::Info, (msg))
+#define log_info(msg) zappy::log_info((msg))
 #else
-#define ZAPPY_LOG_I(msg) ((void)0)
+#define log_info(msg) ((void)0)
 #endif
 
 #endif // ZAPPY_LOGGER_HPP

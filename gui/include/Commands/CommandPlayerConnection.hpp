@@ -36,7 +36,7 @@ class CommandPlayerConnection : public ACommand {
         std::string teamName;
 
         if (!(iss >> playerId >> x >> y >> orientation >> level >> teamName)) {
-            ZAPPY_LOG_E("Protocol: failed to parse player connection args: " + args);
+            log_error("Protocol: failed to parse player connection args: " + args);
             return;
         }
 
@@ -50,7 +50,7 @@ class CommandPlayerConnection : public ACommand {
         world.add_component<Inventory>(player, {0, 0, 0, 0, 0, 0, 0});
         world.add_component<InhabitantTag>(player, InhabitantTag{});
 
-        ZAPPY_LOG_I("Protocol: New player #" + std::to_string(playerId) + " connected (Team: " +
+        log_info("Protocol: New player #" + std::to_string(playerId) + " connected (Team: " +
                     teamName + ")");
     }
 };
