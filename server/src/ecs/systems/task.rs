@@ -39,14 +39,21 @@ use crate::{
             team::Team,
         },
         storage::{Entity, World},
+        systems::task::take_set::take_task,
     },
     game::{Date, Inhabitant},
-    protocol::{Response, ResponseCode, ServerEvent, StatusCode},
+    protocol::{
+        Response, ResponseCode,
+        ServerEvent::{self},
+        StatusCode::{self},
+    },
     utils::orientation::RelativeOrientation,
 };
+use log::{debug, info};
 
 pub mod inventory;
 pub mod look;
+pub mod take_set;
 
 /// Advances queued tasks, applies effects when a timer elapses, starts the next
 /// task's timer, and handles command replies and broadcast events.
@@ -139,6 +146,7 @@ pub fn broadcast_event(world: &mut World, event: ServerEvent) {
         if let Some(line) = event.to_gui_string()
             && let Some(nd) = world.get_component_mut::<NetworkData>(entity)
         {
+            debug!("Broadcasting to GUI {}: {}", entity, line);
             nd.pending_responses.push(Response::new(
                 ResponseCode::Status(StatusCode::Ok),
                 Some(line),
@@ -177,6 +185,7 @@ fn execute_task(
 
     match task_type {
         TaskType::Forward => {
+            info!("Moving forward entity: {}", entity.id());
             let map_width = world.map_size.width;
             let map_height = world.map_size.height;
             let orientation = world.get_component::<RelativeOrientation>(entity).copied();
@@ -228,18 +237,20 @@ fn execute_task(
             }
             (ok, event)
         }
+        TaskType::Take(resource) => take_task(world, entity, resource),
+        TaskType::Set(resource) => take_set::set_task(world, entity, resource),
         _ => (ok, None),
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use crate::ecs::components::inventory::Inventory;
     use crate::ecs::components::level::Level;
     use crate::ecs::components::life::Life;
     use crate::ecs::components::task::{Task, TaskType};
     use crate::ecs::storage::World;
-    use crate::ecs::systems::inventory_system::add_item;
     use crate::game::Resource;
 
     use super::*;
@@ -358,12 +369,12 @@ mod tests {
 
         {
             let inv = world.get_component_mut::<Inventory>(entity).unwrap();
-            add_item(inv, Resource::Food, 10);
-            add_item(inv, Resource::Linemate, 5);
-            add_item(inv, Resource::Sibur, 1);
-            add_item(inv, Resource::Mendiane, 2);
-            add_item(inv, Resource::Phiras, 3);
-            add_item(inv, Resource::Thystame, 4);
+            inv.add_item(Resource::Food, 10);
+            inv.add_item(Resource::Linemate, 5);
+            inv.add_item(Resource::Sibur, 1);
+            inv.add_item(Resource::Mendiane, 2);
+            inv.add_item(Resource::Phiras, 3);
+            inv.add_item(Resource::Thystame, 4);
         }
 
         let (response, event) = execute_task(&mut world, entity, &TaskType::Inventory);

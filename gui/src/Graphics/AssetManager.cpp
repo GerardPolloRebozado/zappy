@@ -6,7 +6,8 @@
 */
 
 #include "Graphics/AssetManager.hpp"
-#include <iostream>
+#include "Graphics/GraphicsErrors.hpp"
+#include "Logging/Logger.hpp"
 
 namespace zappy {
 
@@ -25,12 +26,12 @@ void AssetManager::unloadAll() {
     _models.clear();
     _textures.clear();
     _shaders.clear();
+    // CloseWindow();
 }
 
 raylib::Model& AssetManager::getModel(const std::string& name) {
     if (_models.find(name) == _models.end()) {
-        std::cerr << "AssetManager: Model " << name << " not found, returning empty model"
-                  << std::endl;
+        log_error(ErrorAsset("Model " + name + " not found, returning empty model").what());
         _models[name] = std::make_unique<raylib::Model>();
     }
     return *_models[name];
@@ -38,8 +39,7 @@ raylib::Model& AssetManager::getModel(const std::string& name) {
 
 raylib::Texture2D& AssetManager::getTexture(const std::string& name) {
     if (_textures.find(name) == _textures.end()) {
-        std::cerr << "AssetManager: Texture " << name << " not found, returning empty texture"
-                  << std::endl;
+        log_error(ErrorAsset("Texture " + name + " not found, returning empty texture").what());
         _textures[name] = std::make_unique<raylib::Texture2D>();
     }
     return *_textures[name];
@@ -47,8 +47,7 @@ raylib::Texture2D& AssetManager::getTexture(const std::string& name) {
 
 raylib::Shader& AssetManager::getShader(const std::string& name) {
     if (_shaders.find(name) == _shaders.end()) {
-        std::cerr << "AssetManager: Shader " << name << " not found, returning empty shader"
-                  << std::endl;
+        log_error(ErrorAsset("Shader " + name + " not found, returning empty shader").what());
         _shaders[name] = std::make_unique<raylib::Shader>();
     }
     return *_shaders[name];
@@ -60,7 +59,7 @@ void AssetManager::_loadModels() {
         _models["chicken"] = std::make_unique<raylib::Model>("assets/models/Chicken.obj");
         _models["robot"] = std::make_unique<raylib::Model>("assets/models/Robot1.obj");
     } catch (const raylib::RaylibException& e) {
-        std::cerr << "AssetManager: Failed to load models: " << e.what() << std::endl;
+        log_error(ErrorAsset("Failed to load models: " + std::string(e.what())).what());
     }
 }
 
@@ -70,7 +69,7 @@ void AssetManager::_loadTextures() {
         _textures["mouse_pressed"] =
             std::make_unique<raylib::Texture2D>("assets/mouse_pressed.png");
     } catch (const raylib::RaylibException& e) {
-        std::cerr << "AssetManager: Failed to load textures: " << e.what() << std::endl;
+        log_error(ErrorAsset("Failed to load textures: " + std::string(e.what())).what());
     }
 }
 

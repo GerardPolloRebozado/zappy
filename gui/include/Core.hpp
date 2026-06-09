@@ -11,11 +11,19 @@
 #include "ECS/World.hpp"
 #include "NetworkManager.hpp"
 #include "Systems/RenderSystem.hpp"
+#include "UI/UIManager.hpp"
 #include <memory>
 #include <raylib-cpp.hpp>
 #include <string>
 
+#define LOG_LEVEL 1 2 3
+#define ERROR 1
+#define WARNING 2
+#define INFO 3
+
 namespace zappy {
+
+enum class AppState { MENU, PLAYING };
 
 /**
  * @class Core
@@ -36,7 +44,7 @@ class Core {
     /**
      * @brief Destroy the Core object.
      */
-    ~Core() = default;
+    ~Core();
 
     /**
      * @brief Starts the application and enters the main loop.
@@ -60,12 +68,22 @@ class Core {
      */
     void _setupTestingData();
 
+    void _setupMainMenu();
+    void _showConnectionOverlay();
+    void _setupSettingsMenu();
+    void _setupGameUI();
+    void _clearMenuUI();
+    void _connectToServer(const std::string& host, int port);
+
+    std::unique_ptr<raylib::Window> _window; ///< The Raylib window instance.
     World _world;                            ///< The ECS world instance.
     NetworkManager _network;                 ///< Handles server communication.
     RenderSystem _renderSystem;              ///< Handles world and UI rendering.
-    std::unique_ptr<raylib::Window> _window; ///< The Raylib window instance.
+    UIManager _uiManager;                    ///< Handles OOP UI.
     int _port;                               ///< Server port.
     std::string _host;                       ///< Server host.
+    AppState _appState = AppState::MENU;     ///< Current application state.
+    bool _shouldClose = false;               ///< Flag to request application shutdown.
 };
 
 } // namespace zappy
