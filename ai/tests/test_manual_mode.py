@@ -32,7 +32,8 @@ class TestManualMode(unittest.TestCase):
 
     @patch("builtins.input")
     @patch("builtins.print")
-    def test_run_manual_commands(self, mock_print, mock_input):
+    @patch("src.strategy.manual_mode.logger")
+    def test_run_manual_commands(self, mock_logger, mock_print, mock_input):
         # We simulate user inputs:
         # 1. '1' (Forward)
         # 2. 'right' (Right command case-insensitive)
@@ -48,17 +49,19 @@ class TestManualMode(unittest.TestCase):
         self.client.broadcast.assert_called_once_with("message")
         self.client.take.assert_called_once_with("food")
         self.client.close.assert_called_once()
+        mock_logger.info.assert_any_call("Exiting manual mode...")
 
     @patch("builtins.input")
     @patch("builtins.print")
-    def test_run_manual_invalid_command(self, mock_print, mock_input):
+    @patch("src.strategy.manual_mode.logger")
+    def test_run_manual_invalid_command(self, mock_logger, mock_print, mock_input):
         mock_input.side_effect = ["invalid_cmd", "exit"]
 
         run_manual(self.client)
 
-        # Verify that we printed an error message
-        mock_print.assert_any_call(
-            "Error: Unknown command 'invalid_cmd'. Type 'help' to see available commands."
+        # Verify that we logged an error message
+        mock_logger.error.assert_any_call(
+            "Unknown command 'invalid_cmd'. Type 'help' to see available commands."
         )
         self.client.close.assert_called_once()
 
