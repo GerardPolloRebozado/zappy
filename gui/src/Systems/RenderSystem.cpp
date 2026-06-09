@@ -245,23 +245,25 @@ void RenderSystem::_renderInhabitants(World& w) {
             float rotation = 0.0f;
             switch (orientationPtr->current_direction) {
                 case Orientation::N:
-                    rotation = 180.0f;
+                    rotation = 270.0f;
                     break;
                 case Orientation::E:
-                    rotation = 90.0f;
+                    rotation = 180.0f;
                     break;
                 case Orientation::S:
-                    rotation = 0.0f;
+                    rotation = 90.0f;
                     break;
                 case Orientation::W:
-                    rotation = 270.0f;
+                    rotation = 0.0f;
                     break;
             }
 
-            // Calculate position: center the model on the tile and nudge it 'forward' (+0.2)
-            raylib::Vector3 vpos((float)pos->x + 0.2f - (center.x * scale),
-                                 2.01f - (center.y * scale),
-                                 (float)pos->y + 0.2f - (center.z * scale));
+            // Calculate position: center the model on the tile correctly even when rotated
+            raylib::Vector3 centerOffset = {center.x * scale, center.y * scale, center.z * scale};
+            centerOffset = ::Vector3RotateByAxisAngle(centerOffset, {0, 1, 0}, rotation * DEG2RAD);
+
+            raylib::Vector3 vpos((float)pos->x - centerOffset.x, 2.01f - centerOffset.y,
+                                 (float)pos->y - centerOffset.z);
 
             robot.Draw(vpos, {0, 1, 0}, rotation, {scale, scale, scale}, WHITE);
         }
