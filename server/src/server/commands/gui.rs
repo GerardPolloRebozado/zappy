@@ -3,6 +3,7 @@ use crate::ecs::map_size;
 use crate::ecs::storage::Entity;
 use crate::protocol::{Command, Request, Response, ResponseCode, StatusCode};
 use crate::server::Server;
+use crate::server::commands::ppo;
 
 pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request) {
     let width = server.world.map_size.width;
@@ -86,6 +87,34 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
                 ResponseCode::Status(StatusCode::Ok),
                 Some(format!("sgt {}", freq)),
             ));
+        }
+
+        Command::Ppo(id) => {
+            let mut line = None;
+
+            if let Some(player_id) = ppo::parse_player_id(&id) {
+                if let Some(player_entity) = ppo::find_inhabitant(&server.world, player_id) {
+                    line = ppo::build_ppo_line(&server.world, player_id, player_entity);
+                }
+            }
+
+            let network_data = server.world.get_component_mut::<NetworkData>(entity);
+            if network_data.is_none() {
+                return;
+            }
+            let network_data = network_data.unwrap();
+
+            if let Some(line) = line {
+                network_data.pending_responses.push(Response::new(
+                    ResponseCode::Status(StatusCode::Ok),
+                    Some(line),
+                ));
+            } else {
+                network_data.pending_responses.push(Response::new(
+                    ResponseCode::Status(StatusCode::Ko),
+                    None,
+                ));
+            }
         }
 
         Command::Unknown(_) => {

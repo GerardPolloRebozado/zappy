@@ -13,6 +13,7 @@ use rand::{RngExt, rng};
 
 pub mod ai;
 pub mod gui;
+pub mod ppo;
 
 pub fn queue_task(server: &mut Server, entity: Entity, task_type: TaskType) {
     let task_list = match server.world.get_component_mut::<TaskList>(entity) {

@@ -29,6 +29,14 @@
 //! 3. [`any_finished_task`] pushes `ok` to the acting client, then calls
 //!    [`broadcast_event`] so every AI receives `message k, text`
 //!    and the GUI receives `pbc #n text` (see [`ServerEvent::to_ai_string`]).
+//!
+//! # Movement broadcast flow
+//!
+//! 1. [`crate::server::commands`] queues [`TaskType::Forward`], [`TaskType::TurnRight`],
+//!    or [`TaskType::TurnLeft`].
+//! 2. When the timer elapses, [`execute_task`] mutates [`Position`] / [`RelativeOrientation`].
+//! 3. Returns `ok` plus a [`ServerEvent::PlayerPosition`].
+//! 4. [`broadcast_event`] pushes `ppo #n X Y O` to all GUI clients.
 
 use crate::{
     ecs::{
@@ -174,6 +182,7 @@ pub fn broadcast_event(world: &mut World, event: ServerEvent) {
 /// string (data-only response).
 /// `Death` returns `"dead"` as the response data.
 /// `BroadcastText` produces a [`ServerEvent::Message`] for fan-out.
+/// `Forward` / `TurnRight` / `TurnLeft` produce a [`ServerEvent::PlayerPosition`] for fan-out.
 ///
 /// Returns the response for the acting client plus an optional broadcast event.
 fn execute_task(
@@ -194,19 +203,22 @@ fn execute_task(
             {
                 pos.move_forward(ori, map_width, map_height);
             }
-            (ok, None)
+            let event = Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
+            (ok, event)
         }
         TaskType::TurnRight => {
             if let Some(ori) = world.get_component_mut::<RelativeOrientation>(entity) {
                 *ori = ori.turn_right();
             }
-            (ok, None)
+            let event = Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
+            (ok, event)
         }
         TaskType::TurnLeft => {
             if let Some(ori) = world.get_component_mut::<RelativeOrientation>(entity) {
                 *ori = ori.turn_left();
             }
-            (ok, None)
+            let event = Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
+            (ok, event)
         }
         TaskType::Look => (
             Response::new(
@@ -291,6 +303,22 @@ mod tests {
     }
 
     #[test]
+    fn execute_task_forward_returns_player_position_event() {
+        let (mut world, entity) = setup_inhabitant(5, 5, RelativeOrientation::Forward, 10, 10);
+        let (response, event) = execute_task(&mut world, entity, &TaskType::Forward);
+        assert_ok(response);
+        assert!(matches!(
+            event,
+            Some(ServerEvent::PlayerPosition {
+                player_id,
+                x: 5,
+                y: 4,
+                orientation: RelativeOrientation::Forward,
+            }) if player_id == entity.id()
+        ));
+    }
+
+    #[test]
     fn execute_task_forward_moves_east() {
         let (mut world, entity) = setup_inhabitant(5, 5, RelativeOrientation::ForwardLeft, 10, 10);
         execute_task(&mut world, entity, &TaskType::Forward);
@@ -326,6 +354,22 @@ mod tests {
         execute_task(&mut world, entity, &TaskType::TurnRight);
         let ori = world.get_component::<RelativeOrientation>(entity).unwrap();
         assert_eq!(*ori, RelativeOrientation::ForwardLeft);
+    }
+
+    #[test]
+    fn execute_task_turn_right_returns_player_position_event() {
+        let (mut world, entity) = setup_inhabitant(2, 3, RelativeOrientation::Forward, 10, 10);
+        let (response, event) = execute_task(&mut world, entity, &TaskType::TurnRight);
+        assert_ok(response);
+        assert!(matches!(
+            event,
+            Some(ServerEvent::PlayerPosition {
+                player_id,
+                x: 2,
+                y: 3,
+                orientation: RelativeOrientation::ForwardLeft,
+            }) if player_id == entity.id()
+        ));
     }
 
     #[test]
