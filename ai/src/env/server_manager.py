@@ -1,6 +1,7 @@
 import subprocess
 import time
 import socket
+import os
 
 
 class ServerManager:
@@ -10,14 +11,21 @@ class ServerManager:
         width=10,
         height=10,
         teams=["TeamAI"],
-        binary_path="./zappy_server",
+        binary_path=None,
     ):
         self.port = port
         self.width = width
         self.height = height
         self.teams = teams
-        self.binary_path = binary_path
         self.process = None
+
+        if binary_path is None:
+            base_directory = os.path.dirname(os.path.abspath(__file__))
+            self.binary_path = os.path.abspath(
+                os.path.join(base_directory, "../../../server/zappy_server")
+            )
+        else:
+            self.binary_path = binary_path
 
     def get_free_port(self, current_port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -39,12 +47,14 @@ class ServerManager:
             str(self.width),
             "-y",
             str(self.height),
+            "-c",
+            "10",
+            "-f",
+            "100",
             "-n",
         ] + self.teams
 
-        self.process = subprocess.Popen(
-            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+        self.process = subprocess.Popen(cmd, stdout=None, stderr=None)
         time.sleep(0.2)
 
     def stop(self):

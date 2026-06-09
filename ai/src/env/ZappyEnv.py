@@ -1,7 +1,7 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
-from server_manager import ServerManager
+from src.env.server_manager import ServerManager
 from src.client.ai_client import ZappyAiClient
 
 
@@ -144,7 +144,10 @@ class ZappyEnv(gym.Env):
                 if i >= 81:
                     break
 
-                entities = tile_str.strip().split(" ")
+                if isinstance(tile_str, str):
+                    entities = tile_str.strip().split(" ")
+                else:
+                    entities = tile_str
 
                 for entity in entities:
                     if entity in resources:
