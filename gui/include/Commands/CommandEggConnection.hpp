@@ -33,7 +33,7 @@ class CommandEggConnection : public ACommand {
         int eggId;
 
         if (!(iss >> eggId)) {
-            ZAPPY_LOG_E("Protocol: failed to parse egg connection args: " + args);
+            log_error("Protocol: failed to parse egg connection args: " + args);
             return;
         }
 
@@ -42,7 +42,7 @@ class CommandEggConnection : public ACommand {
             for (auto const& [entity, egg] : *storage) {
                 if (egg->id == eggId) {
                     world.despawn(entity);
-                    ZAPPY_LOG_I("Protocol: Player connected to egg #" + std::to_string(eggId) +
+                    log_info("Protocol: Player connected to egg #" + std::to_string(eggId) +
                                 " (egg removed)");
                     break;
                 }

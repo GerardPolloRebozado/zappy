@@ -29,7 +29,7 @@ class CommandTimeUpdate : public ACommand {
         int frequency;
 
         if (!(iss >> frequency)) {
-            ZAPPY_LOG_E("Protocol: failed to parse time update args: " + args);
+            log_error("Protocol: failed to parse time update args: " + args);
             return;
         }
 
@@ -48,7 +48,7 @@ class CommandTimeUpdate : public ACommand {
             world.add_component<TimeUnit>(timeEntity, {frequency});
         }
 
-        ZAPPY_LOG_I("Protocol: Time unit updated to " + std::to_string(frequency));
+        log_info("Protocol: Time unit updated to " + std::to_string(frequency));
     }
 };
 } // namespace zappy

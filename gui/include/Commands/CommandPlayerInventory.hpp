@@ -34,7 +34,7 @@ class CommandPlayerInventory : public ACommand {
         int q0, q1, q2, q3, q4, q5, q6;
 
         if (!(iss >> playerId >> x >> y >> q0 >> q1 >> q2 >> q3 >> q4 >> q5 >> q6)) {
-            ZAPPY_LOG_E("Protocol: failed to parse player inventory args: " + args);
+            log_error("Protocol: failed to parse player inventory args: " + args);
             return;
         }
 
@@ -58,7 +58,7 @@ class CommandPlayerInventory : public ACommand {
                     inv->phiras = q5;
                     inv->thystame = q6;
                 }
-                ZAPPY_LOG_I("Protocol: Player #" + std::to_string(playerId) + " inventory updated");
+                log_info("Protocol: Player #" + std::to_string(playerId) + " inventory updated");
                 break;
             }
         }

@@ -39,7 +39,7 @@ class CommandPlayerPosition : public ACommand {
         int playerId, x, y, orientation;
 
         if (!(iss >> playerId >> x >> y >> orientation)) {
-            ZAPPY_LOG_E("Protocol: failed to parse player position args: " + args);
+            log_error("Protocol: failed to parse player position args: " + args);
             return;
         }
         auto positionsStorage = world.get_storage<Position>();

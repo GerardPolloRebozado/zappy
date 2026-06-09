@@ -18,7 +18,7 @@ class CommandUnknown : public ACommand {
     ~CommandUnknown() override = default;
 
     void execute(const std::string& args, World& world) override {
-        ZAPPY_LOG_E("Protocol Error: Unknown command or bad parameters received");
+        log_error("Protocol Error: Unknown command or bad parameters received");
     }
 };
 } // namespace zappy

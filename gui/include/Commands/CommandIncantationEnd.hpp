@@ -29,11 +29,11 @@ class CommandIncantationEnd : public ACommand {
         int x, y, result;
 
         if (!(iss >> x >> y >> result)) {
-            ZAPPY_LOG_E("Protocol: failed to parse incantation end args: " + args);
+            log_error("Protocol: failed to parse incantation end args: " + args);
             return;
         }
 
-        ZAPPY_LOG_I("Protocol: Incantation at (" + std::to_string(x) + ", " + std::to_string(y) +
+        log_info("Protocol: Incantation at (" + std::to_string(x) + ", " + std::to_string(y) +
                     ") ended with result: " + (result ? "Success" : "Failure"));
     }
 };

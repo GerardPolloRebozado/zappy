@@ -31,7 +31,7 @@ class AResourceCommand : public ACommand {
         std::istringstream iss(cleanArgs);
         int pId, rId;
         if (!(iss >> pId >> rId)) {
-            ZAPPY_LOG_E("Protocol: failed to parse resource command args: " + args);
+            log_error("Protocol: failed to parse resource command args: " + args);
             return {0, 0, false};
         }
         return {pId, rId, true};

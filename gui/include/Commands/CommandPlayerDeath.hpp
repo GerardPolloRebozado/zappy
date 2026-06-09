@@ -27,7 +27,7 @@ class CommandPlayerDeath : public ACommand {
         int playerId;
 
         if (!(iss >> playerId)) {
-            ZAPPY_LOG_E("Protocol: failed to parse player death args: " + args);
+            log_error("Protocol: failed to parse player death args: " + args);
             return;
         }
 
@@ -36,7 +36,7 @@ class CommandPlayerDeath : public ACommand {
             for (auto const& [entity, pos] : *posStorage) {
                 if (entity.id() == (uint32_t)playerId && !world.get_component<TileTag>(entity)) {
                     world.despawn(entity);
-                    ZAPPY_LOG_I("Protocol: Player #" + std::to_string(playerId) + " died");
+                    log_info("Protocol: Player #" + std::to_string(playerId) + " died");
                     break;
                 }
             }

@@ -52,7 +52,7 @@ void NetworkManager::update(World& world) {
 }
 
 void NetworkManager::sendCommand(const std::string& cmd) {
-    ZAPPY_LOG_D("Sending new command: " + cmd);
+    log_debug("Sending new command: " + cmd);
     _socket.send(cmd + "\n");
 }
 
@@ -79,7 +79,7 @@ void NetworkManager::requestTileContent(int x, int y) {
 
 void NetworkManager::_processHandshake(const std::string& message) {
     if (message == "WELCOME") {
-        ZAPPY_LOG_D("Received WELCOME, sending GRAPHIC");
+        log_debug("Received WELCOME, sending GRAPHIC");
         sendCommand("GRAPHIC");
         _isHandshakeDone = true;
 
@@ -104,7 +104,7 @@ void NetworkManager::_handleProtocolMessage(const std::string& message, World& w
         std::string args = message.substr(cmd.length() + 1);
         command->execute(args, world);
     } catch (const IError& e) {
-        ZAPPY_LOG_E(e.what());
+        log_error(e.what());
     }
 }
 

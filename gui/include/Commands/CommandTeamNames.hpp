@@ -33,7 +33,7 @@ class CommandTeamNames : public ACommand {
         teamName.erase(teamName.find_last_not_of(" \t\n\r") + 1);
 
         if (teamName.empty()) {
-            ZAPPY_LOG_E("Protocol: failed to parse team name args: " + args);
+            log_error("Protocol: failed to parse team name args: " + args);
             return;
         }
 
@@ -50,7 +50,7 @@ class CommandTeamNames : public ACommand {
         world.add_component<TeamName>(teamEntity, {teamName});
         world.add_component<TeamTag>(teamEntity, TeamTag{});
 
-        ZAPPY_LOG_I("Protocol: Team added: " + teamName);
+        log_info("Protocol: Team added: " + teamName);
     };
 };
 } // namespace zappy

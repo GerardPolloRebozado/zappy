@@ -177,11 +177,11 @@ void Core::_setupSettingsMenu() {
 
     _uiManager.addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 100, (float)cy + 80, 90, 40}, "-",
-        []() { ZAPPY_LOG_D("Volume Down"); }, 1));
+        []() { log_debug("Volume Down"); }, 1));
 
     _uiManager.addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx + 10, (float)cy + 80, 90, 40}, "+",
-        []() { ZAPPY_LOG_D("Volume Up"); }, 1));
+        []() { log_debug("Volume Up"); }, 1));
 
     // Back Button
     _uiManager.addComponent(std::make_shared<UIButton>(
@@ -218,7 +218,7 @@ void Core::_showConnectionOverlay() {
             try {
                 p = parsePort(portInput->getText());
             } catch (const IError& e) {
-                ZAPPY_LOG_E(e.what());
+                log_error(e.what());
             }
             this->_connectToServer(h, p);
         },
@@ -227,14 +227,14 @@ void Core::_showConnectionOverlay() {
 
 void Core::_connectToServer(const std::string& host, int port) {
     if (_network.connect(host, port)) {
-        ZAPPY_LOG_I("Core: Connected to " + host + ":" + std::to_string(port));
+        log_info("Core: Connected to " + host + ":" + std::to_string(port));
         _appState = AppState::PLAYING;
         _clearMenuUI();
         _setupTestingData();
         _setupGameUI();
         _renderSystem.centerCamera(10, 10);
     } else {
-        ZAPPY_LOG_E(
+        log_error(
             ErrorNetwork("Failed to connect to " + host + ":" + std::to_string(port)).what());
         int cx = _window->GetWidth() / 2;
         int cy = _window->GetHeight() / 2;

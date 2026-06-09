@@ -36,7 +36,7 @@ class CommandIncantationStart : public ACommand {
         int playerId;
 
         if (!(iss >> x >> y >> level)) {
-            ZAPPY_LOG_E("Protocol: failed to parse incantation start args: " + args);
+            log_error("Protocol: failed to parse incantation start args: " + args);
             return;
         }
 
@@ -44,7 +44,7 @@ class CommandIncantationStart : public ACommand {
             playerIds.push_back(playerId);
         }
 
-        ZAPPY_LOG_I("Protocol: Incantation started at (" + std::to_string(x) + ", " +
+        log_info("Protocol: Incantation started at (" + std::to_string(x) + ", " +
                     std::to_string(y) + ") for level " + std::to_string(level) + " with " +
                     std::to_string(playerIds.size()) + " players.");
     }

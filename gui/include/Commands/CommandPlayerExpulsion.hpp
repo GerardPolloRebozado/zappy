@@ -39,7 +39,7 @@ class CommandPlayerExpulsion : public ACommand {
         int playerId;
 
         if (!(iss >> playerId)) {
-            ZAPPY_LOG_E("Protocol: failed to parse player expulsion args: " + args);
+            log_error("Protocol: failed to parse player expulsion args: " + args);
             return;
         }
 
@@ -71,7 +71,7 @@ class CommandPlayerExpulsion : public ACommand {
         int mapHeight = sizeIt->second->height;
 
         move_forward(victim->position, *ejectDirection, mapWidth, mapHeight);
-        ZAPPY_LOG_I("Protocol: Player #" + std::to_string(playerId) + " expelled");
+        log_info("Protocol: Player #" + std::to_string(playerId) + " expelled");
     }
 
   private:

@@ -33,7 +33,7 @@ class CommandPlayerLevel : public ACommand {
         int playerId, level;
 
         if (!(iss >> playerId >> level)) {
-            ZAPPY_LOG_E("Protocol: failed to parse player level args: " + args);
+            log_error("Protocol: failed to parse player level args: " + args);
             return;
         }
 
@@ -45,7 +45,7 @@ class CommandPlayerLevel : public ACommand {
         for (auto& [entity, levelComp] : *levelStorage) {
             if (entity.id() == (uint32_t)playerId) {
                 levelComp->level = level;
-                ZAPPY_LOG_I("Protocol: Player #" + std::to_string(playerId) +
+                log_info("Protocol: Player #" + std::to_string(playerId) +
                             " level updated to " + std::to_string(level));
                 break;
             }
