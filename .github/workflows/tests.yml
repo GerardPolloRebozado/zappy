@@ -116,6 +116,21 @@ jobs:
         with:
           python_version: "3.x"
           cache: "pip"
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server -> target
+      - name: Build Server
+        run: |
+          cd server
+          cargo build
+          cp target/debug/zappy_server zappy_server
+      - name: Install dependencies
+        run: |
+          cd ai
+          pip install -r requirements.txt
       - name: Run tests
         run: |
           cd ai
