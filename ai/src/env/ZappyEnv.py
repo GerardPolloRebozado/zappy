@@ -6,7 +6,19 @@ from src.client.ai_client import ZappyAiClient
 
 
 class ZappyEnv(gym.Env):
+    """
+    Custom Gymnasium environment for the Zappy AI.
+    Handles the translation between Stable Baselines 3 actions and the Zappy server protocol.
+    """
+
     def __init__(self, port=4242, ip="127.0.0.1", team_name="TeamAI"):
+        """
+        Initializes the Zappy Environment.
+
+        :param port: The port number for the server.
+        :param ip: The IP address of the server.
+        :param team_name: The name of the AI team.
+        """
         super(ZappyEnv, self).__init__()
         self.ip = ip
         self.port = port
@@ -36,6 +48,14 @@ class ZappyEnv(gym.Env):
         )
 
     def reset(self, seed=None, options=None):
+        """
+        Resets the environment for a new episode.
+        Restarts the Rust server, connects the AI client, and fetches the initial observation.
+
+        :param seed: Optional random seed.
+        :param options: Optional configuration dictionary.
+        :return: A tuple containing the initial observation and an info dictionary.
+        """
         super().reset(seed=seed)
 
         self.server_manager.start()
@@ -47,6 +67,14 @@ class ZappyEnv(gym.Env):
         return observation, info
 
     def step(self, action):
+        """
+        Executes a single step in the environment.
+        Translates the discrete action into a server command, evaluates the response,
+        and calculates the appropriate reward. Catches BrokenPipeErrors if the server closes.
+
+        :param action: An integer representing the chosen action.
+        :return: A tuple (observation, reward, terminated, truncated, info).
+        """
         reward = 0.0
         terminated = False
         truncated = False
@@ -119,6 +147,12 @@ class ZappyEnv(gym.Env):
         return observation, reward, terminated, truncated, info
 
     def _get_real_observation(self):
+        """
+        Retrieves the player's inventory and vision from the server and maps them
+        into the 657-dimensional numpy array used for neural network input.
+
+        :return: A 1D numpy array containing the parsed observation.
+        """
         obs = np.zeros(657, dtype=np.int32)
 
         resources = [
@@ -131,6 +165,8 @@ class ZappyEnv(gym.Env):
             "phiras",
             "thystame",
         ]
+
+        # Parse Inventory
         inv = self.client.inventory()
         if isinstance(inv, str) and inv.startswith("[") and inv.endswith("]"):
             items = inv.strip("[]").split(",")
@@ -155,6 +191,7 @@ class ZappyEnv(gym.Env):
             obs[6] = getattr(inv, "thystame", 0)
             obs[656] = inv.food
 
+        # Parse Vision (Look)
         vision_list = self.client.look()
         if isinstance(vision_list, list):
             base_index = 7
@@ -177,6 +214,9 @@ class ZappyEnv(gym.Env):
         return obs
 
     def close(self):
+        """
+        Closes the environment, disconnects the socket, and stops the server process.
+        """
         if self.client:
             self.client.close()
         self.server_manager.stop()

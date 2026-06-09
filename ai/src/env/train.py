@@ -4,6 +4,11 @@ from stable_baselines3.common.env_checker import check_env
 
 
 def main():
+    """
+    Main entry point for training the Zappy AI.
+    Initializes the custom environment, verifies its compliance with Stable Baselines 3,
+    and trains a Proximal Policy Optimization (PPO) model.
+    """
     print("Starting ZappyEnv")
     env = ZappyEnv(team_name="TeamAI")
 
@@ -15,8 +20,10 @@ def main():
     model = PPO("MlpPolicy", env, verbose=1)
 
     print("Training model")
+    # Execute the learning loop for the specified number of timesteps
     model.learn(total_timesteps=10000)
 
+    # Save the trained model weights to a zip file
     model.save("zappy_ai_model")
     print("Finished and saved on zappy_ai_model.zip")
 
