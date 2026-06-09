@@ -5,6 +5,7 @@
 ** FactoryCommands.cpp
 */
 #include "FactoryCommands.hpp"
+#include "Commands/CommandsErrors.hpp"
 #include "Commands/CommandEggConnection.hpp"
 #include "Commands/CommandEggDeath.hpp"
 #include "Commands/CommandEggLayed.hpp"
@@ -64,6 +65,6 @@ std::unique_ptr<ACommand> FactoryCommands::createCommand(const std::string& comm
     if (it != _creators.end()) {
         return it->second();
     }
-    return nullptr;
+    throw ErrorProtocol("Unknown command: " + commandName);
 }
 } // namespace zappy

@@ -11,8 +11,10 @@
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
+#include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 namespace zappy {
 class CommandPlayerConnection : public ACommand {
@@ -33,7 +35,7 @@ class CommandPlayerConnection : public ACommand {
         int playerId, x, y, orientation, level;
         std::string teamName;
         if (!(iss >> playerId >> x >> y >> orientation >> level >> teamName)) {
-            std::cout << "Error parsing pnw command: " << args << std::endl;
+            log_error("Protocol: failed to parse player connection args: " + args);
             return;
         }
 
@@ -47,8 +49,8 @@ class CommandPlayerConnection : public ACommand {
         world.add_component<Inventory>(player, {0, 0, 0, 0, 0, 0, 0});
         world.add_component<InhabitantTag>(player, InhabitantTag{});
 
-        std::cout << "Protocol: New player #" << playerId << " connected (Team: " << teamName << ")"
-                  << std::endl;
+        log_info("Protocol: New player #" + std::to_string(playerId) + " connected (Team: " +
+                    teamName + ")");
     }
 };
 } // namespace zappy
