@@ -81,6 +81,16 @@ class ZappyAiClient:
                     if parsed:
                         self.messages.append(parsed)
                     continue
+                case s if s.startswith("eject:"):
+                    logger.info(f"Event: {s}")
+                    continue
+                case s if s.startswith("Current level:"):
+                    try:
+                        self.level = int(s.split(":")[1].strip())
+                        logger.info(f"Event: {s}")
+                    except (ValueError, IndexError):
+                        logger.warning(f"Failed to parse level up message: {s}")
+                    continue
                 case _:
                     return line
 
@@ -184,15 +194,10 @@ class ZappyAiClient:
     def incantation(self):
         """
         Calls command incantation, if the incantation starts updates the level of the player
-        :return: When the incantation is underway -> current level / ko
+        :return: When the incantation is underway -> Elevation underway / ko
         """
         commands.incantation(self)
-        resp = self.wait_for_response()
-        if resp == "Elevation underway":
-            resp = self.wait_for_response()
-            if resp and resp.startswith("Current level:"):
-                self.level = int(resp.split(":")[1].strip())
-        return resp
+        return self.wait_for_response()
 
     def close(self):
         self.connection.close()
