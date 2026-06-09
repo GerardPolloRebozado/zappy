@@ -1,5 +1,6 @@
 use crate::utils::orientation::RelativeOrientation;
 
+/// Tile coordinates on the toroidal map. Backs the X Y fields in GUI `ppo`, `pnw`, and `pin`.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Position {
     pub x: u32,
@@ -9,6 +10,15 @@ pub struct Position {
 impl Position {
     pub fn new() -> Position {
         Position { x: 0, y: 0 }
+    }
+
+    pub fn at(x: u32, y: u32) -> Self {
+        Self { x, y }
+    }
+
+    /// Returns tile coordinates for protocol serialization (`ppo`, `pnw`, `pin` poll/push replies).
+    pub fn protocol_xy(&self) -> (u32, u32) {
+        (self.x, self.y)
     }
 
     /// Steps one tile along the inhabitant's facing (`Forward` = north, `ForwardLeft` = east,
@@ -35,6 +45,18 @@ impl Position {
             }
             _ => {}
         }
+    }
+
+    /// Like [`move_forward`](Self::move_forward), but returns whether coordinates changed.
+    pub fn move_forward_changed(
+        &mut self,
+        orientation: RelativeOrientation,
+        map_width: u32,
+        map_height: u32,
+    ) -> bool {
+        let (prev_x, prev_y) = self.protocol_xy();
+        self.move_forward(orientation, map_width, map_height);
+        (self.x, self.y) != (prev_x, prev_y)
     }
 }
 
@@ -96,5 +118,22 @@ mod tests {
         let mut pos = Position { x: 0, y: 3 };
         pos.move_forward(RelativeOrientation::BackLeft, 10, 10);
         assert_eq!((pos.x, pos.y), (9, 3));
+    }
+
+    #[test]
+    fn protocol_xy_returns_coords() {
+        let pos = Position::at(7, 3);
+        assert_eq!(pos.protocol_xy(), (7, 3));
+    }
+
+    #[test]
+    fn move_forward_changed_false_for_non_cardinal() {
+        let mut pos = Position::at(5, 5);
+        assert!(!pos.move_forward_changed(
+            RelativeOrientation::Back,
+            10,
+            10
+        ));
+        assert_eq!(pos.protocol_xy(), (5, 5));
     }
 }

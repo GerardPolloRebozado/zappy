@@ -5,6 +5,9 @@
 //!
 //! - GUI clients receive lines such as `pbc #n message\n` via [`ServerEvent::to_gui_string`].
 //! - AI clients receive lines such as `message k, text\n` via [`ServerEvent::to_ai_string`].
+//!
+//! Player position updates use `ppo #n X Y O\n` per the Epitech GUI protocol
+//! ([G-YEP-400_zappy_GUI_protocol.pdf](docs/epitech/G-YEP-400_zappy_GUI_protocol.pdf)).
 
 use crate::{
     game::Inhabitant,
@@ -38,6 +41,13 @@ pub enum ServerEvent {
         orientation: RelativeOrientation,
         level: u8,
         team: String,
+    },
+    /// Player position/orientation: GUI `ppo #n X Y O` (Epitech GUI protocol v3.3).
+    PlayerPosition {
+        player_id: u32,
+        x: u32,
+        y: u32,
+        orientation: RelativeOrientation,
     },
     /// Incantation started: GUI `pic X Y L #n ...`.
     StartIncantation {
@@ -103,6 +113,14 @@ impl ServerEvent {
             team: team.into(),
         }
     }
+    pub fn player_position(player: &Inhabitant) -> Self {
+        Self::PlayerPosition {
+            player_id: player.id(),
+            x: player.x(),
+            y: player.y(),
+            orientation: player.orientation(),
+        }
+    }
     pub fn start_incantation(x: u32, y: u32, level: u8, player_ids: Vec<u32>) -> Self {
         Self::StartIncantation {
             x,
@@ -157,6 +175,15 @@ impl ServerEvent {
                 team,
             } => Some(format!(
                 "pnw #{player_id} {x} {y} {} {level} {team}\n",
+                orientation.as_protocol_k()
+            )),
+            ServerEvent::PlayerPosition {
+                player_id,
+                x,
+                y,
+                orientation,
+            } => Some(format!(
+                "ppo #{player_id} {x} {y} {}\n",
                 orientation.as_protocol_k()
             )),
             ServerEvent::StartIncantation {
@@ -242,6 +269,7 @@ impl ServerEvent {
                 Some(format!("message {k}, {message}\n"))
             }
             ServerEvent::NewPlayer { .. }
+            | ServerEvent::PlayerPosition { .. }
             | ServerEvent::StartIncantation { .. }
             | ServerEvent::EndIncantation { .. }
             | ServerEvent::EggLay { .. }
@@ -321,6 +349,44 @@ mod tests {
         assert!(
             matches!(event, ServerEvent::Message { player_id: 7, message, x: 2, y: 3, } if message == "hi")
         );
+    }
+
+    #[test]
+    fn test_player_position_gui_format() {
+        assert_eq!(
+            ServerEvent::PlayerPosition {
+                player_id: 3,
+                x: 7,
+                y: 9,
+                orientation: RelativeOrientation::ForwardLeft,
+            }
+            .to_gui_string(),
+            Some("ppo #3 7 9 2\n".to_string())
+        );
+    }
+
+    #[test]
+    fn test_player_position_constructor() {
+        let player = Inhabitant::default()
+            .with_id(4)
+            .with_pos(1, 2)
+            .with_orientation(RelativeOrientation::ForwardRight);
+        let event = ServerEvent::player_position(&player);
+        assert!(
+            matches!(event, ServerEvent::PlayerPosition { player_id: 4, x: 1, y: 2, orientation: RelativeOrientation::ForwardRight })
+        );
+    }
+
+    #[test]
+    fn test_player_position_ai_string_is_none() {
+        let event = ServerEvent::PlayerPosition {
+            player_id: 1,
+            x: 0,
+            y: 0,
+            orientation: RelativeOrientation::Forward,
+        };
+        let player = Inhabitant::default().with_id(1);
+        assert_eq!(event.to_ai_string(Some(&player), 10, 10), None);
     }
 
     #[test]
