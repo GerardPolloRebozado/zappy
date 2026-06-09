@@ -8,7 +8,8 @@
 #define ZAPPY_COMMANDGAMEEND_HPP
 
 #include "ACommand.hpp"
-#include <iostream>
+#include "Logging/Logger.hpp"
+#include <string>
 
 namespace zappy {
 class CommandGameEnd : public ACommand {
@@ -17,7 +18,7 @@ class CommandGameEnd : public ACommand {
     ~CommandGameEnd() override = default;
 
     void execute(const std::string& args, World& world) override {
-        std::cout << "Game ended. Winning team: " << args << std::endl;
+        log_info("Game ended. Winning team: " + args);
     }
 };
 } // namespace zappy

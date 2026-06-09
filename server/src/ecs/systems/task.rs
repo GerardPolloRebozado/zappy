@@ -49,6 +49,7 @@ use crate::{
     },
     utils::orientation::RelativeOrientation,
 };
+use log::debug;
 
 pub mod inventory;
 pub mod look;
@@ -145,6 +146,7 @@ pub fn broadcast_event(world: &mut World, event: ServerEvent) {
         if let Some(line) = event.to_gui_string()
             && let Some(nd) = world.get_component_mut::<NetworkData>(entity)
         {
+            debug!("Broadcasting to GUI {}: {}", entity, line);
             nd.pending_responses.push(Response::new(
                 ResponseCode::Status(StatusCode::Ok),
                 Some(line),
