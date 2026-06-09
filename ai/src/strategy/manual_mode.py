@@ -1,4 +1,5 @@
 from src.utils import COMMANDS_MAP, print_manual_commands
+from src.utils.logging_levels import logger
 
 
 def run_manual(client):
@@ -14,13 +15,13 @@ def run_manual(client):
             # check and print any broadcast messages first
             while client.messages:
                 msg = client.messages.pop(0)
-                print(f"[Broadcast] From {msg['direction']}: {msg['text']}")
+                logger.info(f"[Broadcast] From {msg['direction']}: {msg['text']}")
 
             # prompt user for command
             try:
                 user_input = input("\nZappy> ").strip()
             except EOFError:
-                print("\nExiting manual mode...")
+                logger.info("\nExiting manual mode...")
                 break
 
             if not user_input:
@@ -32,7 +33,7 @@ def run_manual(client):
 
             # exit
             if cmd_key in ["exit", "quit", "q"]:
-                print("Exiting manual mode...")
+                logger.info("Exiting manual mode...")
                 break
 
             # help
@@ -58,8 +59,8 @@ def run_manual(client):
                         break
 
             if not matched_cmd:
-                print(
-                    f"Error: Unknown command '{parts[0]}'. Type 'help' to see available commands."
+                logger.error(
+                    f"Unknown command '{parts[0]}'. Type 'help' to see available commands."
                 )
                 continue
 
@@ -100,19 +101,19 @@ def run_manual(client):
 
                 # response from server
                 if response is not None:
-                    print(f"Server Response: {response}")
+                    logger.debug(f"Server Response: {response}")
                 else:
-                    print("No response (connection may have been closed).")
+                    logger.warning("No response (connection may have been closed).")
                     break
 
             except Exception as e:
-                print(f"Error executing command: {e}")
+                logger.error(f"Error executing command: {e}")
 
             if client.is_dead:
-                print("You died!")
+                logger.info("You died!")
                 break
 
     except KeyboardInterrupt:
-        print("\nExiting manual mode...")
+        logger.info("\nExiting manual mode...")
     finally:
         client.close()

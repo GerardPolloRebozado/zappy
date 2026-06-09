@@ -2,6 +2,8 @@ import socket
 from src.network import Connection
 from src.utils import parse_look, parse_broadcast, Inventory
 from . import commands
+from src.utils.logging_levels import logger
+
 
 class ZappyAiClient:
     def __init__(self, port, name, ip):
@@ -26,30 +28,28 @@ class ZappyAiClient:
         """
         try:
             self.connection.connect()
-            
+
             # receive welcome
             welcome = self.connection.receive_line()
             if welcome != "WELCOME":
-                print(f"Unexpected welcome message: {welcome}")
+                logger.warning(f"Unexpected welcome message: {welcome}")
                 return 84
-            
+
             # send team name
             self.connection.send_line(self.name)
-            
+
             # receive slots
             slots = self.connection.receive_line()
-            print(f"Remaining slots: {slots}")
-            
+            logger.info(f"Remaining slots: {slots}")
             # receive map dimensions
             dimensions = self.connection.receive_line()
-            print(f"Map dimensions: {dimensions}")
-            
+            logger.info(f"Map dimensions: {dimensions}")
             return 0
         except (ConnectionRefusedError, socket.gaierror):
-            print(f"Could not connect to server at {self.ip}:{self.port}")
+            logger.error(f"Could not connect to server at {self.ip}:{self.port}")
             return 84
         except Exception as e:
-            print(f"An error occurred during connection: {e}")
+            logger.error(f"An error occurred during connection: {e}")
             return 84
 
     def receive_line(self):
@@ -193,6 +193,6 @@ class ZappyAiClient:
             if resp and resp.startswith("Current level:"):
                 self.level = int(resp.split(":")[1].strip())
         return resp
-      
+
     def close(self):
         self.connection.close()

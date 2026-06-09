@@ -1,5 +1,6 @@
 import math
 from src.utils import ELEVATION_TABLE, can_evolve
+from src.utils.logging_levels import logger
 
 
 def get_missing_resources(level, inventory):
@@ -38,22 +39,22 @@ def move_to_tile(client, tile_index):
     if tile_index == 0:
         return True
 
-    print("Calculating route to tile")
+    logger.info("Calculating route to tile")
     d = int(math.sqrt(tile_index))
     x = tile_index - (d**2 + d)
 
     # move forward d times, then turn and move x times
     for _ in range(d):
-        print(f"[SERVER] -> {client.forward()}")
+        logger.debug(f"[SERVER] -> {client.forward()}")
 
     if x < 0:
-        print(f"[SERVER] -> {client.left()}")
+        logger.debug(f"[SERVER] -> {client.left()}")
         for _ in range(abs(x)):
-            print(f"[SERVER] -> {client.forward()}")
+            logger.debug(f"[SERVER] -> {client.forward()}")
     elif x > 0:
-        print(f"[SERVER] -> {client.right()}")
+        logger.debug(f"[SERVER] -> {client.right()}")
         for _ in range(x):
-            print(f"[SERVER] -> {client.forward()}")
+            logger.debug(f"[SERVER] -> {client.forward()}")
     return True
 
 
@@ -72,16 +73,16 @@ def take_decision(client):
     """
     # 1 check inventory first
     inv = client.inventory()
-    print(f"[SERVER] -> {inv}")
+    logger.debug(f"[SERVER] -> {inv}")
     if inv is None or isinstance(inv, str):
-        print(f"Failed to get inventory: {inv}")
+        logger.error(f"Failed to get inventory: {inv}")
         return
 
     # 2 check if can evolve right now
     look = client.look()
-    print(f"[SERVER] -> {look}")
+    logger.debug(f"[SERVER] -> {look}")
     if look is None or isinstance(look, str):
-        print(f"Failed to look: {look}")
+        logger.error(f"Failed to look: {look}")
         return
 
     current_tile = look[0]
@@ -89,15 +90,23 @@ def take_decision(client):
 
     if can_evolve(client.level, inv, players_on_tile):
         req = ELEVATION_TABLE[client.level]
-        print(f"Evolving to level {client.level + 1}! Dropping resources...")
-        print(f"[SERVER] -> {client.set('linemate')}") if req.linemate > 0 else None
-        print(f"[SERVER] -> {client.set('deraumere')}") if req.deraumere > 0 else None
-        print(f"[SERVER] -> {client.set('sibur')}") if req.sibur > 0 else None
-        print(f"[SERVER] -> {client.set('mendiane')}") if req.mendiane > 0 else None
-        print(f"[SERVER] -> {client.set('phiras')}") if req.phiras > 0 else None
-        print(f"[SERVER] -> {client.set('thystame')}") if req.thystame > 0 else None
+        logger.info(f"Evolving to level {client.level + 1}! Dropping resources...")
+        logger.debug(
+            f"[SERVER] -> {client.set('linemate')}"
+        ) if req.linemate > 0 else None
+        logger.debug(
+            f"[SERVER] -> {client.set('deraumere')}"
+        ) if req.deraumere > 0 else None
+        logger.debug(f"[SERVER] -> {client.set('sibur')}") if req.sibur > 0 else None
+        logger.debug(
+            f"[SERVER] -> {client.set('mendiane')}"
+        ) if req.mendiane > 0 else None
+        logger.debug(f"[SERVER] -> {client.set('phiras')}") if req.phiras > 0 else None
+        logger.debug(
+            f"[SERVER] -> {client.set('thystame')}"
+        ) if req.thystame > 0 else None
         res = client.incantation()
-        print(f"[SERVER] -> {res}")
+        logger.debug(f"[SERVER] -> {res}")
         return
 
     # 3 we have enough resources but not enough players, broadcast
@@ -112,13 +121,15 @@ def take_decision(client):
             and inv.thystame >= req.thystame
         )
         if has_resources and players_on_tile < req.players:
-            print(
+            logger.info(
                 f"Waiting for players for level {client.level}. Current: {players_on_tile}/{req.players}"
             )
-            print(f"[SERVER] -> {client.broadcast(f'Elevation level {client.level}')}")
+            logger.debug(
+                f"[SERVER] -> {client.broadcast(f'Elevation level {client.level}')}"
+            )
             if "food" in current_tile:
-                print("Taking food while waiting...")
-                print(f"[SERVER] -> {client.take('food')}")
+                logger.info("Taking food while waiting...")
+                logger.debug(f"[SERVER] -> {client.take('food')}")
             return
 
     # 4 search for needed resources
@@ -127,18 +138,18 @@ def take_decision(client):
     # P1 take what's on current tile if needed
     for item in current_tile:
         if item in missing:
-            print(f"Taking {item} from current tile.")
-            print(f"[SERVER] -> {client.take(item)}")
+            logger.info(f"Taking {item} from current tile.")
+            logger.debug(f"[SERVER] -> {client.take(item)}")
             return
 
     # P2 move to closest tile with needed resource
     for i, tile in enumerate(look):
         for item in tile:
             if item in missing:
-                print(f"Found {item} on tile {i}. Moving...")
+                logger.info(f"Found {item} on tile {i}. Moving...")
                 move_to_tile(client, i)
                 return
 
     # P3 nothing needed in sight, explore
-    print("Nothing interesting in sight. Exploring...")
-    print(f"[SERVER] -> {client.forward()}")
+    logger.info("Nothing interesting in sight. Exploring...")
+    logger.debug(f"[SERVER] -> {client.forward()}")
