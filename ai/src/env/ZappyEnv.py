@@ -52,36 +52,49 @@ class ZappyEnv(gym.Env):
         truncated = False
         response = None
 
-        if action == 1:
-            response = self.client.forward()
-        elif action == 3:
-            response = self.client.left()
-        elif action == 7:
-            response = self.client.right()
-        elif action == 10:
-            response = self.client.look()
-        elif action == 11:
-            response = self.client.inventory()
-        elif action == 12:
-            response = self.client.broadcast("Hola")
-        elif action == 13:
-            response = self.client.connect_nbr()
-        elif action == 14:
-            response = self.client.fork()
-        elif action == 15:
-            response = self.client.eject()
-        elif action == 16:
-            response = self.client.take(
-                "food"
-            )  # TODO: the AI could choose whatever it want
-        elif action == 17:
-            response = self.client.set(
-                "food"
-            )  # TODO: he AI could choose whatever it want to drop
-        elif action == 18:
-            response = self.client.incantation()
-        else:
-            reward = -0.5
+        try:
+            if action == 1:
+                response = self.client.forward()
+            elif action == 3:
+                response = self.client.left()
+            elif action == 7:
+                response = self.client.right()
+            elif action == 10:
+                response = self.client.look()
+            elif action == 11:
+                response = self.client.inventory()
+            elif action == 12:
+                response = self.client.broadcast("Hola")
+            elif action == 13:
+                response = self.client.connect_nbr()
+            elif action == 14:
+                response = self.client.fork()
+            elif action == 15:
+                response = self.client.eject()
+            elif action == 16:
+                response = self.client.take(
+                    "food"
+                )  # TODO: the AI could choose whatever it want
+            elif action == 17:
+                response = self.client.set(
+                    "food"
+                )  # TODO: the AI could choose whatever it want to drop
+            elif action == 18:
+                # response = self.client.incantation()
+                response = "ko"
+                reward = -1.0
+            else:
+                reward = -0.5
+
+        except BrokenPipeError:
+            print("[ENV] BrokenPipe: Dead Player")
+            response = "dead"
+            self.client.is_dead = True
+
+        except Exception as e:
+            print(f"[ENV] Network: {e}")
+            response = "dead"
+            self.client.is_dead = True
 
         if self.client.is_dead or response == "dead":
             terminated = True
@@ -92,7 +105,13 @@ class ZappyEnv(gym.Env):
             reward = -0.1
 
         if not terminated:
-            observation = self._get_real_observation()
+            try:
+                observation = self._get_real_observation()
+            except Exception as e:
+                print(f"[ENV] Error: {e}")
+                observation = np.zeros(657, dtype=np.int32)
+                terminated = True
+                reward = -100.0
         else:
             observation = np.zeros(657, dtype=np.int32)
 
