@@ -51,7 +51,6 @@ pub fn build_inhabitant_with_entity(
     world.add_component(entity, Inventory::new());
     world.add_component(entity, Life::new(world.freq));
     world.add_component(entity, RelativeOrientation::Forward);
-    world.add_component(entity, Team::default());
 
     let position = world.get_component_mut::<Position>(entity).unwrap();
     position.x = x;

@@ -24,6 +24,25 @@ pub enum TaskType {
     Death,
 }
 
+impl std::fmt::Display for TaskType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TaskType::Forward => write!(f, "Forward"),
+            TaskType::TurnRight => write!(f, "TurnRight"),
+            TaskType::TurnLeft => write!(f, "TurnLeft"),
+            TaskType::Look => write!(f, "Look"),
+            TaskType::Inventory => write!(f, "Inventory"),
+            TaskType::BroadcastText(text) => write!(f, "BroadcastText({text})"),
+            TaskType::Fork => write!(f, "Fork"),
+            TaskType::Eject => write!(f, "Eject"),
+            TaskType::Take(resource) => write!(f, "Take({resource})"),
+            TaskType::Set(resource) => write!(f, "Set({resource})"),
+            TaskType::Incantation => write!(f, "Incantation"),
+            TaskType::Death => write!(f, "Death"),
+        }
+    }
+}
+
 impl TaskType {
     /// return the duration of the task in time units.  unit / freq = seconds
     pub fn duration(&self) -> u64 {
