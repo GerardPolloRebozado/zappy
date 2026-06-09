@@ -1,13 +1,15 @@
-use log::error;
-
+use crate::ecs::builders::inhabitants::build_inhabitant_with_entity;
 use crate::ecs::components::network::NetworkData;
 use crate::ecs::components::task::{TASK_NOT_STARTED, Task, TaskList, TaskType};
 use crate::ecs::components::team::Team;
 use crate::ecs::storage::Entity;
-use crate::protocol::{Command, Request, Response, ResponseCode, StatusCode};
+use crate::protocol::{Command, Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::server::Server;
 use crate::server::commands::ai::handle_ai_command;
 use crate::server::commands::gui::handle_gui_command;
+use crate::utils::orientation::RelativeOrientation;
+use log::{error, info};
+use rand::{RngExt, rng};
 
 pub mod ai;
 pub mod gui;
@@ -72,6 +74,7 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
         if team_name == "GRAPHIC" {
             let team = server.world.get_component_mut::<Team>(entity).unwrap();
             *team = Team::AuthenticatedGUI;
+            info!("Entity {} authenticated as GRAPHIC", entity);
             return;
         }
 
@@ -97,6 +100,28 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
     }
     let team_component = server.world.get_component_mut::<Team>(entity).unwrap();
     *team_component = Team::AuthenticatedAI(team_name.clone());
+
+    let x = rng().random_range(0..server.world.map_size.width);
+    let y = rng().random_range(0..server.world.map_size.height);
+    let entity = build_inhabitant_with_entity(
+        entity,
+        x,
+        y,
+        RelativeOrientation::Forward,
+        &mut server.world,
+    );
+    info!(
+        "Entity {} authenticated as team {}, placed at ({}, {})",
+        entity, team_name, x, y
+    );
+    server.broadcast_global(ServerEvent::NewPlayer {
+        player_id: entity.id(),
+        x,
+        y,
+        orientation: RelativeOrientation::SameTile,
+        level: 0,
+        team: team_name,
+    });
 
     let network_data = server.world.get_component_mut::<NetworkData>(entity);
     if network_data.is_none() {
