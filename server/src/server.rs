@@ -12,7 +12,7 @@ use crate::ecs::systems::run::run_systems;
 use crate::game::*;
 use crate::protocol::{Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::utils::Config;
-use log::info;
+use log::{error, info};
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
@@ -139,9 +139,11 @@ impl Server {
                     continue;
                 }
 
+                info!("Parsing request: {}", trimmed);
                 let req = match trimmed.parse::<Request>() {
                     Ok(req) => req,
                     Err(_) => {
+                        error!("Cannot parse request: {}", trimmed);
                         if let Some(client) = self.world.get_component_mut::<NetworkData>(entity) {
                             client.pending_responses.push(Response {
                                 code: ResponseCode::Status(StatusCode::Ko),
