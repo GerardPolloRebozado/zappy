@@ -3,16 +3,16 @@
 pub mod commands;
 pub mod signal;
 
-use crate::ecs::builders::inhabitants::build_inhabitant;
 use crate::ecs::components::network::NetworkData;
 use crate::ecs::components::task::TaskType;
+use crate::ecs::components::team::Team;
 use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::network::network_system;
 use crate::ecs::systems::run::run_systems;
 use crate::game::*;
 use crate::protocol::{Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::utils::Config;
-use crate::utils::orientation;
+use log::{error, info};
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
@@ -42,6 +42,7 @@ impl Server {
         listener
             .set_nonblocking(true)
             .expect("Cannot set non-blocking");
+        info!("Server started on port: {}", config.port);
         Server {
             listener,
             _users: HashMap::new(),
@@ -71,13 +72,12 @@ impl Server {
             let mut socket = socket;
             let _ = socket.write_all(b"WELCOME\n");
             let network_data = NetworkData::new(socket);
-            build_inhabitant(
-                0,
-                0,
-                orientation::RelativeOrientation::Forward,
-                &mut self.world,
-                network_data,
-            );
+            let entity = self.world.spawn();
+            self.world
+                .add_component::<NetworkData>(entity, network_data);
+            self.world
+                .add_component::<Team>(entity, Team::WaitingForTeamName);
+            info!("New client connected: entity {}", entity.id());
         }
     }
 
@@ -139,9 +139,11 @@ impl Server {
                     continue;
                 }
 
+                info!("Parsing request: {}", trimmed);
                 let req = match trimmed.parse::<Request>() {
                     Ok(req) => req,
                     Err(_) => {
+                        error!("Cannot parse request: {}", trimmed);
                         if let Some(client) = self.world.get_component_mut::<NetworkData>(entity) {
                             client.pending_responses.push(Response {
                                 code: ResponseCode::Status(StatusCode::Ko),
@@ -180,6 +182,11 @@ impl Server {
     }
 
     pub fn handle_response(&mut self, entity: Entity, response: Response) {
+        info!(
+            "Handling response for entity {}: {:?}",
+            entity.id(),
+            response
+        );
         let network_data = self.world.get_component_mut::<NetworkData>(entity);
         if network_data.is_none() {
             return;

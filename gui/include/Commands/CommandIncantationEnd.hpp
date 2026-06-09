@@ -9,7 +9,9 @@
 
 #include "ACommand.hpp"
 #include "Components/ComponentShared.hpp"
+#include "Logging/Logger.hpp"
 #include <sstream>
+#include <string>
 
 namespace zappy {
 class CommandIncantationEnd : public ACommand {
@@ -27,11 +29,12 @@ class CommandIncantationEnd : public ACommand {
         int x, y, result;
 
         if (!(iss >> x >> y >> result)) {
+            log_error("Protocol: failed to parse incantation end args: " + args);
             return;
         }
 
-        std::cout << "Protocol: Incantation at (" << x << ", " << y
-                  << ") ended with result: " << (result ? "Success" : "Failure") << std::endl;
+        log_info("Protocol: Incantation at (" + std::to_string(x) + ", " + std::to_string(y) +
+                    ") ended with result: " + (result ? "Success" : "Failure"));
     }
 };
 } // namespace zappy

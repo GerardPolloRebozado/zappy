@@ -1,6 +1,6 @@
 use crate::utils::orientation::RelativeOrientation;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Position {
     pub x: u32,
     pub y: u32,

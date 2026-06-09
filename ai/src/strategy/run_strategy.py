@@ -1,4 +1,5 @@
 from .decision_making import take_decision
+from src.utils.logging_levels import logger
 
 
 def run_client(client):
@@ -13,7 +14,7 @@ def run_client(client):
 
             while client.messages:
                 msg = client.messages.pop(0)
-                print(f"Broadcast from {msg['direction']}: {msg['text']}")
+                logger.info(f"Broadcast from {msg['direction']}: {msg['text']}")
 
     except KeyboardInterrupt:
         pass

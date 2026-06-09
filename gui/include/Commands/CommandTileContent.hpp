@@ -10,6 +10,8 @@
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
 #include "Components/ComponentTile.hpp"
+#include "Logging/Logger.hpp"
+#include <string>
 
 namespace zappy {
 class CommandTileContent : public ACommand {
@@ -27,6 +29,7 @@ class CommandTileContent : public ACommand {
         std::istringstream iss(args);
         int x, y, q0, q1, q2, q3, q4, q5, q6;
         if (!(iss >> x >> y >> q0 >> q1 >> q2 >> q3 >> q4 >> q5 >> q6)) {
+            log_error("Protocol: failed to parse tile content args: " + args);
             return;
         }
 
@@ -59,7 +62,8 @@ class CommandTileContent : public ACommand {
             world.add_component<TerrainType>(tileEntity, {static_cast<TerrainType::Type>(t_type)});
         }
 
-        std::cout << "Protocol: Tile (" << x << ", " << y << ") content updated" << std::endl;
+        log_info("Protocol: Tile (" + std::to_string(x) + ", " + std::to_string(y) +
+                    ") content updated");
     }
 };
 } // namespace zappy

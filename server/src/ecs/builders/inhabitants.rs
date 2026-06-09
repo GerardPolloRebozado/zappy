@@ -37,3 +37,29 @@ pub fn build_inhabitant(
 
     new_inhabitant
 }
+
+pub fn build_inhabitant_with_entity(
+    entity: Entity,
+    x: u32,
+    y: u32,
+    orientation: RelativeOrientation,
+    world: &mut World,
+) -> Entity {
+    world.add_component(entity, TaskList::default());
+    world.add_component(entity, Position::new());
+    world.add_component(entity, Level::new());
+    world.add_component(entity, Inventory::new());
+    world.add_component(entity, Life::new(world.freq));
+    world.add_component(entity, RelativeOrientation::Forward);
+
+    let position = world.get_component_mut::<Position>(entity).unwrap();
+    position.x = x;
+    position.y = y;
+
+    let mut _orientation = world
+        .get_component_mut::<RelativeOrientation>(entity)
+        .unwrap();
+    *_orientation = orientation;
+
+    entity
+}

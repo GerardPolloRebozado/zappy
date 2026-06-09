@@ -9,8 +9,10 @@
 
 #include "ACommand.hpp"
 #include "Components/ComponentInhabitant.hpp"
+#include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 namespace zappy {
 class CommandEggConnection : public ACommand {
@@ -31,6 +33,7 @@ class CommandEggConnection : public ACommand {
         int eggId;
 
         if (!(iss >> eggId)) {
+            log_error("Protocol: failed to parse egg connection args: " + args);
             return;
         }
 
@@ -39,8 +42,8 @@ class CommandEggConnection : public ACommand {
             for (auto const& [entity, egg] : *storage) {
                 if (egg->id == eggId) {
                     world.despawn(entity);
-                    std::cout << "Protocol: Player connected to egg #" << eggId << " (egg removed)"
-                              << std::endl;
+                    log_info("Protocol: Player connected to egg #" + std::to_string(eggId) +
+                                " (egg removed)");
                     break;
                 }
             }
