@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.28)
 project(zappy_gui)
 
+set(ZAPPY_LOG_LEVEL 3 CACHE STRING "1=ERROR, 2=DEBUG, 3=INFO")
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,8 +10,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose Release or Debug" FORCE)
 endif ()
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 #Raylib
 include(FetchContent)
@@ -90,9 +90,13 @@ target_include_directories(zappy_gui_core PUBLIC
 
 target_link_libraries(zappy_gui_core PUBLIC raylib)
 
+target_compile_definitions(zappy_gui_core PRIVATE ZAPPY_LOG_LEVEL=${ZAPPY_LOG_LEVEL})
+
 add_executable(${PROJECT_NAME} src/main.cpp)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE zappy_gui_core)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE ZAPPY_LOG_LEVEL=${ZAPPY_LOG_LEVEL})
 
 if (APPLE)
   target_link_libraries(zappy_gui_core PUBLIC

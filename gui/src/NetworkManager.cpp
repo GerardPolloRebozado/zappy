@@ -7,7 +7,8 @@
 
 #include "NetworkManager.hpp"
 #include "Commands/FactoryCommands.hpp"
-#include <iostream>
+#include "Logging/Logger.hpp"
+#include "errors/IError.hpp"
 #include <sstream>
 
 namespace zappy {
@@ -51,7 +52,7 @@ void NetworkManager::update(World& world) {
 }
 
 void NetworkManager::sendCommand(const std::string& cmd) {
-    std::cout << "Sending new command: " << cmd << std::endl;
+    log_debug("Sending new command: " + cmd);
     _socket.send(cmd + "\n");
 }
 
@@ -78,7 +79,7 @@ void NetworkManager::requestTileContent(int x, int y) {
 
 void NetworkManager::_processHandshake(const std::string& message) {
     if (message == "WELCOME") {
-        std::cout << "Received WELCOME, sending GRAPHIC" << std::endl;
+        log_debug("Received WELCOME, sending GRAPHIC");
         sendCommand("GRAPHIC");
         _isHandshakeDone = true;
 
@@ -98,13 +99,12 @@ void NetworkManager::_handleProtocolMessage(const std::string& message, World& w
         return;
     }
 
-    std::unique_ptr<ACommand> command = FactoryCommands::createCommand(cmd);
-
-    if (command) {
+    try {
+        std::unique_ptr<ACommand> command = FactoryCommands::createCommand(cmd);
         std::string args = message.substr(cmd.length() + 1);
         command->execute(args, world);
-    } else {
-        std::cout << "Wrong command: " << cmd << std::endl;
+    } catch (const IError& e) {
+        log_error(e.what());
     }
 }
 
