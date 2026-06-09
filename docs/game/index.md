@@ -54,6 +54,10 @@ resource_amount = map_width × map_height × density
 
 Movement updates the inhabitant's position and immediately refreshes its field of view.
 
+When an inhabitant completes a move or turn, connected GUI clients are notified so the map view stays in sync with the game state.
+
+The GUI may also query an inhabitant's current position and orientation on demand.
+
 Vision range is configurable through the game configuration.
 
 ## Inventory
