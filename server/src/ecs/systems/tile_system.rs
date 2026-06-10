@@ -135,4 +135,28 @@ mod tests {
         }
         assert!(found);
     }
+
+    #[test]
+    fn test_spawn_egg() {
+        let mut world = World::default();
+        let size = MapSize {
+            width: 10,
+            height: 10,
+        };
+
+        spawn_egg(size, &mut world, 42);
+
+        let egg_storage = world
+            .get_storage::<Egg>()
+            .expect("Egg storage should exist");
+        assert_eq!(egg_storage.iter().count(), 1);
+
+        let (egg_ent, _) = egg_storage.iter().next().unwrap();
+        let pos = world
+            .get_component::<Position>(*egg_ent)
+            .expect("Egg should have a position");
+
+        assert!(pos.x < 10);
+        assert!(pos.y < 10);
+    }
 }

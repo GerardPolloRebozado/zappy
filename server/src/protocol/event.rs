@@ -235,7 +235,7 @@ impl ServerEvent {
     ///
     /// let player = Inhabitant::default().with_id(5);
     /// let event = ServerEvent::Dead { player_id: 5 };
-    /// assert_eq!(event.to_ai_string(Some(&player), 10, 10), Some("dead\n".to_string()));
+    /// assert_eq!(event.to_ai_string(Some(&player), 10, 10), Some("dead".to_string()));
     /// ```
     pub fn to_ai_string(
         &self,

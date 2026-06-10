@@ -188,6 +188,7 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
         &mut server.world,
         ServerEvent::EggConnect { egg_id: egg.id() },
     );
+    server.world.despawn(egg);
 }
 
 #[cfg(test)]
@@ -315,5 +316,47 @@ mod tests {
 
         let team = server.world.get_component::<Team>(inhabitant).unwrap();
         assert_eq!(*team, Team::AuthenticatedAI("existing_team".to_string()));
+    }
+
+    #[test]
+    fn test_ai_auth_consumes_egg() {
+        let mut server = Server {
+            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
+            _users: std::collections::HashMap::new(),
+            _freq: 100,
+            game_start: 0,
+            world: crate::ecs::storage::World::new(
+                crate::ecs::map_size::MapSize {
+                    width: 10,
+                    height: 10,
+                },
+                100,
+            ),
+            clients_nb: 10,
+            team_names: vec!["existing_team".to_string()],
+        };
+
+        let (mock_socket, _) = network::MockSocket::new(vec![]);
+        let network_data = NetworkData::new(mock_socket);
+        let egg = server.world.spawn();
+        server.world.add_component(egg, Position { x: 5, y: 5 });
+        server.world.add_component(egg, Egg);
+
+        let inhabitant = server.world.spawn();
+        server.world.add_component(inhabitant, network_data);
+        server
+            .world
+            .add_component(inhabitant, Team::WaitingForTeamName);
+
+        let request = Request {
+            command: Command::Unknown("existing_team".to_string()),
+        };
+
+        handle_auth_request(&mut server, inhabitant, request);
+
+        // Check if egg is despawned
+        assert!(!server.world.is_alive(egg));
+        let egg_storage = server.world.get_storage::<Egg>().unwrap();
+        assert_eq!(egg_storage.iter().count(), 0);
     }
 }

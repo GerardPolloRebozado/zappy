@@ -17,3 +17,43 @@ impl Egg {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ecs::storage::World;
+
+    #[test]
+    fn test_random_egg() {
+        let mut world = World::default();
+        let egg1 = world.spawn();
+        world.add_component(egg1, Egg);
+
+        let found = Egg::random_egg(&mut world);
+        assert_eq!(found, egg1);
+    }
+
+    #[test]
+    fn test_random_egg_multiple() {
+        let mut world = World::default();
+        let egg1 = world.spawn();
+        world.add_component(egg1, Egg);
+        let egg2 = world.spawn();
+        world.add_component(egg2, Egg);
+
+        let found = Egg::random_egg(&mut world);
+        assert!(found == egg1 || found == egg2);
+    }
+
+    #[test]
+    #[should_panic(expected = "No eggs found in the world")]
+    fn test_random_egg_empty() {
+        let mut world = World::default();
+        // Register Egg storage by adding a component (which we then remove or just register explicitly)
+        let ent = world.spawn();
+        world.add_component(ent, Egg);
+        world.despawn(ent);
+
+        Egg::random_egg(&mut world);
+    }
+}
