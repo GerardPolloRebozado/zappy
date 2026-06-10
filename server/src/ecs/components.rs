@@ -1,3 +1,4 @@
+pub mod egg;
 pub mod inhabitant;
 pub mod inventory;
 pub mod level;

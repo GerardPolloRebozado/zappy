@@ -1,15 +1,17 @@
 use crate::commands::ai::handle_ai_command;
 use crate::commands::gui::handle_gui_command;
 use crate::ecs::builders::inhabitants::build_inhabitant_with_entity;
+use crate::ecs::components::egg::Egg;
 use crate::ecs::components::network::NetworkData;
+use crate::ecs::components::position::Position;
 use crate::ecs::components::task::{TASK_NOT_STARTED, Task, TaskList, TaskType};
 use crate::ecs::components::team::Team;
 use crate::ecs::storage::Entity;
+use crate::ecs::systems::task::broadcast_event;
 use crate::protocol::{Command, Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::server::Server;
 use crate::utils::orientation::RelativeOrientation;
 use log::{error, info};
-use rand::{RngExt, rng};
 
 pub mod ai;
 pub mod gui;
@@ -57,30 +59,67 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
     let team_name;
 
     {
-        let network_data = server.world.get_component_mut::<NetworkData>(entity);
-        if network_data.is_none() {
-            return;
-        }
-        let network_data = network_data.unwrap();
-
-        team_name = match request.command {
-            Command::Unknown(team_name) => team_name,
-            _ => {
-                error!("Team not found: {}", request.command);
-                network_data
-                    .pending_responses
-                    .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
+        {
+            let network_data = server.world.get_component_mut::<NetworkData>(entity);
+            if network_data.is_none() {
                 return;
             }
-        };
+            let network_data = network_data.unwrap();
+
+            team_name = match request.command {
+                Command::Unknown(team_name) => team_name,
+                _ => {
+                    error!("Team not found: {}", request.command);
+                    network_data
+                        .pending_responses
+                        .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
+                    return;
+                }
+            };
+        }
 
         if team_name == "GRAPHIC" {
-            let team = server.world.get_component_mut::<Team>(entity).unwrap();
-            *team = Team::AuthenticatedGUI;
-            info!("Entity {} authenticated as GRAPHIC", entity);
+            {
+                let team = server.world.get_component_mut::<Team>(entity).unwrap();
+                *team = Team::AuthenticatedGUI;
+                info!("Entity {} authenticated as GRAPHIC", entity);
+            }
+            // send spawned egg events
+            let mut events = Vec::new();
+            let eggs_storage = server.world.get_storage::<Egg>();
+            if eggs_storage.is_none() {
+                return;
+            }
+            for (entity, _) in eggs_storage.unwrap().iter() {
+                let position = server
+                    .world
+                    .get_component::<Position>(*entity)
+                    .unwrap()
+                    .clone();
+                let event = ServerEvent::EggLaid {
+                    egg_id: entity.id(),
+                    player_id: 0,
+                    x: position.x,
+                    y: position.y,
+                };
+                events.push(event.to_gui_string().unwrap());
+            }
+            let network_data = server
+                .world
+                .get_component_mut::<NetworkData>(entity)
+                .unwrap();
+            for e in events {
+                network_data
+                    .pending_responses
+                    .push(Response::new(ResponseCode::Status(StatusCode::Ok), Some(e)));
+            }
             return;
         }
 
+        let network_data = server
+            .world
+            .get_component_mut::<NetworkData>(entity)
+            .unwrap();
         if !server.team_names.contains(&team_name) {
             network_data
                 .pending_responses
@@ -107,29 +146,30 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
     let team_component = server.world.get_component_mut::<Team>(entity).unwrap();
     *team_component = Team::AuthenticatedAI(team_name.clone());
 
-    let x = rng().random_range(0..server.world.map_size.width);
-    let y = rng().random_range(0..server.world.map_size.height);
+    let egg = Egg::random_egg(&mut server.world);
+    let egg_position = server.world.get_component::<Position>(egg).unwrap().clone();
     let entity = build_inhabitant_with_entity(
         entity,
-        x,
-        y,
+        egg_position.x,
+        egg_position.y,
         RelativeOrientation::Forward,
         &mut server.world,
     );
     info!(
         "Entity {} authenticated as team {}, placed at ({}, {})",
-        entity, team_name, x, y
+        entity, team_name, egg_position.x, egg_position.y
     );
     server.broadcast_global(ServerEvent::NewPlayer {
         player_id: entity.id(),
-        x,
-        y,
+        x: egg_position.x,
+        y: egg_position.y,
         orientation: RelativeOrientation::SameTile,
         level: 0,
         team: team_name,
     });
 
     let network_data = server.world.get_component_mut::<NetworkData>(entity);
+
     if network_data.is_none() {
         return;
     }
@@ -144,6 +184,11 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
         ResponseCode::Status(StatusCode::Ok),
         Some(format!("{} {}", width, height)),
     ));
+    broadcast_event(
+        &mut server.world,
+        ServerEvent::EggConnect { egg_id: egg.id() },
+    );
+    server.world.despawn(egg);
 }
 
 #[cfg(test)]
@@ -254,6 +299,9 @@ mod tests {
 
         let (mock_socket, _) = network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
+        let egg = server.world.spawn();
+        server.world.add_component(egg, Position { x: 0, y: 0 });
+        server.world.add_component(egg, Egg);
         let inhabitant = server.world.spawn();
         server.world.add_component(inhabitant, network_data);
         server
@@ -268,5 +316,47 @@ mod tests {
 
         let team = server.world.get_component::<Team>(inhabitant).unwrap();
         assert_eq!(*team, Team::AuthenticatedAI("existing_team".to_string()));
+    }
+
+    #[test]
+    fn test_ai_auth_consumes_egg() {
+        let mut server = Server {
+            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
+            _users: std::collections::HashMap::new(),
+            _freq: 100,
+            game_start: 0,
+            world: crate::ecs::storage::World::new(
+                crate::ecs::map_size::MapSize {
+                    width: 10,
+                    height: 10,
+                },
+                100,
+            ),
+            clients_nb: 10,
+            team_names: vec!["existing_team".to_string()],
+        };
+
+        let (mock_socket, _) = network::MockSocket::new(vec![]);
+        let network_data = NetworkData::new(mock_socket);
+        let egg = server.world.spawn();
+        server.world.add_component(egg, Position { x: 5, y: 5 });
+        server.world.add_component(egg, Egg);
+
+        let inhabitant = server.world.spawn();
+        server.world.add_component(inhabitant, network_data);
+        server
+            .world
+            .add_component(inhabitant, Team::WaitingForTeamName);
+
+        let request = Request {
+            command: Command::Unknown("existing_team".to_string()),
+        };
+
+        handle_auth_request(&mut server, inhabitant, request);
+
+        // Check if egg is despawned
+        assert!(!server.world.is_alive(egg));
+        let egg_storage = server.world.get_storage::<Egg>().unwrap();
+        assert_eq!(egg_storage.iter().count(), 0);
     }
 }

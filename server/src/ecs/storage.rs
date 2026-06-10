@@ -86,7 +86,7 @@ pub trait ComponentStorage: Any {
 #[derive(Clone)]
 pub struct ComponentMap<T> {
     /// Maps an Entity to its component data
-    entries: HashMap<Entity, T>,
+    pub entries: HashMap<Entity, T>,
 }
 
 impl<T: 'static> Default for ComponentMap<T> {

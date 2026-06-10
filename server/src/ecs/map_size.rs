@@ -13,10 +13,9 @@ pub struct MapSize {
 
 /// Builds a `bct x y …` line for the tile at `(x, y)`, or `None` if no tile exists there.
 pub fn get_tile_content(world: &World, x: u32, y: u32) -> Option<String> {
-    use crate::ecs::components::inventory::Inventory;
-    use crate::ecs::components::position::Position;
-    use crate::ecs::components::terrain_type::TerrainType;
-    use crate::ecs::components::tile::Tile;
+    use crate::ecs::components::{
+        inventory::Inventory, position::Position, terrain_type::TerrainType, tile::Tile,
+    };
 
     let tiles = world.get_storage::<Tile>()?;
     let positions = world.get_storage::<Position>()?;
