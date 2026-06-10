@@ -1,6 +1,6 @@
 import unittest
 import os
-from training.env.server_manager import ServerManager
+from training.training_env.server_manager import ServerManager
 
 
 class TestServerManager(unittest.TestCase):
