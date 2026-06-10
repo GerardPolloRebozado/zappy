@@ -1,0 +1,15 @@
+*.obj linguist-generated=true
+*.fbx linguist-generated=true
+*.blend linguist-generated=true
+*.3ds linguist-generated=true
+*.dae linguist-generated=true
+*.gltf linguist-generated=true
+*.glb linguist-generated=true
+*.png linguist-binary=true
+*.jpg linguist-binary=true
+*.jpeg linguist-binary=true
+*.psd linguist-generated=true
+*.tga linguist-generated=true
+*.wav linguist-generated=true
+*.mp3 linguist-generated=true
+*.ogg linguist-generated=true
