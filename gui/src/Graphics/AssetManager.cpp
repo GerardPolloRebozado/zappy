@@ -8,6 +8,8 @@
 #include "Graphics/AssetManager.hpp"
 #include "Graphics/GraphicsErrors.hpp"
 #include "Logging/Logger.hpp"
+#include <algorithm>
+#include <cctype>
 
 namespace zappy {
 
@@ -68,6 +70,22 @@ void AssetManager::_loadModels() {
     try {
         _models["chicken"] = std::make_unique<raylib::Model>("assets/models/Chicken.obj");
         _models["robot"] = std::make_unique<raylib::Model>("assets/models/Robot1.obj");
+        _models["tree2"] =
+            std::make_unique<raylib::Model>("assets/models/trees/tree2/tree2.vox.obj");
+        _models["rock1"] = std::make_unique<raylib::Model>("assets/models/rock1.obj");
+        _models["rock2"] = std::make_unique<raylib::Model>("assets/models/rock2.obj");
+
+        const std::vector<std::string> animals = {
+            "Axolotl", "Bear",     "Bunny",   "Cat",    "Chicken", "Cow",    "Crocodile",
+            "Dog",     "Elephant", "Fox",     "Frog",   "Mole",    "Monkey", "Mouse",
+            "Panda",   "Parrot",   "Penguin", "Piglet", "Turtle",  "Unicorn"};
+        for (const auto& animal : animals) {
+            std::string lowerName = animal;
+            std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+            std::string path = "assets/models/animals/" + animal + "/" + lowerName + ".vox.obj";
+            _models["voxel_" + lowerName] = std::make_unique<raylib::Model>(path);
+        }
+
     } catch (const raylib::RaylibException& e) {
         log_error(ErrorAsset("Failed to load models: " + std::string(e.what())).what());
     }
