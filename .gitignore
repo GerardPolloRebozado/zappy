@@ -24,7 +24,6 @@ Debug/
 Release/
 cmake-build-*/
 *.o
-*.obj
 *.a
 *.lib
 *.so
