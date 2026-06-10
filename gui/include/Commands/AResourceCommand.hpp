@@ -81,7 +81,8 @@ class AResourceCommand : public ACommand {
         }
 
         for (auto const& [ent, pos] : *posStorage) {
-            if (ent.id() == (uint32_t)playerId && !world.get_component<TileTag>(ent)) {
+            auto serverId = world.get_component<ServerId>(ent);
+            if (serverId && serverId->id == playerId && !world.get_component<TileTag>(ent)) {
                 return {ent, *pos, true};
             }
         }

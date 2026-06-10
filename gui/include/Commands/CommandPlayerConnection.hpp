@@ -40,7 +40,8 @@ class CommandPlayerConnection : public ACommand {
         }
 
         // TODO: create player util fn?
-        Entity player = world.spawn_at_id(playerId);
+        Entity player = world.spawn();
+        world.add_component<ServerId>(player, {playerId});
         world.add_component<Position>(player, {x, y});
         world.add_component<Orientation>(player,
                                          {static_cast<Orientation::Direction>(orientation)});
@@ -49,8 +50,8 @@ class CommandPlayerConnection : public ACommand {
         world.add_component<Inventory>(player, {0, 0, 0, 0, 0, 0, 0});
         world.add_component<InhabitantTag>(player, InhabitantTag{});
 
-        log_info("Protocol: New player #" + std::to_string(playerId) + " connected (Team: " +
-                    teamName + ")");
+        log_info("Protocol: New player #" + std::to_string(playerId) +
+                 " connected (Team: " + teamName + ")");
     }
 };
 } // namespace zappy
