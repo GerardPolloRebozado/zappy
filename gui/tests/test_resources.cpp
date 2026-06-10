@@ -16,7 +16,8 @@ using namespace zappy;
 
 Test(CommandResourceTest, CollectResource) {
     World world;
-    Entity player = world.spawn_at_id(100);
+    Entity player = world.spawn();
+    world.add_component<ServerId>(player, ServerId{100});
     Entity tile = world.spawn();
 
     world.add_component<Position>(player, Position{2, 3});
@@ -40,7 +41,8 @@ Test(CommandResourceTest, CollectResource) {
 
 Test(CommandResourceTest, DropResource) {
     World world;
-    Entity player = world.spawn_at_id(200);
+    Entity player = world.spawn();
+    world.add_component<ServerId>(player, ServerId{200});
     Entity tile = world.spawn();
 
     world.add_component<Position>(player, Position{1, 1});

@@ -7,6 +7,7 @@
 
 #include "UI/UIScoreboardPanel.hpp"
 #include "Components/ComponentInhabitant.hpp"
+#include "Components/ComponentShared.hpp"
 #include "Graphics/AssetManager.hpp"
 #include <algorithm>
 #include <map>
@@ -53,8 +54,11 @@ void UIScoreboardPanel::render() {
             }
 
             teamData[team->team_name].maxLevel = std::max(teamData[team->team_name].maxLevel, lvl);
-            teamData[team->team_name].players.push_back("P" + std::to_string(entity.id()) +
-                                                        "(Lvl " + std::to_string(lvl) + ")");
+            auto serverId = _world.get_component<ServerId>(entity);
+            std::string idStr =
+                serverId ? std::to_string(serverId->id) : std::to_string(entity.id());
+            teamData[team->team_name].players.push_back("P" + idStr + "(Lvl " +
+                                                        std::to_string(lvl) + ")");
         }
     }
 

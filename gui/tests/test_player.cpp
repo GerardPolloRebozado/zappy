@@ -24,6 +24,7 @@ using namespace zappy;
 Test(CommandPlayerPositionTest, ValidUpdateExistingPosition) {
     World world;
     Entity player = world.spawn();
+    world.add_component<ServerId>(player, ServerId{static_cast<int>(player.id())});
 
     world.add_component<Orientation>(player, Orientation{Orientation::N}); // N = 1
     world.add_component<Position>(player, Position{0, 0});
@@ -46,6 +47,7 @@ Test(CommandPlayerPositionTest, ValidUpdateExistingPosition) {
 Test(CommandPlayerLevelTest, ValidUpdateExistingLevel) {
     World world;
     Entity player = world.spawn();
+    world.add_component<ServerId>(player, ServerId{static_cast<int>(player.id())});
 
     world.add_component<Level>(player, Level{1});
 
@@ -63,6 +65,7 @@ Test(CommandPlayerLevelTest, ValidUpdateExistingLevel) {
 Test(CommandPlayerInventoryTest, ValidUpdateExistingInventory) {
     World world;
     Entity player = world.spawn();
+    world.add_component<ServerId>(player, ServerId{static_cast<int>(player.id())});
 
     world.add_component<Position>(player, Position{0, 0});
     world.add_component<Inventory>(player, Inventory{1, 1, 1, 1, 1, 1, 1});
@@ -93,7 +96,8 @@ Test(CommandPlayerConnectionTest, ValidNewPlayer) {
     auto posStorage = world.get_storage<Position>();
     bool found = false;
     for (auto const& [ent, pos] : *posStorage) {
-        if (ent.id() == 50) {
+        auto serverId = world.get_component<ServerId>(ent);
+        if (serverId && serverId->id == 50) {
             cr_assert_eq(pos->x, 10);
             cr_assert_eq(pos->y, 20);
             cr_assert_not_null(world.get_component<InhabitantTag>(ent));
@@ -108,7 +112,8 @@ Test(CommandPlayerConnectionTest, ValidNewPlayer) {
 
 Test(CommandPlayerDeathTest, ValidPlayerDeath) {
     World world;
-    Entity player = world.spawn_at_id(77);
+    Entity player = world.spawn();
+    world.add_component<ServerId>(player, ServerId{77});
     world.add_component<Position>(player, Position{0, 0});
 
     cr_assert(world.is_alive(player));
@@ -134,11 +139,13 @@ Test(CommandPlayerExpulsionTest, EjectEast) {
     World world;
     setupMap(world, 10, 10);
 
-    Entity victim = world.spawn_at_id(1);
+    Entity victim = world.spawn();
+    world.add_component<ServerId>(victim, ServerId{1});
     world.add_component<Position>(victim, Position{5, 5});
     world.add_component<InhabitantTag>(victim, InhabitantTag{});
 
-    Entity ejector = world.spawn_at_id(2);
+    Entity ejector = world.spawn();
+    world.add_component<ServerId>(ejector, ServerId{2});
     world.add_component<Position>(ejector, Position{5, 5});
     world.add_component<InhabitantTag>(ejector, InhabitantTag{});
     world.add_component<Orientation>(ejector, Orientation{Orientation::E});
@@ -156,11 +163,13 @@ Test(CommandPlayerExpulsionTest, EjectNorthWithWrap) {
     World world;
     setupMap(world, 10, 10);
 
-    Entity victim = world.spawn_at_id(10);
+    Entity victim = world.spawn();
+    world.add_component<ServerId>(victim, ServerId{10});
     world.add_component<Position>(victim, Position{3, 0});
     world.add_component<InhabitantTag>(victim, InhabitantTag{});
 
-    Entity ejector = world.spawn_at_id(11);
+    Entity ejector = world.spawn();
+    world.add_component<ServerId>(ejector, ServerId{11});
     world.add_component<Position>(ejector, Position{3, 0});
     world.add_component<InhabitantTag>(ejector, InhabitantTag{});
     world.add_component<Orientation>(ejector, Orientation{Orientation::N});
@@ -178,7 +187,8 @@ Test(CommandPlayerExpulsionTest, NoCoTileInhabitant) {
     World world;
     setupMap(world, 10, 10);
 
-    Entity victim = world.spawn_at_id(20);
+    Entity victim = world.spawn();
+    world.add_component<ServerId>(victim, ServerId{20});
     world.add_component<Position>(victim, Position{7, 7});
     world.add_component<InhabitantTag>(victim, InhabitantTag{});
 

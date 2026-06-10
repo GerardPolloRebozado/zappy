@@ -44,7 +44,8 @@ class CommandPlayerInventory : public ACommand {
         }
 
         for (auto& [entity, position] : *posStorage) {
-            if (entity.id() == (uint32_t)playerId) {
+            auto serverId = world.get_component<ServerId>(entity);
+            if (serverId && serverId->id == playerId) {
                 position->x = x;
                 position->y = y;
 

@@ -48,7 +48,8 @@ class CommandPlayerPosition : public ACommand {
         }
         for (auto& [entity, position] : *positionsStorage) {
 
-            if (entity.id() == playerId) {
+            auto serverId = world.get_component<ServerId>(entity);
+            if (serverId && serverId->id == playerId) {
 
                 position->x = x;
                 position->y = y;

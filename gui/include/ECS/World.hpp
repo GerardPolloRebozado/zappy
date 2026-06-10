@@ -74,20 +74,6 @@ class World {
     }
 
     /**
-     * Spawns an entity with a specific ID. If the ID is already in use, it returns the existing
-     * entity.
-     * @param id the ID to use for the new entity
-     * @return the entity with the specified ID
-     */
-    Entity spawn_at_id(uint32_t id) {
-        if (id >= entity_generations.size()) {
-            entity_generations.resize(id + 1, 0);
-            return {id, 0};
-        }
-        return {id, entity_generations[id]};
-    }
-
-    /**
      *
      * @param entity the entity to despawn. Marks the entity as dead by incrementing its generation
      * and adding its ID to the free list for reuse

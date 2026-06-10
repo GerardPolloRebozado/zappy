@@ -43,10 +43,11 @@ class CommandPlayerLevel : public ACommand {
         }
 
         for (auto& [entity, levelComp] : *levelStorage) {
-            if (entity.id() == (uint32_t)playerId) {
+            auto serverId = world.get_component<ServerId>(entity);
+            if (serverId && serverId->id == playerId) {
                 levelComp->level = level;
-                log_info("Protocol: Player #" + std::to_string(playerId) +
-                            " level updated to " + std::to_string(level));
+                log_info("Protocol: Player #" + std::to_string(playerId) + " level updated to " +
+                         std::to_string(level));
                 break;
             }
         }

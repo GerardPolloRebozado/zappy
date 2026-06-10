@@ -34,7 +34,8 @@ class CommandPlayerDeath : public ACommand {
         auto posStorage = world.get_storage<Position>();
         if (posStorage) {
             for (auto const& [entity, pos] : *posStorage) {
-                if (entity.id() == (uint32_t)playerId && !world.get_component<TileTag>(entity)) {
+                auto serverId = world.get_component<ServerId>(entity);
+                if (serverId && serverId->id == playerId && !world.get_component<TileTag>(entity)) {
                     world.despawn(entity);
                     log_info("Protocol: Player #" + std::to_string(playerId) + " died");
                     break;

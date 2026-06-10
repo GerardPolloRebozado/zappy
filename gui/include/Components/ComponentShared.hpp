@@ -37,6 +37,10 @@ struct Renderable3D {
 struct TimeUnit {
     int frequency;
 };
+
+struct ServerId {
+    int id;
+};
 } // namespace zappy
 
 #endif // ZAPPY_GUI_COMPONENTSHARED_HPP
