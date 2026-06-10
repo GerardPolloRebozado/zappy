@@ -1,11 +1,11 @@
 import unittest
 import os
-from training.env.ZappyEnv import ZappyEnv
+from training.training_env.ZappyEnv import ZappyEnv
 
 
 class TestZappyEnv(unittest.TestCase):
     def test_environment_lifecycle(self):
-        print("\n[Test Env] Starting env")
+        print("\n[Test Env] Starting training_env")
 
         os.path.abspath(
             os.path.join(os.path.dirname(__file__), "../../server/zappy_server")
