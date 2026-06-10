@@ -163,9 +163,9 @@ impl ServerEvent {
         match self {
             ServerEvent::Message {
                 player_id, message, ..
-            } => Some(format!("pbc #{player_id} {message}\n")),
-            ServerEvent::Eject { player_id, .. } => Some(format!("pex #{player_id}\n")),
-            ServerEvent::Dead { player_id } => Some(format!("pdi #{player_id}\n")),
+            } => Some(format!("pbc #{player_id} {message}")),
+            ServerEvent::Eject { player_id, .. } => Some(format!("pex #{player_id}")),
+            ServerEvent::Dead { player_id } => Some(format!("pdi #{player_id}")),
             ServerEvent::NewPlayer {
                 player_id,
                 x,
@@ -174,7 +174,7 @@ impl ServerEvent {
                 level,
                 team,
             } => Some(format!(
-                "pnw #{player_id} {x} {y} {} {level} {team}\n",
+                "pnw #{player_id} {x} {y} {} {level} {team}",
                 orientation.as_protocol_k()
             )),
             ServerEvent::PlayerPosition {
@@ -183,7 +183,7 @@ impl ServerEvent {
                 y,
                 orientation,
             } => Some(format!(
-                "ppo #{player_id} {x} {y} {}\n",
+                "ppo #{player_id} {x} {y} {}",
                 orientation.as_protocol_k()
             )),
             ServerEvent::StartIncantation {
@@ -197,28 +197,28 @@ impl ServerEvent {
                     .map(|id| format!("#{id}"))
                     .collect::<Vec<_>>()
                     .join(" ");
-                Some(format!("pic {x} {y} {level} {players}\n"))
+                Some(format!("pic {x} {y} {level} {players}"))
             }
-            ServerEvent::EndIncantation { x, y, result } => Some(format!("pie {x} {y} {result}\n")),
-            ServerEvent::EggLay { player_id } => Some(format!("pfk #{player_id}\n")),
+            ServerEvent::EndIncantation { x, y, result } => Some(format!("pie {x} {y} {result}")),
+            ServerEvent::EggLay { player_id } => Some(format!("pfk #{player_id}")),
             ServerEvent::ResourceDrop {
                 player_id,
                 resource,
-            } => Some(format!("pdr #{player_id} {resource}\n")),
+            } => Some(format!("pdr #{player_id} {resource}")),
             ServerEvent::ResourceCollect {
                 player_id,
                 resource,
-            } => Some(format!("pgt #{player_id} {resource}\n")),
+            } => Some(format!("pgt #{player_id} {resource}")),
             ServerEvent::EggLaid {
                 egg_id,
                 player_id,
                 x,
                 y,
-            } => Some(format!("enw #{egg_id} #{player_id} {x} {y}\n")),
-            ServerEvent::EggConnect { egg_id } => Some(format!("ebo #{egg_id}\n")),
-            ServerEvent::EggDeath { egg_id } => Some(format!("edi #{egg_id}\n")),
-            ServerEvent::EndOfGame { team } => Some(format!("seg {team}\n")),
-            ServerEvent::ServerMessage { message } => Some(format!("smg {message}\n")),
+            } => Some(format!("enw #{egg_id} #{player_id} {x} {y}")),
+            ServerEvent::EggConnect { egg_id } => Some(format!("ebo #{egg_id}")),
+            ServerEvent::EggDeath { egg_id } => Some(format!("edi #{egg_id}")),
+            ServerEvent::EndOfGame { team } => Some(format!("seg {team}")),
+            ServerEvent::ServerMessage { message } => Some(format!("smg {message}")),
         }
     }
 
@@ -247,7 +247,7 @@ impl ServerEvent {
             ServerEvent::Dead { player_id } => {
                 if let Some(p) = for_player {
                     if p.id() == *player_id {
-                        Some("dead\n".to_string())
+                        Some("dead".to_string())
                     } else {
                         None
                     }
@@ -261,12 +261,12 @@ impl ServerEvent {
                     return None;
                 }
                 let k = calc_k(*x, *y, for_player, map_width, map_height);
-                Some(format!("eject: {k}\n"))
+                Some(format!("eject: {k}"))
             }
             ServerEvent::Message { x, y, message, .. } => {
                 let for_player = for_player?;
                 let k = calc_k(*x, *y, for_player, map_width, map_height);
-                Some(format!("message {k}, {message}\n"))
+                Some(format!("message {k}, {message}"))
             }
             ServerEvent::NewPlayer { .. }
             | ServerEvent::PlayerPosition { .. }

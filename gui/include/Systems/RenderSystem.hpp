@@ -102,6 +102,7 @@ class RenderSystem {
      * @param w The world to fetch terrain data from.
      */
     void _renderTerrain(World& w);
+    void _renderEggs(World& w);
 
     /**
      * @brief Renders the inhabitants in the world.

@@ -93,6 +93,7 @@ void NetworkManager::_processHandshake(const std::string& message) {
 
 // should return info somewhere?
 void NetworkManager::_handleProtocolMessage(const std::string& message, World& world) {
+    log_info("Received responde: " + message);
     std::istringstream iss(message);
     std::string cmd;
     if (!(iss >> cmd)) {

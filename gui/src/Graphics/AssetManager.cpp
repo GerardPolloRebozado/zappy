@@ -74,6 +74,7 @@ void AssetManager::_loadModels() {
             std::make_unique<raylib::Model>("assets/models/trees/tree2/tree2.vox.obj");
         _models["rock1"] = std::make_unique<raylib::Model>("assets/models/rock1.obj");
         _models["rock2"] = std::make_unique<raylib::Model>("assets/models/rock2.obj");
+        _models["egg"] = std::make_unique<raylib::Model>("assets/models/egg.obj");
 
         const std::vector<std::string> animals = {
             "Axolotl", "Bear",     "Bunny",   "Cat",    "Chicken", "Cow",    "Crocodile",
