@@ -120,13 +120,16 @@ impl Server {
                     requests_to_write.push(*entity);
                 }
 
+                if revents.contains(PollFlags::POLLHUP) {
+                    disconnected.push(*entity);
+                }
+
                 if !revents.contains(PollFlags::POLLIN) {
                     continue;
                 }
 
-                match network_data.read_data() {
-                    Some(msg) => requests_to_read.push((*entity, msg)),
-                    None => disconnected.push(*entity),
+                if let Some(msg) = network_data.read_data() {
+                    requests_to_read.push((*entity, msg))
                 }
             }
         }
