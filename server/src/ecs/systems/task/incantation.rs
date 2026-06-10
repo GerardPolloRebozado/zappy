@@ -9,6 +9,12 @@ use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::task::broadcast_event;
 use crate::protocol::{Response, ResponseCode, ServerEvent, StatusCode};
 
+/// Processes incantations that have just started.
+///
+/// It checks if the prerequisites for the incantation are met. If they are, it broadcasts an
+/// `Elevation underway` message to all participating players, as well as a `pic` event to GUI clients.
+/// If the prerequisites are not met, the incantation is immediately aborted and the initiating
+/// player receives a `ko` response.
 pub fn process_started_incantations(world: &mut World, started_incantations: Vec<Entity>) {
     for entity in started_incantations {
         if let Some((_, participants, level)) = check_incantation_prerequisites(world, entity) {
@@ -45,6 +51,11 @@ pub fn process_started_incantations(world: &mut World, started_incantations: Vec
     }
 }
 
+/// Checks if the prerequisites for an incantation are met for a specific player.
+///
+/// Validates that the tile the player is standing on contains the correct amount of required stones,
+/// and that there are enough players of the same level on the same tile.
+/// Returns the tile entity, a vector of participating player entities, and their current level if valid.
 pub fn check_incantation_prerequisites(
     world: &mut World,
     entity: Entity,
@@ -97,6 +108,10 @@ pub fn check_incantation_prerequisites(
     Some((tile_entity, participating_players, level))
 }
 
+/// Returns the required stones and players for a given level elevation.
+///
+/// The format returned is `(players, linemate, deraumere, sibur, mendiane, phiras, thystame)`.
+/// Returns `None` if the level is invalid (e.g. already at maximum level).
 pub fn get_requirements(level: u8) -> Option<(u32, u32, u32, u32, u32, u32, u32)> {
     match level {
         1 => Some((1, 1, 0, 0, 0, 0, 0)),
@@ -110,6 +125,11 @@ pub fn get_requirements(level: u8) -> Option<(u32, u32, u32, u32, u32, u32, u32)
     }
 }
 
+/// Executes the final step of an incantation task.
+///
+/// Validates the prerequisites one last time. If successful, consumes the required stones from the tile,
+/// increments the level of all participating players, and returns the appropriate server responses and events.
+/// If the prerequisites are no longer met (e.g. stones were removed during the ritual), it returns `ko`.
 pub fn execute_incantation(world: &mut World, entity: Entity) -> (Response, Option<ServerEvent>) {
     let ko = Response::new(ResponseCode::Status(StatusCode::Ko), None);
 
@@ -171,4 +191,93 @@ pub fn execute_incantation(world: &mut World, entity: Entity) -> (Response, Opti
     };
 
     (ok, Some(event))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ecs::builders::inhabitants::build_inhabitant;
+    use crate::ecs::builders::tile::build_tile;
+    use crate::ecs::components::network::{MockSocket, NetworkData};
+
+    fn setup_world_with_tile() -> (World, Entity) {
+        let mut world = World::default();
+        let tile = build_tile(Position { x: 0, y: 0 }, &mut world);
+        (world, tile)
+    }
+
+    fn spawn_player(world: &mut World, level: u8) -> Entity {
+        let (mock_socket, _) = MockSocket::new(vec![]);
+        let network_data = NetworkData::new(mock_socket);
+        let player = build_inhabitant(
+            0,
+            0,
+            crate::utils::orientation::RelativeOrientation::Forward,
+            world,
+            network_data,
+        );
+        world.get_component_mut::<Level>(player).unwrap().value = level;
+        player
+    }
+
+    #[test]
+    fn test_get_requirements() {
+        assert_eq!(get_requirements(1), Some((1, 1, 0, 0, 0, 0, 0)));
+        assert_eq!(get_requirements(2), Some((2, 1, 1, 1, 0, 0, 0)));
+        assert_eq!(get_requirements(8), None);
+    }
+
+    #[test]
+    fn test_check_prerequisites_fails_not_enough_stones() {
+        let (mut world, _tile) = setup_world_with_tile();
+        let player = spawn_player(&mut world, 1);
+
+        assert!(check_incantation_prerequisites(&mut world, player).is_none());
+    }
+
+    #[test]
+    fn test_check_prerequisites_success() {
+        let (mut world, tile) = setup_world_with_tile();
+        let player = spawn_player(&mut world, 1);
+
+        world
+            .get_component_mut::<Inventory>(tile)
+            .unwrap()
+            .add_item(Resource::Linemate, 1);
+
+        let res = check_incantation_prerequisites(&mut world, player);
+        assert!(res.is_some());
+        let (found_tile, participants, level) = res.unwrap();
+        assert_eq!(found_tile, tile);
+        assert_eq!(participants.len(), 1);
+        assert_eq!(level, 1);
+    }
+
+    #[test]
+    fn test_execute_incantation_success() {
+        let (mut world, tile) = setup_world_with_tile();
+        let player = spawn_player(&mut world, 1);
+
+        world
+            .get_component_mut::<Inventory>(tile)
+            .unwrap()
+            .add_item(Resource::Linemate, 1);
+
+        let (response, _event) = execute_incantation(&mut world, player);
+
+        assert_eq!(response.code, ResponseCode::Status(StatusCode::Ok));
+        assert_eq!(response.data, Some("Current level: 2".to_string()));
+
+        // Stones should be removed
+        assert_eq!(
+            world
+                .get_component::<Inventory>(tile)
+                .unwrap()
+                .get_item_count(Resource::Linemate),
+            0
+        );
+
+        // Level should be 2
+        assert_eq!(world.get_component::<Level>(player).unwrap().value, 2);
+    }
 }
