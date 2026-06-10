@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <set>
 
 namespace zappy {
 
@@ -170,6 +171,27 @@ void RenderSystem::_renderTerrain(World& w) {
         return;
     }
 
+    std::vector<std::pair<int, int>> inhabitantPosList;
+    auto orientationStorage = w.get_storage<Orientation>();
+    if (orientationStorage) {
+        for (auto const& [entity, orientationPtr] : *orientationStorage) {
+            auto ppos = w.get_component<Position>(entity);
+            if (ppos) {
+                inhabitantPosList.push_back({ppos->x, ppos->y});
+            }
+        }
+    }
+
+    auto eggStorage = w.get_storage<Egg>();
+    if (eggStorage) {
+        for (auto const& [entity, eggPtr] : *eggStorage) {
+            auto ppos = w.get_component<Position>(entity);
+            if (ppos) {
+                inhabitantPosList.push_back({ppos->x, ppos->y});
+            }
+        }
+    }
+
     raylib::Vector3 cameraTarget = _camera.target;
 
     for (auto const& [entity, type] : *terrainStorage) {
@@ -216,6 +238,45 @@ void RenderSystem::_renderTerrain(World& w) {
             }
             vpos.DrawCube(1.0f, 1.0f, 1.0f, color);
 
+            if (type->current_type == TerrainType::FOREST) {
+                raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
+                BoundingBox box = treeModel.GetBoundingBox();
+
+                float sizeX = box.max.x - box.min.x;
+                float sizeZ = box.max.z - box.min.z;
+
+                if (sizeX > 0 && sizeZ > 0) {
+                    bool playerOnTile = false;
+                    for (const auto& p : inhabitantPosList) {
+                        if (p.first == pos->x && p.second == pos->y) {
+                            playerOnTile = true;
+                            break;
+                        }
+                    }
+
+                    if (!playerOnTile) {
+                        float scale = 0.4f / std::max(sizeX, sizeZ);
+
+                        raylib::Vector3 centerOffset((box.max.x + box.min.x) / 2.0f * scale,
+                                                     box.min.y * scale,
+                                                     (box.max.z + box.min.z) / 2.0f * scale);
+
+                        // Sink the tree by 0.1f to hide its built-in grass base
+                        raylib::Vector3 drawPos(vpos.x - centerOffset.x,
+                                                2.0f - centerOffset.y - 0.1f,
+                                                vpos.z - centerOffset.z);
+
+                        // Deterministic random offset within the tile
+                        float rX = ((std::abs(pos->x * 137 + pos->y * 31)) % 61) / 100.0f - 0.3f;
+                        float rZ = ((std::abs(pos->x * 19 + pos->y * 101)) % 61) / 100.0f - 0.3f;
+                        drawPos.x += rX;
+                        drawPos.z += rZ;
+
+                        treeModel.Draw(drawPos, scale, raylib::Color::White());
+                    }
+                }
+            }
+
             if (pos->x == _hoveredX && pos->y == _hoveredZ) {
                 _renderHoverEffect(pos->x, pos->y);
             }
@@ -238,6 +299,14 @@ void RenderSystem::_renderInhabitants(World& w) {
     raylib::Vector3 center = {(box.min.x + box.max.x) / 2.0f,
                               box.min.y, // Ground it on its bottom
                               (box.min.z + box.max.z) / 2.0f};
+
+    std::set<std::string> teamNames;
+    auto teamStorage = w.get_storage<TeamName>();
+    if (teamStorage) {
+        for (auto const& [e, t] : *teamStorage) {
+            teamNames.insert(t->team_name);
+        }
+    }
 
     for (auto const& [entity, orientationPtr] : *orientationStorage) {
         auto pos = w.get_component<Position>(entity);
@@ -266,6 +335,40 @@ void RenderSystem::_renderInhabitants(World& w) {
                                  (float)pos->y - centerOffset.z);
 
             robot.Draw(vpos, {0, 1, 0}, rotation, {scale, scale, scale}, WHITE);
+
+            auto team = w.get_component<TeamName>(entity);
+            if (team) {
+                int colorIndex = 0;
+                for (const auto& tn : teamNames) {
+                    if (tn == team->team_name) {
+                        break;
+                    }
+                    colorIndex++;
+                }
+
+                std::vector<raylib::Color> teamColors = {
+                    raylib::Color(230, 60, 60, 255),  // Red
+                    raylib::Color(60, 230, 60, 255),  // Green
+                    raylib::Color(60, 100, 230, 255), // Blue
+                    raylib::Color(230, 230, 60, 255), // Yellow
+                    raylib::Color(230, 60, 230, 255), // Magenta
+                    raylib::Color(60, 230, 230, 255)  // Cyan
+                };
+                raylib::Color tColor = teamColors[colorIndex % teamColors.size()];
+
+                float wH = 0.12f; // Thicker height
+                float wT = 0.12f; // Thicker width
+                float yB = 2.02f;
+                float dist = 0.38f;
+                raylib::Vector3((float)pos->x, yB + wH / 2, (float)pos->y + dist)
+                    .DrawCube(dist * 2 + wT, wH, wT, tColor);
+                raylib::Vector3((float)pos->x, yB + wH / 2, (float)pos->y - dist)
+                    .DrawCube(dist * 2 + wT, wH, wT, tColor);
+                raylib::Vector3((float)pos->x + dist, yB + wH / 2, (float)pos->y)
+                    .DrawCube(wT, wH, dist * 2 + wT, tColor);
+                raylib::Vector3((float)pos->x - dist, yB + wH / 2, (float)pos->y)
+                    .DrawCube(wT, wH, dist * 2 + wT, tColor);
+            }
         }
     }
 }
@@ -278,12 +381,16 @@ void RenderSystem::_renderResources(World& w) {
 
     raylib::Vector3 cameraTarget = _camera.target;
     auto& am = AssetManager::getInstance();
-    raylib::Model& chicken = am.getModel("chicken");
-    float chickenScale = 0.17f;
-
-    BoundingBox cBox = chicken.GetBoundingBox();
-    raylib::Vector3 cCenter = {(cBox.min.x + cBox.max.x) / 2.0f, cBox.min.y,
-                               (cBox.min.z + cBox.max.z) / 2.0f};
+    std::vector<std::string> grassAnimals = {"bunny", "cat", "cow", "dog", "piglet"};
+    std::vector<std::string> mountainAnimals = {"bear", "mole"};
+    std::vector<std::string> waterAnimals = {"axolotl", "crocodile", "frog", "penguin", "turtle"};
+    std::vector<std::string> sandAnimals = {"crocodile", "elephant", "turtle"};
+    std::vector<std::string> forestAnimals = {"bear",  "bunny", "fox",   "monkey",
+                                              "mouse", "panda", "parrot"};
+    std::vector<std::string> obsidianAnimals = {"mole", "mouse", "crocodile"};
+    std::vector<std::string> luminousAnimals = {"bunny", "frog", "parrot", "unicorn"};
+    std::vector<std::string> crystalAnimals = {"bear", "fox", "mole"};
+    std::vector<std::string> magneticAnimals = {"bear", "fox", "penguin"};
 
     for (auto const& [entity, type] : *terrainStorage) {
         auto pos = w.get_component<Position>(entity);
@@ -298,41 +405,115 @@ void RenderSystem::_renderResources(World& w) {
 
             float yBase = 2.01f;
 
-            // Use chicken model for food, offset slightly from center
+            // Use biome-specific voxel animals for food, offset slightly from center
             if (inv->food > 0) {
-                raylib::Vector3 cPos((float)pos->x - 0.2f - (cCenter.x * chickenScale),
-                                     yBase - (cCenter.y * chickenScale),
-                                     (float)pos->y - 0.2f - (cCenter.z * chickenScale));
-                chicken.Draw(cPos, chickenScale, WHITE);
+                std::vector<std::string>* pool = nullptr;
+
+                switch (type->current_type) {
+                    case TerrainType::GRASS:
+                        pool = &grassAnimals;
+                        break;
+                    case TerrainType::MOUNTAIN:
+                        pool = &mountainAnimals;
+                        break;
+                    case TerrainType::WATER:
+                        pool = &waterAnimals;
+                        break;
+                    case TerrainType::SAND:
+                        pool = &sandAnimals;
+                        break;
+                    case TerrainType::FOREST:
+                        pool = &forestAnimals;
+                        break;
+                    case TerrainType::OBSIDIAN_BARRENS:
+                        pool = &obsidianAnimals;
+                        break;
+                    case TerrainType::LUMINOUS_ORCHARDS:
+                        pool = &luminousAnimals;
+                        break;
+                    case TerrainType::CRYSTAL_CANYONS:
+                        pool = &crystalAnimals;
+                        break;
+                    case TerrainType::MAGNETIC_TUNDRA:
+                        pool = &magneticAnimals;
+                        break;
+                }
+
+                std::string selectedAnimal = "voxel_chicken"; // default
+                if (pool && !pool->empty()) {
+                    int index = (std::abs(pos->x * 137 + pos->y * 31)) % pool->size();
+                    selectedAnimal = "voxel_" + (*pool)[index];
+                }
+
+                raylib::Model& foodModel = am.getModel(selectedAnimal);
+                BoundingBox cBox = foodModel.GetBoundingBox();
+
+                float sizeX = cBox.max.x - cBox.min.x;
+                float sizeZ = cBox.max.z - cBox.min.z;
+                float sizeY = cBox.max.y - cBox.min.y;
+                float maxDim = std::max({sizeX, sizeY, sizeZ});
+                // Make animals smaller: max dim is 0.2f
+                float scale = (maxDim > 0) ? (0.20f / maxDim) : 0.10f;
+
+                raylib::Vector3 cCenter = {(cBox.min.x + cBox.max.x) / 2.0f, cBox.min.y,
+                                           (cBox.min.z + cBox.max.z) / 2.0f};
+
+                // Deterministic random offset for food within the tile
+                float rX = ((std::abs(pos->x * 71 + pos->y * 13)) % 81) / 100.0f - 0.4f;
+                float rZ = ((std::abs(pos->x * 23 + pos->y * 89)) % 81) / 100.0f - 0.4f;
+
+                raylib::Vector3 cPos((float)pos->x + rX - (cCenter.x * scale),
+                                     yBase - (cCenter.y * scale),
+                                     (float)pos->y + rZ - (cCenter.z * scale));
+
+                // Deterministic random rotation
+                float rotAngle = ((std::abs(pos->x * 47 + pos->y * 59)) % 360);
+
+                foodModel.Draw(cPos, {0, 1, 0}, rotAngle, {scale, scale, scale}, WHITE);
             }
 
-            float startX = (float)pos->x - 0.3f;
-            float startZ = (float)pos->y - 0.3f;
-            float size = 0.12f;
+            auto drawGem = [&](const std::string& modelName, float dx, float dz,
+                               raylib::Color tint) {
+                raylib::Model& rockModel = am.getModel(modelName);
+                BoundingBox box = rockModel.GetBoundingBox();
+                float sizeX = box.max.x - box.min.x;
+                float sizeZ = box.max.z - box.min.z;
+                float sizeY = box.max.y - box.min.y;
+                float maxDim = std::max({sizeX, sizeY, sizeZ});
+                float rockScale = (maxDim > 0) ? (0.15f / maxDim) : 0.05f;
 
-            // Use Vector3::DrawCube instead of DrawCube for resources - much faster
+                raylib::Vector3 rockCenter = {(box.min.x + box.max.x) / 2.0f, box.min.y,
+                                              (box.min.z + box.max.z) / 2.0f};
+
+                raylib::Vector3 drawPos((float)pos->x - 0.3f + dx - (rockCenter.x * rockScale),
+                                        yBase - (rockCenter.y * rockScale),
+                                        (float)pos->y - 0.3f + dz - (rockCenter.z * rockScale));
+
+                // Add deterministic rotation for variety
+                float rotAngle =
+                    ((std::abs(pos->x * 31 + pos->y * 73 + (int)(dx * 10) + (int)(dz * 10))) % 360);
+
+                rockModel.Draw(drawPos, {0, 1, 0}, rotAngle, {rockScale, rockScale, rockScale},
+                               tint);
+            };
+
             if (inv->linemate > 0) {
-                raylib::Vector3(startX, yBase + size / 2, startZ).DrawCube(size, size, size, WHITE);
+                drawGem("rock1", 0.0f, 0.0f, WHITE);
             }
             if (inv->deraumere > 0) {
-                raylib::Vector3(startX + 0.2f, yBase + size / 2, startZ)
-                    .DrawCube(size, size, size, SKYBLUE);
+                drawGem("rock2", 0.2f, 0.0f, SKYBLUE);
             }
             if (inv->sibur > 0) {
-                raylib::Vector3(startX + 0.4f, yBase + size / 2, startZ)
-                    .DrawCube(size, size, size, DARKBLUE);
+                drawGem("rock1", 0.4f, 0.0f, DARKBLUE);
             }
             if (inv->mendiane > 0) {
-                raylib::Vector3(startX, yBase + size / 2, startZ + 0.2f)
-                    .DrawCube(size, size, size, PINK);
+                drawGem("rock2", 0.0f, 0.2f, PINK);
             }
             if (inv->phiras > 0) {
-                raylib::Vector3(startX + 0.2f, yBase + size / 2, startZ + 0.2f)
-                    .DrawCube(size, size, size, DARKPURPLE);
+                drawGem("rock1", 0.2f, 0.2f, DARKPURPLE);
             }
             if (inv->thystame > 0) {
-                raylib::Vector3(startX + 0.4f, yBase + size / 2, startZ + 0.2f)
-                    .DrawCube(size, size, size, GOLD);
+                drawGem("rock2", 0.4f, 0.2f, GOLD);
             }
         }
     }

@@ -24,7 +24,6 @@ Debug/
 Release/
 cmake-build-*/
 *.o
-*.obj
 *.a
 *.lib
 *.so
@@ -92,7 +91,6 @@ coverage.xml
 .hypothesis/
 
 
-models/
 data/
 datasets/
 checkpoints/
