@@ -9,26 +9,31 @@
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
+#include "CoreErrors.hpp"
 #include "Graphics/AssetManager.hpp"
+#include "Logging/Logger.hpp"
+#include "Network/NetworkErrors.hpp"
 #include "UI/UIButton.hpp"
 #include "UI/UIHudPanel.hpp"
 #include "UI/UIInput.hpp"
 #include "UI/UIPanel.hpp"
 #include "UI/UIScoreboardPanel.hpp"
 #include "UI/UIText.hpp"
-#include "CoreErrors.hpp"
-#include "Logging/Logger.hpp"
-#include "Network/NetworkErrors.hpp"
 #include "errors/IError.hpp"
 
 namespace zappy {
 
 Core::Core(int port, const std::string& host) : _port(port), _host(host) {
-    _window = std::make_unique<raylib::Window>(1280, 720, "Zappy GUI");
+    _window = std::make_unique<raylib::Window>(1920, 1080, "Zappy GUI");
     _window->SetTargetFPS(60);
 
     // Prevent ESC from instantly closing the entire application
     _window->SetExitKey(0);
+
+    // Enable fullscreen by default
+    int monitor = GetCurrentMonitor();
+    _window->SetSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+    _window->ToggleFullscreen();
 
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
@@ -104,26 +109,26 @@ void Core::_setupMainMenu() {
     // Background panel
     _uiManager.addComponent(std::make_shared<UIPanel>(
         raylib::Rectangle{0, 0, (float)_window->GetWidth(), (float)_window->GetHeight()},
-        raylib::Color(20, 20, 30, 255), 0));
+        raylib::Color(15, 20, 40, 255), 0));
 
     // Title
     _uiManager.addComponent(
-        std::make_shared<UIText>(raylib::Rectangle{(float)cx - 100, (float)cy - 200, 200, 50},
-                                 "ZAPPY", 40, raylib::Color::RayWhite(), 1));
+        std::make_shared<UIText>(raylib::Rectangle{(float)cx - 150, (float)cy - 250, 300, 80},
+                                 "ZAPPY", 80, raylib::Color::RayWhite(), 1));
 
     // Play Button
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 100, (float)cy - 50, 200, 50}, "Play",
+        raylib::Rectangle{(float)cx - 150, (float)cy - 50, 300, 60}, "Play",
         [this]() { this->_showConnectionOverlay(); }, 1));
 
     // Settings Button
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 100, (float)cy + 20, 200, 50}, "Settings",
+        raylib::Rectangle{(float)cx - 150, (float)cy + 30, 300, 60}, "Settings",
         [this]() { this->_setupSettingsMenu(); }, 1));
 
     // Quit Button
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 100, (float)cy + 90, 200, 50}, "Quit",
+        raylib::Rectangle{(float)cx - 150, (float)cy + 110, 300, 60}, "Quit",
         [this]() { this->_shouldClose = true; }, 1));
 }
 
@@ -136,17 +141,20 @@ void Core::_setupSettingsMenu() {
     // Background panel
     _uiManager.addComponent(std::make_shared<UIPanel>(
         raylib::Rectangle{0, 0, (float)_window->GetWidth(), (float)_window->GetHeight()},
-        raylib::Color(20, 20, 30, 255), 0));
+        raylib::Color(15, 20, 40, 255), 0));
 
     // Title
     _uiManager.addComponent(
-        std::make_shared<UIText>(raylib::Rectangle{(float)cx - 100, (float)cy - 250, 200, 50},
-                                 "SETTINGS", 40, raylib::Color::RayWhite(), 1, 4.0f));
+        std::make_shared<UIText>(raylib::Rectangle{(float)cx - 150, (float)cy - 300, 300, 60},
+                                 "SETTINGS", 60, raylib::Color::RayWhite(), 1, 4.0f));
 
     // Resolution 1280x720 Button
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 100, (float)cy - 130, 200, 40}, "1280x720",
+        raylib::Rectangle{(float)cx - 150, (float)cy - 150, 300, 50}, "1280x720",
         [this]() {
+            if (this->_window->IsFullscreen()) {
+                this->_window->ToggleFullscreen();
+            }
             this->_window->SetSize(1280, 720);
             this->_setupSettingsMenu(); // Re-center UI
         },
@@ -154,8 +162,11 @@ void Core::_setupSettingsMenu() {
 
     // Resolution 1920x1080 Button
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 100, (float)cy - 70, 200, 40}, "1920x1080",
+        raylib::Rectangle{(float)cx - 150, (float)cy - 80, 300, 50}, "1920x1080",
         [this]() {
+            if (this->_window->IsFullscreen()) {
+                this->_window->ToggleFullscreen();
+            }
             this->_window->SetSize(1920, 1080);
             this->_setupSettingsMenu(); // Re-center UI
         },
@@ -163,8 +174,12 @@ void Core::_setupSettingsMenu() {
 
     // Fullscreen Button
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 100, (float)cy - 10, 200, 40}, "Toggle Fullscreen",
+        raylib::Rectangle{(float)cx - 150, (float)cy - 10, 300, 50}, "Toggle Fullscreen",
         [this]() {
+            if (!this->_window->IsFullscreen()) {
+                int monitor = GetCurrentMonitor();
+                this->_window->SetSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+            }
             this->_window->ToggleFullscreen();
             this->_setupSettingsMenu(); // Re-center UI
         },
@@ -172,20 +187,20 @@ void Core::_setupSettingsMenu() {
 
     // Volume Controls (Placeholder)
     _uiManager.addComponent(
-        std::make_shared<UIText>(raylib::Rectangle{(float)cx - 100, (float)cy + 50, 200, 30},
-                                 "Volume:", 20, raylib::Color::RayWhite(), 1));
+        std::make_shared<UIText>(raylib::Rectangle{(float)cx - 150, (float)cy + 60, 300, 40},
+                                 "Volume:", 30, raylib::Color::RayWhite(), 1));
 
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 100, (float)cy + 80, 90, 40}, "-",
+        raylib::Rectangle{(float)cx - 150, (float)cy + 110, 140, 50}, "-",
         []() { log_debug("Volume Down"); }, 1));
 
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx + 10, (float)cy + 80, 90, 40}, "+",
+        raylib::Rectangle{(float)cx + 10, (float)cy + 110, 140, 50}, "+",
         []() { log_debug("Volume Up"); }, 1));
 
     // Back Button
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 100, (float)cy + 150, 200, 50}, "Back",
+        raylib::Rectangle{(float)cx - 150, (float)cy + 190, 300, 60}, "Back",
         [this]() { this->_setupMainMenu(); }, 1));
 }
 
@@ -195,23 +210,23 @@ void Core::_showConnectionOverlay() {
 
     // Overlay Background
     _uiManager.addComponent(
-        std::make_shared<UIPanel>(raylib::Rectangle{(float)cx - 150, (float)cy - 100, 300, 250},
-                                  raylib::Color(40, 40, 50, 255), 10));
+        std::make_shared<UIPanel>(raylib::Rectangle{(float)cx - 200, (float)cy - 150, 400, 300},
+                                  raylib::Color(30, 35, 50, 255), 10));
 
     // Host Input
     auto hostInput = std::make_shared<UIInput>(
-        raylib::Rectangle{(float)cx - 100, (float)cy - 50, 200, 40}, _host, "Host...", 256, 11);
+        raylib::Rectangle{(float)cx - 150, (float)cy - 80, 300, 50}, _host, "Host...", 256, 11);
     _uiManager.addComponent(hostInput);
 
     // Port Input
     auto portInput =
-        std::make_shared<UIInput>(raylib::Rectangle{(float)cx - 100, (float)cy, 200, 40},
+        std::make_shared<UIInput>(raylib::Rectangle{(float)cx - 150, (float)cy - 10, 300, 50},
                                   std::to_string(_port), "Port...", 10, 11);
     _uiManager.addComponent(portInput);
 
     // Connect Button
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 100, (float)cy + 60, 200, 40}, "Connect",
+        raylib::Rectangle{(float)cx - 150, (float)cy + 60, 300, 50}, "Connect",
         [this, hostInput, portInput]() {
             std::string h = hostInput->getText();
             int p = 0;
@@ -234,8 +249,7 @@ void Core::_connectToServer(const std::string& host, int port) {
         _setupGameUI();
         _renderSystem.centerCamera(10, 10);
     } else {
-        log_error(
-            ErrorNetwork("Failed to connect to " + host + ":" + std::to_string(port)).what());
+        log_error(ErrorNetwork("Failed to connect to " + host + ":" + std::to_string(port)).what());
         int cx = _window->GetWidth() / 2;
         int cy = _window->GetHeight() / 2;
         _uiManager.addComponent(
@@ -251,7 +265,7 @@ void Core::_setupGameUI() {
 
     // Right Tile HUD
     _uiManager.addComponent(std::make_shared<UIHudPanel>(
-        raylib::Rectangle{(float)_window->GetWidth() - 250, 50, 240, 450}, _world, _renderSystem,
+        raylib::Rectangle{(float)_window->GetWidth() - 220, 50, 200, 400}, _world, _renderSystem,
         10));
 }
 

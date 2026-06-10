@@ -25,6 +25,9 @@ class AssetManager {
     // Models
     raylib::Model& getModel(const std::string& name);
 
+    // Fonts
+    raylib::Font& getFont(const std::string& name);
+
     // Textures
     raylib::Texture2D& getTexture(const std::string& name);
 
@@ -40,10 +43,12 @@ class AssetManager {
     std::map<std::string, std::unique_ptr<raylib::Model>> _models;
     std::map<std::string, std::unique_ptr<raylib::Texture2D>> _textures;
     std::map<std::string, std::unique_ptr<raylib::Shader>> _shaders;
+    std::map<std::string, std::unique_ptr<raylib::Font>> _fonts;
 
     void _loadModels();
     void _loadTextures();
     void _loadShaders();
+    void _loadFonts();
 };
 
 } // namespace zappy
