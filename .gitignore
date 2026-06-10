@@ -91,7 +91,6 @@ coverage.xml
 .hypothesis/
 
 
-models/
 data/
 datasets/
 checkpoints/
