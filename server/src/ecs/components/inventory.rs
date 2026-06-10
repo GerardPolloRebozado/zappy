@@ -1,8 +1,8 @@
-use crate::game::Resource;
+use crate::ecs::components::resource::Resource;
 use std::collections::HashMap;
 
 /// Pure data component for storing items
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Inventory {
     pub items: HashMap<Resource, u32>,
 }

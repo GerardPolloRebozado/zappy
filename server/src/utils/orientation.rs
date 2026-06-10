@@ -5,7 +5,7 @@
 
 use std::cmp::Ordering;
 
-use crate::game::Inhabitant;
+use crate::ecs::components::inhabitant::Inhabitant;
 
 /// Orientation from a listener to a source tile, relative to the listener's facing.
 ///
@@ -130,7 +130,7 @@ fn shortest_delta(from: u32, to: u32, size: i32) -> i32 {
 /// # Examples
 ///
 /// ```
-/// use zappy_server::game::Inhabitant; use zappy_server::utils::orientation::calc_k;
+/// use zappy_server::Inhabitant; use zappy_server::utils::orientation::calc_k;
 /// use zappy_server::utils::orientation::RelativeOrientation;
 ///
 /// let player = Inhabitant::default().with_id(1).with_pos(5, 5);
@@ -161,7 +161,7 @@ pub fn calc_k(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game::Inhabitant;
+    use crate::ecs::components::inhabitant::Inhabitant;
 
     #[test]
     fn same_tile_returns_zero() {

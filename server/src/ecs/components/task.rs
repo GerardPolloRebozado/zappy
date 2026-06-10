@@ -4,7 +4,8 @@
 //! string until the 7/f action completes and [`crate::ecs::systems::task`] builds
 //! a [`crate::protocol::ServerEvent::Message`] for fan-out.
 
-use crate::game::{Date, Resource};
+use crate::ecs::components::resource::Resource;
+use crate::utils::date::Date;
 
 #[derive(Clone)]
 pub enum TaskType {

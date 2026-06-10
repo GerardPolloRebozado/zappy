@@ -18,7 +18,7 @@ pub fn execute_inventory(world: &World, entity: Entity) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game::Resource;
+    use crate::ecs::components::resource::Resource;
 
     #[test]
     fn execute_inventory_returns_formatted_items() {

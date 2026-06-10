@@ -1,12 +1,12 @@
 use log::info;
 
+use crate::commands::queue_task;
 use crate::ecs::components::network::NetworkData;
+use crate::ecs::components::resource::Resource;
 use crate::ecs::components::task::TaskType;
 use crate::ecs::storage::Entity;
-use crate::game::Resource;
 use crate::protocol::{Command, Request, Response, ResponseCode, StatusCode};
 use crate::server::Server;
-use crate::server::commands::queue_task;
 
 pub fn handle_ai_command(server: &mut Server, entity: Entity, request: Request) {
     info!("Received AI command: {}", request.command);

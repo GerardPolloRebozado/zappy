@@ -1,17 +1,16 @@
 //! TCP server: poll loop, client map, and timed task completion.
 
-pub mod commands;
-pub mod signal;
-
+use crate::commands;
+use crate::ecs::components::inhabitant::Inhabitant;
 use crate::ecs::components::network::NetworkData;
 use crate::ecs::components::task::TaskType;
 use crate::ecs::components::team::Team;
 use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::network::network_system;
 use crate::ecs::systems::run::run_systems;
-use crate::game::*;
 use crate::protocol::{Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::utils::Config;
+use crate::utils::date::Date;
 use log::{error, info};
 use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
@@ -21,7 +20,7 @@ use std::os::fd::AsFd;
 
 pub struct Server {
     pub listener: TcpListener,
-    pub _users: HashMap<String, User>,
+    pub _users: HashMap<String, Inhabitant>,
     pub _freq: u32,
     pub game_start: u64,
     pub world: World,

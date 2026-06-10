@@ -1,9 +1,6 @@
-use crate::{
-    ecs::{
-        components::{inventory::Inventory, position::Position},
-        storage::{Entity, World},
-    },
-    game::Resource,
+use crate::ecs::{
+    components::{inventory::Inventory, position::Position, resource::Resource},
+    storage::{Entity, World},
 };
 
 /// Marker component to identify a Tile entity.
