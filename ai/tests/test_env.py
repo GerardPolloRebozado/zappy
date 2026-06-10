@@ -1,6 +1,6 @@
 import unittest
 import os
-from src.env.ZappyEnv import ZappyEnv
+from training.env.ZappyEnv import ZappyEnv
 
 
 class TestZappyEnv(unittest.TestCase):
