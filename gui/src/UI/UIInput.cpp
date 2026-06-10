@@ -6,15 +6,16 @@
 */
 
 #include "UI/UIInput.hpp"
+#include "Graphics/AssetManager.hpp"
 
 namespace zappy {
 
 UIInput::UIInput(raylib::Rectangle bounds, const std::string& initialText,
                  const std::string& placeholder, size_t maxLength, int zIndex)
     : AUIComponent(bounds, zIndex), _text(initialText), _placeholder(placeholder),
-      _maxLength(maxLength), _isFocused(false), _normalColor(raylib::Color::LightGray()),
-      _focusedColor(raylib::Color::White()), _textColor(raylib::Color::Black()),
-      _placeholderColor(GRAY) {}
+      _maxLength(maxLength), _isFocused(false), _normalColor(raylib::Color(25, 30, 50, 255)),
+      _focusedColor(raylib::Color(35, 45, 75, 255)), _textColor(raylib::Color::RayWhite()),
+      _placeholderColor(raylib::Color::Gray()) {}
 
 void UIInput::update(float dt, raylib::Vector2 mousePos,
                      std::shared_ptr<std::vector<UIEvent>> events) {
@@ -60,13 +61,13 @@ void UIInput::update(float dt, raylib::Vector2 mousePos,
 void UIInput::render() {
     raylib::Color bgColor = _isFocused ? _focusedColor : _normalColor;
     _bounds.Draw(bgColor);
-    _bounds.DrawLines(DARKGRAY, _isFocused ? 3.0f : 1.0f);
+    _bounds.DrawLines(raylib::Color(0, 100, 255, 255), _isFocused ? 3.0f : 1.0f);
 
     int padding = 5;
     std::string displayTxt = _text.empty() && !_isFocused ? _placeholder : _text;
     raylib::Color txtColor = _text.empty() && !_isFocused ? _placeholderColor : _textColor;
 
-    raylib::Text(displayTxt, 20, txtColor, GetFontDefault(), 1.5f)
+    raylib::Text(displayTxt, 20, txtColor, AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
         .Draw(_bounds.x + padding, _bounds.y + _bounds.height / 2 - 10);
 }
 

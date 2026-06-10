@@ -20,12 +20,14 @@ void AssetManager::loadAll() {
     _loadModels();
     _loadTextures();
     _loadShaders();
+    _loadFonts();
 }
 
 void AssetManager::unloadAll() {
     _models.clear();
     _textures.clear();
     _shaders.clear();
+    _fonts.clear();
     // CloseWindow();
 }
 
@@ -43,6 +45,14 @@ raylib::Texture2D& AssetManager::getTexture(const std::string& name) {
         _textures[name] = std::make_unique<raylib::Texture2D>();
     }
     return *_textures[name];
+}
+
+raylib::Font& AssetManager::getFont(const std::string& name) {
+    if (_fonts.find(name) == _fonts.end()) {
+        log_error(ErrorAsset("Font " + name + " not found, returning default font").what());
+        _fonts[name] = std::make_unique<raylib::Font>(GetFontDefault());
+    }
+    return *_fonts[name];
 }
 
 raylib::Shader& AssetManager::getShader(const std::string& name) {
@@ -76,6 +86,14 @@ void AssetManager::_loadTextures() {
 void AssetManager::_loadShaders() {
     // _shaders["ritual"] = std::make_unique<raylib::Shader>("assets/shaders/ritual.vs",
     // "assets/shaders/ritual.fs");
+}
+
+void AssetManager::_loadFonts() {
+    try {
+        _fonts["BoldPixels"] = std::make_unique<raylib::Font>("assets/fonts/BoldPixels.ttf");
+    } catch (const raylib::RaylibException& e) {
+        log_error(ErrorAsset("Failed to load fonts: " + std::string(e.what())).what());
+    }
 }
 
 } // namespace zappy
