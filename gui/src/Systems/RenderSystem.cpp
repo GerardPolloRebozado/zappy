@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <ranges>
 #include <set>
 
 namespace zappy {
@@ -50,6 +51,7 @@ void RenderSystem::render(World& w) {
     _renderLandmarks(w);
     _renderResources(w);
     _renderInhabitants(w);
+    _renderEggs(w);
     _camera.EndMode();
 }
 
@@ -284,6 +286,25 @@ void RenderSystem::_renderTerrain(World& w) {
     }
 }
 
+void RenderSystem::_renderEggs(World& w) {
+    auto eggStorage = w.get_storage<Egg>();
+    if (!eggStorage) {
+        return;
+    }
+
+    raylib::Model& eggModel = AssetManager::getInstance().getModel("egg");
+    constexpr float scale = 0.02f;
+
+    for (const auto& entity : *eggStorage | std::views::keys) {
+        auto pos = w.get_component<Position>(entity);
+        if (pos) {
+            const raylib::Vector3 vpos(static_cast<float>(pos->x), 2.3f,
+                                       static_cast<float>(pos->y));
+            eggModel.Draw(vpos, scale, raylib::Color::White());
+        }
+    }
+}
+
 void RenderSystem::_renderInhabitants(World& w) {
     auto orientationStorage = w.get_storage<Orientation>();
     if (!orientationStorage) {
@@ -291,8 +312,8 @@ void RenderSystem::_renderInhabitants(World& w) {
     }
 
     auto& am = AssetManager::getInstance();
-    raylib::Model& robot = am.getModel("robot");
-    float scale = 0.1f;
+    const raylib::Model& robot = am.getModel("robot");
+    constexpr float scale = 0.1f;
 
     // Get bounding box to center the model
     BoundingBox box = robot.GetBoundingBox();
