@@ -80,13 +80,16 @@ class CommandPlayerExpulsion : public ACommand {
         std::shared_ptr<Position> position;
     };
 
-    static std::optional<Victim> findVictim(World& world, const std::shared_ptr<ComponentMap<Position>>& posStorage,
-                                            int playerId) {
+    static std::optional<Victim>
+    findVictim(World& world, const std::shared_ptr<ComponentMap<Position>>& posStorage,
+               int playerId) {
         for (auto const& [entity, pos] : *posStorage) {
-            if (entity.id() != static_cast<uint32_t>(playerId)) {
+            auto serverId = world.get_component<ServerId>(entity);
+            if (!serverId || serverId->id != playerId) {
                 continue;
             }
-            if (!world.get_component<InhabitantTag>(entity) || world.get_component<TileTag>(entity)) {
+            if (!world.get_component<InhabitantTag>(entity) ||
+                world.get_component<TileTag>(entity)) {
                 continue;
             }
             auto position = world.get_component<Position>(entity);
@@ -102,10 +105,12 @@ class CommandPlayerExpulsion : public ACommand {
     findEjectDirection(World& world, const std::shared_ptr<ComponentMap<Position>>& posStorage,
                        const std::shared_ptr<Position>& victimPos, int victimId) {
         for (auto const& [entity, pos] : *posStorage) {
-            if (entity.id() == static_cast<uint32_t>(victimId)) {
+            auto serverId = world.get_component<ServerId>(entity);
+            if (serverId && serverId->id == victimId) {
                 continue;
             }
-            if (!world.get_component<InhabitantTag>(entity) || world.get_component<TileTag>(entity)) {
+            if (!world.get_component<InhabitantTag>(entity) ||
+                world.get_component<TileTag>(entity)) {
                 continue;
             }
             if (pos->x != victimPos->x || pos->y != victimPos->y) {
@@ -120,8 +125,8 @@ class CommandPlayerExpulsion : public ACommand {
         return std::nullopt;
     }
 
-    static void move_forward(const std::shared_ptr<Position>& pos, Orientation::Direction direction, int mapWidth,
-                             int mapHeight) {
+    static void move_forward(const std::shared_ptr<Position>& pos, Orientation::Direction direction,
+                             int mapWidth, int mapHeight) {
         switch (direction) {
             case Orientation::N:
                 pos->y = (pos->y + mapHeight - 1) % mapHeight;

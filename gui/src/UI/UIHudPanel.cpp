@@ -140,7 +140,10 @@ void UIHudPanel::render() {
                 }
 
                 foundPlayer = true;
-                std::string pInfo = "Player " + std::to_string(entity.id());
+                auto serverId = _world.get_component<ServerId>(entity);
+                std::string idStr =
+                    serverId ? std::to_string(serverId->id) : std::to_string(entity.id());
+                std::string pInfo = "Player " + idStr;
                 if (level) {
                     pInfo += " (Lvl " + std::to_string(level->level) + ")";
                 }
