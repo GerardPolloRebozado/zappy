@@ -3,8 +3,7 @@
 //! Map bounds live on [`World::map_size`] so movement and `bct`/`mct` handlers
 //! read the same values as the spawned tile grid.
 
-use crate::ecs::storage::World;
-use crate::game::Resource;
+use crate::ecs::{components::resource::Resource, storage::World};
 
 #[derive(Clone, Copy)]
 pub struct MapSize {

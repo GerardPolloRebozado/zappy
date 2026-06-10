@@ -1,6 +1,6 @@
-use crate::{
-    game::Date,
-    utils::constants::{LIFE_UNIT_IN_TIME_UNITS, STARTING_LIFE_UNITS},
+use crate::utils::{
+    constants::{LIFE_UNIT_IN_TIME_UNITS, STARTING_LIFE_UNITS},
+    date::Date,
 };
 
 /// Used to store the time a entity will day in unix seconds

@@ -2,12 +2,10 @@ use env_logger::Builder;
 use log::LevelFilter;
 use std::io;
 use zappy_server::server::Server;
-use zappy_server::server::signal::{SIGNAL_RECEIVED, install_sigint_handler};
 use zappy_server::utils::constants::ERROR_EXIT_CODE;
 use zappy_server::utils::parse_server_args;
 
 fn main() -> io::Result<()> {
-    install_sigint_handler();
     Builder::from_default_env()
         .filter_level(LevelFilter::Trace)
         .init();
@@ -28,10 +26,5 @@ fn main() -> io::Result<()> {
     server.load();
     loop {
         server.run();
-        if SIGNAL_RECEIVED.load(std::sync::atomic::Ordering::SeqCst) > 0 {
-            server.save();
-            break;
-        }
     }
-    Ok(())
 }

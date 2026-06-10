@@ -39,7 +39,7 @@ pub fn check_dead_inhabitants(world: &mut World) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game::Date;
+    use crate::utils::date::Date;
 
     #[test]
     fn test_life_is_alive() {

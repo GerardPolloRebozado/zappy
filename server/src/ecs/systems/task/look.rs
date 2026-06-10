@@ -122,7 +122,7 @@ fn get_resources_on_tile(world: &World, x: u32, y: u32) -> Vec<String> {
 mod tests {
     use super::*;
     use crate::ecs::components::level::Level;
-    use crate::game::Resource;
+    use crate::ecs::components::resource::Resource;
 
     #[test]
     fn test_execute_look() {
