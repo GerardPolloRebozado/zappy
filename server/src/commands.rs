@@ -86,7 +86,11 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
             }
             // send spawned egg events
             let mut events = Vec::new();
-            for (entity, _) in server.world.get_storage::<Egg>().unwrap().iter() {
+            let eggs_storage = server.world.get_storage::<Egg>();
+            if eggs_storage.is_none() {
+                return;
+            }
+            for (entity, _) in eggs_storage.unwrap().iter() {
                 let position = server
                     .world
                     .get_component::<Position>(*entity)
@@ -294,6 +298,9 @@ mod tests {
 
         let (mock_socket, _) = network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
+        let egg = server.world.spawn();
+        server.world.add_component(egg, Position { x: 0, y: 0 });
+        server.world.add_component(egg, Egg);
         let inhabitant = server.world.spawn();
         server.world.add_component(inhabitant, network_data);
         server

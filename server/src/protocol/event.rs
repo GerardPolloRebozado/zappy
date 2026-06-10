@@ -291,12 +291,12 @@ mod tests {
     #[test]
     fn test_dead_formats() {
         let event = ServerEvent::Dead { player_id: 5 };
-        assert_eq!(event.to_gui_string(), Some("pdi #5\n".to_string()));
+        assert_eq!(event.to_gui_string(), Some("pdi #5".to_string()));
 
         let for_player = Inhabitant::default().with_id(5);
         assert_eq!(
             event.to_ai_string(Some(&for_player), 10, 10),
-            Some("dead\n".to_string())
+            Some("dead".to_string())
         );
     }
 
@@ -307,7 +307,7 @@ mod tests {
             x: 1,
             y: 2,
         };
-        assert_eq!(eject.to_gui_string(), Some("pex #3\n".to_string()));
+        assert_eq!(eject.to_gui_string(), Some("pex #3".to_string()));
 
         let message = ServerEvent::Message {
             player_id: 2,
@@ -315,7 +315,7 @@ mod tests {
             x: 4,
             y: 5,
         };
-        assert_eq!(message.to_gui_string(), Some("pbc #2 hello\n".to_string()));
+        assert_eq!(message.to_gui_string(), Some("pbc #2 hello".to_string()));
     }
 
     #[test]
@@ -329,7 +329,7 @@ mod tests {
         let facing_north = Inhabitant::default().with_id(1).with_pos(5, 5);
         assert_eq!(
             event.to_ai_string(Some(&facing_north), 10, 10),
-            Some("eject: 1\n".to_string())
+            Some("eject: 1".to_string())
         );
 
         let facing_east = Inhabitant::default()
@@ -338,7 +338,7 @@ mod tests {
             .with_orientation(RelativeOrientation::ForwardLeft);
         assert_eq!(
             event.to_ai_string(Some(&facing_east), 10, 10),
-            Some("eject: 3\n".to_string())
+            Some("eject: 3".to_string())
         );
     }
 
@@ -361,7 +361,7 @@ mod tests {
                 orientation: RelativeOrientation::ForwardLeft,
             }
             .to_gui_string(),
-            Some("ppo #3 7 9 2\n".to_string())
+            Some("ppo #3 7 9 2".to_string())
         );
     }
 
@@ -407,7 +407,7 @@ mod tests {
                 team: "TeamA".to_string()
             }
             .to_gui_string(),
-            Some("pnw #1 3 4 2 5 TeamA\n".to_string())
+            Some("pnw #1 3 4 2 5 TeamA".to_string())
         );
 
         assert_eq!(
@@ -418,7 +418,7 @@ mod tests {
                 player_ids: vec![4, 5]
             }
             .to_gui_string(),
-            Some("pic 1 2 3 #4 #5\n".to_string())
+            Some("pic 1 2 3 #4 #5".to_string())
         );
 
         assert_eq!(
@@ -428,12 +428,12 @@ mod tests {
                 result: 1
             }
             .to_gui_string(),
-            Some("pie 1 2 1\n".to_string())
+            Some("pie 1 2 1".to_string())
         );
 
         assert_eq!(
             ServerEvent::EggLay { player_id: 2 }.to_gui_string(),
-            Some("pfk #2\n".to_string())
+            Some("pfk #2".to_string())
         );
 
         assert_eq!(
@@ -442,7 +442,7 @@ mod tests {
                 resource: 3
             }
             .to_gui_string(),
-            Some("pdr #1 3\n".to_string())
+            Some("pdr #1 3".to_string())
         );
 
         assert_eq!(
@@ -451,7 +451,7 @@ mod tests {
                 resource: 0
             }
             .to_gui_string(),
-            Some("pgt #1 0\n".to_string())
+            Some("pgt #1 0".to_string())
         );
 
         assert_eq!(
@@ -462,16 +462,16 @@ mod tests {
                 y: 6
             }
             .to_gui_string(),
-            Some("enw #10 #2 5 6\n".to_string())
+            Some("enw #10 #2 5 6".to_string())
         );
 
         assert_eq!(
             ServerEvent::EggConnect { egg_id: 7 }.to_gui_string(),
-            Some("ebo #7\n".to_string())
+            Some("ebo #7".to_string())
         );
         assert_eq!(
             ServerEvent::EggDeath { egg_id: 8 }.to_gui_string(),
-            Some("edi #8\n".to_string())
+            Some("edi #8".to_string())
         );
 
         assert_eq!(
@@ -479,7 +479,7 @@ mod tests {
                 team: "TeamA".to_string()
             }
             .to_gui_string(),
-            Some("seg TeamA\n".to_string())
+            Some("seg TeamA".to_string())
         );
 
         assert_eq!(
@@ -487,7 +487,7 @@ mod tests {
                 message: "server info".to_string()
             }
             .to_gui_string(),
-            Some("smg server info\n".to_string())
+            Some("smg server info".to_string())
         );
     }
 }

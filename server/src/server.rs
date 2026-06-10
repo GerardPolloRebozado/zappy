@@ -334,7 +334,7 @@ mod tests {
         let line_a = network_a.pending_responses[0].data.as_ref().unwrap();
         let line_b = network_b.pending_responses[0].data.as_ref().unwrap();
 
-        assert_eq!(line_a, "message 0, hello\n");
-        assert_eq!(line_b, "message 3, hello\n");
+        assert_eq!(line_a, "message 0, hello");
+        assert_eq!(line_b, "message 3, hello");
     }
 }
