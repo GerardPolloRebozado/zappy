@@ -39,6 +39,8 @@
 //! world.despawn(player);
 //! ```
 
+use log::info;
+
 use crate::ecs::components::inventory::Inventory;
 use crate::ecs::map_size::MapSize;
 use std::any::{Any, TypeId};
@@ -264,6 +266,7 @@ impl World {
         }
         self.entity_generations[entity.id as usize] += 1;
         self.free_ids.push(entity.id);
+        info!("Removed entity: {}", entity.id());
     }
 
     /// Checks if an entity is alive
