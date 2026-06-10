@@ -1,6 +1,5 @@
 use crate::{
     ecs::map_size::MapSize,
-    game::Resource::{Deraumere, Food, Linemate, Mendiane, Phiras, Sibur, Thystame},
     utils::constants::{
         DERAUMERE_DENSITY, FOOD_DENSITY, LINEMATE_DENSITY, MENDIANE_DENSITY, PHIRAS_DENSITY,
         SIBUR_DENSITY, THYSTAME_DENSITY,
@@ -17,6 +16,8 @@ pub enum Resource {
     Phiras,
     Thystame,
 }
+
+use Resource::*;
 
 impl std::fmt::Display for Resource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -1,3 +1,5 @@
+use crate::commands::ai::handle_ai_command;
+use crate::commands::gui::handle_gui_command;
 use crate::ecs::builders::inhabitants::build_inhabitant_with_entity;
 use crate::ecs::components::network::NetworkData;
 use crate::ecs::components::task::{TASK_NOT_STARTED, Task, TaskList, TaskType};
@@ -5,8 +7,6 @@ use crate::ecs::components::team::Team;
 use crate::ecs::storage::Entity;
 use crate::protocol::{Command, Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::server::Server;
-use crate::server::commands::ai::handle_ai_command;
-use crate::server::commands::gui::handle_gui_command;
 use crate::utils::orientation::RelativeOrientation;
 use log::{error, info};
 use rand::{RngExt, rng};

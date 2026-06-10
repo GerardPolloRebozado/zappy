@@ -129,11 +129,7 @@ mod tests {
     #[test]
     fn move_forward_changed_false_for_non_cardinal() {
         let mut pos = Position::at(5, 5);
-        assert!(!pos.move_forward_changed(
-            RelativeOrientation::Back,
-            10,
-            10
-        ));
+        assert!(!pos.move_forward_changed(RelativeOrientation::Back, 10, 10));
         assert_eq!(pos.protocol_xy(), (5, 5));
     }
 }

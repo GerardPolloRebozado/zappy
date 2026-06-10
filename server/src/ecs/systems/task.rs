@@ -39,6 +39,7 @@
 //! 4. [`broadcast_event`] pushes `ppo #n X Y O` to all GUI clients.
 
 use crate::{
+    ecs::components::inhabitant::Inhabitant,
     ecs::{
         components::{
             network::NetworkData,
@@ -49,12 +50,12 @@ use crate::{
         storage::{Entity, World},
         systems::task::take_set::take_task,
     },
-    game::{Date, Inhabitant},
     protocol::{
         Response, ResponseCode,
         ServerEvent::{self},
         StatusCode::{self},
     },
+    utils::date::Date,
     utils::orientation::RelativeOrientation,
 };
 use log::{debug, info};
@@ -203,21 +204,24 @@ fn execute_task(
             {
                 pos.move_forward(ori, map_width, map_height);
             }
-            let event = Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
+            let event =
+                Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
             (ok, event)
         }
         TaskType::TurnRight => {
             if let Some(ori) = world.get_component_mut::<RelativeOrientation>(entity) {
                 *ori = ori.turn_right();
             }
-            let event = Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
+            let event =
+                Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
             (ok, event)
         }
         TaskType::TurnLeft => {
             if let Some(ori) = world.get_component_mut::<RelativeOrientation>(entity) {
                 *ori = ori.turn_left();
             }
-            let event = Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
+            let event =
+                Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
             (ok, event)
         }
         TaskType::Look => (
@@ -261,9 +265,9 @@ mod tests {
     use crate::ecs::components::inventory::Inventory;
     use crate::ecs::components::level::Level;
     use crate::ecs::components::life::Life;
+    use crate::ecs::components::resource::Resource;
     use crate::ecs::components::task::{Task, TaskType};
     use crate::ecs::storage::World;
-    use crate::game::Resource;
 
     use super::*;
 

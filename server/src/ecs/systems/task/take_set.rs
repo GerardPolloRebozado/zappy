@@ -2,10 +2,9 @@ use log::error;
 
 use crate::{
     ecs::{
-        components::{inventory::Inventory, position::Position, tile::Tile},
+        components::{inventory::Inventory, position::Position, resource::Resource, tile::Tile},
         storage::{Entity, World},
     },
-    game::Resource,
     protocol::{
         Response, ResponseCode,
         ServerEvent::{self, ResourceCollect},
@@ -146,21 +145,7 @@ mod tests {
     /// gets an existing resource using tasks
     #[test]
     fn get_resource() {
-        let mut server = Server {
-            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
-            _users: std::collections::HashMap::new(),
-            _freq: 100,
-            game_start: 0,
-            world: storage::World::new(
-                ecs::map_size::MapSize {
-                    width: 10,
-                    height: 10,
-                },
-                100,
-            ),
-            clients_nb: 1,
-            team_names: vec!["existing_team".to_string()],
-        };
+        let mut server = Server::default();
 
         let (mock_socket, _) = crate::ecs::components::network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);

@@ -1,8 +1,10 @@
+pub mod inhabitant;
 pub mod inventory;
 pub mod level;
 pub mod life;
 pub mod network;
 pub mod position;
+pub mod resource;
 pub mod task;
 pub mod team;
 pub mod terrain_type;

@@ -10,7 +10,7 @@
 //! ([G-YEP-400_zappy_GUI_protocol.pdf](docs/epitech/G-YEP-400_zappy_GUI_protocol.pdf)).
 
 use crate::{
-    game::Inhabitant,
+    ecs::components::inhabitant::Inhabitant,
     utils::orientation::{RelativeOrientation, calc_k},
 };
 
@@ -230,7 +230,7 @@ impl ServerEvent {
     /// # Examples
     ///
     /// ```
-    /// use zappy_server::game::Inhabitant; use zappy_server::protocol::ServerEvent;
+    /// use zappy_server::Inhabitant; use zappy_server::protocol::ServerEvent;
     /// use zappy_server::utils::orientation::RelativeOrientation;
     ///
     /// let player = Inhabitant::default().with_id(5);
@@ -372,9 +372,15 @@ mod tests {
             .with_pos(1, 2)
             .with_orientation(RelativeOrientation::ForwardRight);
         let event = ServerEvent::player_position(&player);
-        assert!(
-            matches!(event, ServerEvent::PlayerPosition { player_id: 4, x: 1, y: 2, orientation: RelativeOrientation::ForwardRight })
-        );
+        assert!(matches!(
+            event,
+            ServerEvent::PlayerPosition {
+                player_id: 4,
+                x: 1,
+                y: 2,
+                orientation: RelativeOrientation::ForwardRight
+            }
+        ));
     }
 
     #[test]

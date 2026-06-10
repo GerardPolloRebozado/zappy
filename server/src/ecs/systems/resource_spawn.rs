@@ -2,11 +2,11 @@ use rand::{RngExt, rng, seq::SliceRandom};
 
 use crate::{
     ecs::{
-        components::{terrain_type::TerrainType, tile::Tile},
+        components::{resource::Resource, terrain_type::TerrainType, tile::Tile},
         storage::{Entity, World},
     },
-    game::{Date, Resource},
     utils::constants::UNITS_BETWEEN_RESOURCE_SPAWN,
+    utils::date::Date,
 };
 
 /// Populates a tile with resources based on its terrain type. returns true if at least one resource was spawned.
