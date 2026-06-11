@@ -64,6 +64,36 @@ If you enter a parameterized command like `broadcast`, `take`, or `set` without 
 - `help` or `h`: Show the manual mode command menu.
 - `exit`, `quit`, or `q`: Terminate connection and exit manual mode.
 
+## Reinforcement Learning (AI Training)
+
+The project includes Machine Learning using **Stable-Baselines3 (PPO)** and **Gymnasium** to train a neural network bot. 
+
+### The Training Environment (`ZappyEnv`)
+The AI does not interact with the game via strings or visuals; it interacts through mathematical tensors translated by the custom `ZappyEnv`.
+
+- **Observation Space (What the AI senses):** 657 values of a NumPy array representing the current state of the player.
+  - Indices `0-6`: The player's current inventory (food, linemate, deraumere, etc.).
+  - Indices `7-654`: The parsed "vision" grid (the result of the `Look` command mapped to integer counters per tile).
+  - Index `655`: The player's current level.
+- **Action Space (What the AI does):** 19 actions, mapped to Zappy commands via an `IntEnum`. 
+
+### The Rewards System
+The Reinforcement Learning agent starts blind and learns optimal behavior by trying to maximize its cumulative score based on the following ruleset:
+
+- **`+1.0` (Success):** Awarded when the server returns `ok`. The AI is encouraged to perform valid, actionable commands (like moving successfully or picking up an item that actually exists).
+- **`-0.1` (Failure):** Penalized when the server returns `ko`. The AI learns to avoid useless actions (like trying to pick up food from an empty tile or walking into walls).
+- **`-0.5` (Invalid Action):** Penalized if the neural network attempts to use an unmapped/invalid action ID.
+- **`-100.0` (Death/Termination):** The ultimate punishment. If the player runs out of life units (1260 ticks without eating) and the server sends a `dead` signal (Broken Pipe), the episode terminates with a massive penalty. This forces the AI to prioritize food collection and survival above all else.
+
+### Run AI Training
+To launch the autonomous training loop (which automatically spins up a background Zappy Server instance and manages the lifecycle), you first need to configure the build directory:
+
+```bash
+cd build
+cmake ..
+make train
+```
+
 ### Run tests
 From inside build/
 ```bash
