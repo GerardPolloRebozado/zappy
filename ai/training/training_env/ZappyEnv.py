@@ -2,7 +2,7 @@ from enum import IntEnum
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
-from src.env.server_manager import ServerManager
+from training.training_env.server_manager import ServerManager
 from src.client.ai_client import ZappyAiClient
 
 
