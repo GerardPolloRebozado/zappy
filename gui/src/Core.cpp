@@ -205,28 +205,40 @@ void Core::_setupSettingsMenu() {
 }
 
 void Core::_showConnectionOverlay() {
+    _clearMenuUI();
+
     int cx = _window->GetWidth() / 2;
     int cy = _window->GetHeight() / 2;
 
-    // Overlay Background
+    // Background panel
+    _uiManager.addComponent(std::make_shared<UIPanel>(
+        raylib::Rectangle{0, 0, (float)_window->GetWidth(), (float)_window->GetHeight()},
+        raylib::Color(15, 20, 40, 255), 0));
+
+    // Title
     _uiManager.addComponent(
-        std::make_shared<UIPanel>(raylib::Rectangle{(float)cx - 200, (float)cy - 150, 400, 300},
-                                  raylib::Color(30, 35, 50, 255), 10));
+        std::make_shared<UIText>(raylib::Rectangle{(float)cx - 150, (float)cy - 200, 300, 60},
+                                 "CONNECT", 60, raylib::Color::RayWhite(), 1, 4.0f));
 
     // Host Input
     auto hostInput = std::make_shared<UIInput>(
-        raylib::Rectangle{(float)cx - 150, (float)cy - 80, 300, 50}, _host, "Host...", 256, 11);
+        raylib::Rectangle{(float)cx - 150, (float)cy - 80, 300, 50}, _host, "Host...", 256, 1);
     _uiManager.addComponent(hostInput);
 
     // Port Input
     auto portInput =
         std::make_shared<UIInput>(raylib::Rectangle{(float)cx - 150, (float)cy - 10, 300, 50},
-                                  std::to_string(_port), "Port...", 10, 11);
+                                  std::to_string(_port), "Port...", 10, 1);
     _uiManager.addComponent(portInput);
+
+    // Go Back Button
+    _uiManager.addComponent(std::make_shared<UIButton>(
+        raylib::Rectangle{(float)cx - 150, (float)cy + 60, 140, 50}, "Go Back",
+        [this]() { this->_setupMainMenu(); }, 1));
 
     // Connect Button
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 150, (float)cy + 60, 300, 50}, "Connect",
+        raylib::Rectangle{(float)cx + 10, (float)cy + 60, 140, 50}, "Connect",
         [this, hostInput, portInput]() {
             std::string h = hostInput->getText();
             int p = 0;
@@ -237,7 +249,7 @@ void Core::_showConnectionOverlay() {
             }
             this->_connectToServer(h, p);
         },
-        11));
+        1));
 }
 
 void Core::_connectToServer(const std::string& host, int port) {
