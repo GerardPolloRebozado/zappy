@@ -138,6 +138,7 @@ mod tests {
     use crate::ecs::builders::tile::build_tile;
     use crate::ecs::components::network::NetworkData;
     use crate::ecs::components::task::{Task, TaskList, TaskType};
+    use crate::ecs::components::terrain_type::TerrainType;
     use crate::ecs::systems::task::any_finished_task;
     use crate::ecs::{self, storage};
     use crate::server::Server;
@@ -156,7 +157,7 @@ mod tests {
             &mut server.world,
             network_data,
         );
-        let tile_entity = build_tile(Position { x: 0, y: 0 }, &mut server.world);
+        let tile_entity = build_tile(Position { x: 0, y: 0 }, &mut server.world, TerrainType::Grass);
         server
             .world
             .get_component_mut::<Inventory>(tile_entity)
@@ -224,7 +225,7 @@ mod tests {
             &mut server.world,
             network_data,
         );
-        let tile_entity = build_tile(Position { x: 0, y: 0 }, &mut server.world);
+        let tile_entity = build_tile(Position { x: 0, y: 0 }, &mut server.world, TerrainType::Grass);
         server
             .world
             .get_component_mut::<Inventory>(inhabitant)

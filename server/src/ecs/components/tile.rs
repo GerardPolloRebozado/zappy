@@ -1,5 +1,5 @@
 use crate::ecs::{
-    components::{inventory::Inventory, position::Position, resource::Resource},
+    components::{inventory::Inventory, position::Position, resource::Resource, terrain_type::TerrainType},
     storage::{Entity, World},
 };
 
@@ -71,7 +71,7 @@ mod tests {
     #[test]
     fn find_existing_tile() {
         let mut world = World::default();
-        let tile_entity = build_tile(Position { x: 0, y: 0 }, &mut world);
+        let tile_entity = build_tile(Position { x: 0, y: 0 }, &mut world, TerrainType::Grass);
 
         let found_entity = Tile::find_tile_by_pos(&Position { x: 0, y: 0 }, &mut world);
         assert_eq!(found_entity, Some(tile_entity));
