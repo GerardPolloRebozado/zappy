@@ -15,6 +15,8 @@
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
 #include "ECS/World.hpp"
+#include "Graphics/TileTextures.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -184,16 +186,6 @@ void RenderSystem::_renderTerrain(World& w) {
         }
     }
 
-    auto eggStorage = w.get_storage<Egg>();
-    if (eggStorage) {
-        for (auto const& [entity, eggPtr] : *eggStorage) {
-            auto ppos = w.get_component<Position>(entity);
-            if (ppos) {
-                inhabitantPosList.push_back({ppos->x, ppos->y});
-            }
-        }
-    }
-
     raylib::Vector3 cameraTarget = _camera.target;
 
     for (auto const& [entity, type] : *terrainStorage) {
@@ -206,39 +198,17 @@ void RenderSystem::_renderTerrain(World& w) {
                 continue;
             }
 
-            raylib::Vector3 vpos((float)pos->x, 1.5f, (float)pos->y);
+            const raylib::Vector3 vpos(static_cast<float>(pos->x), 1.5f,
+                                       static_cast<float>(pos->y));
 
-            raylib::Color color = GRAY;
-            switch (type->current_type) {
-                case TerrainType::GRASS:
-                    color = raylib::Color::Green();
-                    break;
-                case TerrainType::MOUNTAIN:
-                    color = raylib::Color::DarkGray();
-                    break;
-                case TerrainType::WATER:
-                    color = raylib::Color::Blue();
-                    break;
-                case TerrainType::SAND:
-                    color = raylib::Color::Gold();
-                    break;
-                case TerrainType::FOREST:
-                    color = raylib::Color::DarkGreen();
-                    break;
-                case TerrainType::OBSIDIAN_BARRENS:
-                    color = raylib::Color::Black();
-                    break;
-                case TerrainType::LUMINOUS_ORCHARDS:
-                    color = raylib::Color::Lime();
-                    break;
-                case TerrainType::CRYSTAL_CANYONS:
-                    color = raylib::Color::Purple();
-                    break;
-                case TerrainType::MAGNETIC_TUNDRA:
-                    color = raylib::Color::SkyBlue();
-                    break;
+            static Tiletextures textures;
+            raylib::Model baseCubeModel = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
+            std::shared_ptr<raylib::Texture2D> texture =
+                textures.GetTileTexture(type->current_type);
+            if (texture) {
+                baseCubeModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *texture.get();
+                baseCubeModel.Draw(vpos, 1.0f, WHITE);
             }
-            vpos.DrawCube(1.0f, 1.0f, 1.0f, color);
 
             if (type->current_type == TerrainType::FOREST) {
                 raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
