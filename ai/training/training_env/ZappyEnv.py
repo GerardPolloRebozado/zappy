@@ -164,6 +164,8 @@ class ZappyEnv(gym.Env):
                             break
         elif response == "ko":
             reward = -1.0
+        elif isinstance(response, str) and response.startswith("Current level:"):
+            reward = +100.0
         if not terminated:
             try:
                 observation = self._get_real_observation()
