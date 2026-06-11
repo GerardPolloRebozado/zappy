@@ -1,5 +1,5 @@
 use crate::ecs::{
-    components::{inventory::Inventory, position::Position, resource::Resource, terrain_type::TerrainType},
+    components::{inventory::Inventory, position::Position, resource::Resource},
     storage::{Entity, World},
 };
 
@@ -64,7 +64,7 @@ impl Tile {
 
 #[cfg(test)]
 mod tests {
-    use crate::ecs::builders::tile::build_tile;
+    use crate::ecs::{builders::tile::build_tile, components::terrain_type::TerrainType};
 
     use super::*;
 

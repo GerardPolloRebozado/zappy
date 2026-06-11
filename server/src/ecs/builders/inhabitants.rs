@@ -1,42 +1,13 @@
 use crate::{
     ecs::{
         components::{
-            inventory::Inventory, level::Level, life::Life, network::NetworkData,
-            position::Position, task::TaskList, team::Team,
+            inhabitant_tag::InhabitantTag, inventory::Inventory, level::Level, position::Position,
+            resource::Resource::Food, task::TaskList, team::Team,
         },
         storage::{Entity, World},
     },
-    utils::orientation::RelativeOrientation,
+    utils::{constants::STARTING_FOOD, orientation::RelativeOrientation},
 };
-
-pub fn build_inhabitant(
-    x: u32,
-    y: u32,
-    orientation: RelativeOrientation,
-    world: &mut World,
-    network_data: NetworkData,
-) -> Entity {
-    let new_inhabitant = world.spawn();
-    world.add_component(new_inhabitant, TaskList::default());
-    world.add_component(new_inhabitant, Position::new());
-    world.add_component(new_inhabitant, Level::new());
-    world.add_component(new_inhabitant, Inventory::new());
-    world.add_component(new_inhabitant, Life::new(world.freq));
-    world.add_component(new_inhabitant, RelativeOrientation::Forward);
-    world.add_component(new_inhabitant, network_data);
-    world.add_component(new_inhabitant, Team::default());
-
-    let position = world.get_component_mut::<Position>(new_inhabitant).unwrap();
-    position.x = x;
-    position.y = y;
-
-    let mut _orientation = world
-        .get_component_mut::<RelativeOrientation>(new_inhabitant)
-        .unwrap();
-    *_orientation = orientation;
-
-    new_inhabitant
-}
 
 pub fn build_inhabitant_with_entity(
     entity: Entity,
@@ -45,12 +16,15 @@ pub fn build_inhabitant_with_entity(
     orientation: RelativeOrientation,
     world: &mut World,
 ) -> Entity {
+    let mut inv = Inventory::new();
+    inv.add_item(Food, STARTING_FOOD);
     world.add_component(entity, TaskList::default());
     world.add_component(entity, Position::new());
     world.add_component(entity, Level::new());
-    world.add_component(entity, Inventory::new());
-    world.add_component(entity, Life::new(world.freq));
+    world.add_component(entity, inv);
+    world.add_component(entity, InhabitantTag);
     world.add_component(entity, RelativeOrientation::Forward);
+    world.add_component(entity, Team::default());
 
     let position = world.get_component_mut::<Position>(entity).unwrap();
     position.x = x;

@@ -1,10 +1,14 @@
-use crate::ecs::components::resource::Resource;
+use crate::{
+    ecs::components::resource::Resource::{self, Food},
+    utils::{constants::LIFE_UNIT_IN_TIME_UNITS, date::Date},
+};
 use std::collections::HashMap;
 
 /// Pure data component for storing items
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Inventory {
     pub items: HashMap<Resource, u32>,
+    pub last_time_consumed: u64,
 }
 
 const RESOURCE_ORDER: [Resource; 7] = [
@@ -21,12 +25,32 @@ impl Inventory {
     pub fn new() -> Self {
         Inventory {
             items: HashMap::new(),
+            last_time_consumed: Date::now().to_timestamp(),
         }
     }
 
     /// Adds a specified amount of a resource to an inventory.
     pub fn add_item(&mut self, resource: Resource, amount: u32) {
         *self.items.entry(resource).or_insert(0) += amount;
+    }
+
+    ///removes some food to continue being alive till reaching 0
+    pub fn consume_food(&mut self, freq: u64) {
+        let time_difference = Date::now().to_timestamp() - self.last_time_consumed;
+        let food_in_time_units = self.get_item_count(Food) * LIFE_UNIT_IN_TIME_UNITS as u32;
+
+        let food_to_remove = (((food_in_time_units as i64 / freq as i64) - time_difference as i64)
+            as f64
+            / LIFE_UNIT_IN_TIME_UNITS as f64
+            / freq as f64)
+            .round();
+        if food_to_remove >= 1.0 {
+            self.remove_item(Food, food_to_remove as u32);
+            self.last_time_consumed = Date::now().to_timestamp();
+        } else if food_to_remove < 0.0 {
+            *self.items.get_mut(&Resource::Food).unwrap() = 0;
+            self.last_time_consumed = Date::now().to_timestamp();
+        }
     }
 
     /// Removes a specified amount of a resource from an inventory.
@@ -128,5 +152,27 @@ mod tests {
             inv.format_inventory_response(),
             "[food 10, linemate 5, deraumere 0, sibur 1, mendiane 2, phiras 3, thystame 4]"
         );
+    }
+
+    #[test]
+    fn test_consume_all_food() {
+        let mut inv = Inventory::new();
+        inv.add_item(Food, 10);
+        inv.last_time_consumed = 1;
+        inv.consume_food(1);
+        assert_eq!(inv.get_item_count(Food), 0);
+    }
+
+    #[test]
+    fn test_consume_one_unit_of_food() {
+        let mut inv = Inventory::new();
+        inv.add_item(Food, 2);
+        inv.last_time_consumed -= LIFE_UNIT_IN_TIME_UNITS;
+        inv.consume_food(1);
+        assert_eq!(inv.get_item_count(Food), 1);
+        inv.consume_food(1);
+        assert_eq!(inv.get_item_count(Food), 1);
+        inv.consume_food(1);
+        assert_eq!(inv.get_item_count(Food), 1);
     }
 }

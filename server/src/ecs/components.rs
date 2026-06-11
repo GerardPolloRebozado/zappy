@@ -1,8 +1,8 @@
 pub mod egg;
 pub mod inhabitant;
+pub mod inhabitant_tag;
 pub mod inventory;
 pub mod level;
-pub mod life;
 pub mod network;
 pub mod position;
 pub mod resource;

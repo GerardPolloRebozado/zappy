@@ -269,9 +269,9 @@ fn execute_task(
 #[cfg(test)]
 mod tests {
 
+    use crate::ecs::builders::inhabitants::build_inhabitant_with_entity;
     use crate::ecs::components::inventory::Inventory;
-    use crate::ecs::components::level::Level;
-    use crate::ecs::components::life::Life;
+    use crate::ecs::components::network::MockSocket;
     use crate::ecs::components::resource::Resource;
     use crate::ecs::components::task::{Task, TaskType};
     use crate::ecs::storage::World;
@@ -289,14 +289,11 @@ mod tests {
         world.map_size.width = map_w;
         world.map_size.height = map_h;
 
+        let (mock_socket, _) = MockSocket::new(Vec::from(""));
+        let network_data = NetworkData::new(mock_socket);
         let entity = world.spawn();
-        world.add_component(entity, Position { x, y });
-        world.add_component(entity, orientation);
-        world.add_component(entity, Level::new());
-        world.add_component(entity, TaskList::default());
-        world.add_component(entity, Inventory::new());
-        world.add_component(entity, Life::new(world.freq));
-        world.add_component(entity, crate::ecs::components::team::Team::default());
+        build_inhabitant_with_entity(entity, x, y, orientation, &mut world);
+        world.add_component(entity, network_data);
         (world, entity)
     }
 
@@ -436,7 +433,7 @@ mod tests {
         assert_eq!(response.code, ResponseCode::Status(StatusCode::Ok));
         assert_eq!(
             response.data.as_deref(),
-            Some("[food 10, linemate 5, deraumere 0, sibur 1, mendiane 2, phiras 3, thystame 4]")
+            Some("[food 20, linemate 5, deraumere 0, sibur 1, mendiane 2, phiras 3, thystame 4]")
         );
         assert!(event.is_none());
     }

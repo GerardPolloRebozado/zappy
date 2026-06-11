@@ -196,10 +196,11 @@ pub fn execute_incantation(world: &mut World, entity: Entity) -> (Response, Opti
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ecs::builders::inhabitants::build_inhabitant;
+    use crate::ecs::builders::inhabitants::build_inhabitant_with_entity;
     use crate::ecs::builders::tile::build_tile;
     use crate::ecs::components::network::{MockSocket, NetworkData};
     use crate::ecs::components::terrain_type::TerrainType;
+    use crate::utils::orientation::RelativeOrientation;
 
     fn setup_world_with_tile() -> (World, Entity) {
         let mut world = World::default();
@@ -210,13 +211,10 @@ mod tests {
     fn spawn_player(world: &mut World, level: u8) -> Entity {
         let (mock_socket, _) = MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
-        let player = build_inhabitant(
-            0,
-            0,
-            crate::utils::orientation::RelativeOrientation::Forward,
-            world,
-            network_data,
-        );
+        let entity = world.spawn();
+        let player =
+            build_inhabitant_with_entity(entity, 0, 0, RelativeOrientation::Forward, world);
+        world.add_component(entity, network_data);
         world.get_component_mut::<Level>(player).unwrap().value = level;
         player
     }

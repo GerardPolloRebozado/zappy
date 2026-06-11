@@ -221,7 +221,7 @@ impl Server {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ecs::builders::inhabitants::build_inhabitant;
+    use crate::ecs::builders::inhabitants::build_inhabitant_with_entity;
     use crate::ecs::components::network::NetworkData;
     use crate::ecs::components::task::{TaskList, TaskType};
     use crate::ecs::components::team::Team;
@@ -230,34 +230,18 @@ mod tests {
 
     #[test]
     fn test_queue_task_limit() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-
-        let mut server = Server {
-            listener,
-            _users: HashMap::new(),
-            _freq: 100,
-            game_start: 0,
-            world: World::new(
-                crate::ecs::map_size::MapSize {
-                    width: 10,
-                    height: 10,
-                },
-                100,
-            ),
-            clients_nb: 1,
-            team_names: vec!["team".to_string()],
-        };
-
-        let client_socket = std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+        let mut server = Server::default();
+        let client_socket = std::net::TcpStream::connect(format!("127.0.0.1:{}", 8080)).unwrap();
         let network = NetworkData::new(client_socket);
-        let entity = build_inhabitant(
+        let entity = server.world.spawn();
+        let entity = build_inhabitant_with_entity(
+            entity,
             0,
             0,
             RelativeOrientation::Forward,
             &mut server.world,
-            network,
         );
+        server.world.add_component(entity, network);
 
         for _ in 0..15 {
             server.queue_task(entity, TaskType::Forward);
@@ -290,26 +274,30 @@ mod tests {
 
         let socket_a = std::net::TcpStream::connect(addr).unwrap();
         let network_a = NetworkData::new(socket_a);
-        let entity_same = build_inhabitant(
+        let entity_same = server.world.spawn();
+        let entity = build_inhabitant_with_entity(
+            entity_same,
             5,
             5,
             RelativeOrientation::Forward,
             &mut server.world,
-            network_a,
         );
+        server.world.add_component(entity, network_a);
         if let Some(nd) = server.world.get_component_mut::<Team>(entity_same) {
             *nd = Team::AuthenticatedAI("team".to_string());
         }
 
         let socket_b = std::net::TcpStream::connect(addr).unwrap();
         let network_b = NetworkData::new(socket_b);
-        let entity_east = build_inhabitant(
+        let entity_east = server.world.spawn();
+        let entity_east = build_inhabitant_with_entity(
+            entity_east,
             6,
             5,
             RelativeOrientation::Forward,
             &mut server.world,
-            network_b,
         );
+        server.world.add_component(entity_east, network_b);
         if let Some(nd) = server.world.get_component_mut::<Team>(entity_east) {
             *nd = Team::AuthenticatedAI("team".to_string());
         }

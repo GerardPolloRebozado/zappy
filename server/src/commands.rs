@@ -128,7 +128,7 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
         }
     }
 
-    // check if the team if full
+    // check if the team is full
     let team_members = Team::team_members(team_name.clone(), &server.world);
 
     if team_members.iter().len() >= usize::try_from(server.clients_nb).unwrap() {
@@ -143,9 +143,6 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
     }
     //
 
-    let team_component = server.world.get_component_mut::<Team>(entity).unwrap();
-    *team_component = Team::AuthenticatedAI(team_name.clone());
-
     let egg = Egg::random_egg(&mut server.world);
     let egg_position = server.world.get_component::<Position>(egg).unwrap().clone();
     let entity = build_inhabitant_with_entity(
@@ -155,6 +152,9 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
         RelativeOrientation::Forward,
         &mut server.world,
     );
+
+    let team_component = server.world.get_component_mut::<Team>(entity).unwrap();
+    *team_component = Team::AuthenticatedAI(team_name.clone());
     info!(
         "Entity {} authenticated as team {}, placed at ({}, {})",
         entity, team_name, egg_position.x, egg_position.y
@@ -193,7 +193,7 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
 
 #[cfg(test)]
 mod tests {
-    use crate::ecs::{builders::inhabitants::build_inhabitant, components::network};
+    use crate::ecs::{components::network, systems::tile_system::spawn_egg};
 
     use super::*;
 
@@ -217,13 +217,15 @@ mod tests {
 
         let (mock_socket, output) = network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
-        let inhabitant = build_inhabitant(
+        let inhabitant = server.world.spawn();
+        build_inhabitant_with_entity(
+            inhabitant,
             0,
             0,
             crate::utils::orientation::RelativeOrientation::Forward,
             &mut server.world,
-            network_data,
         );
+        server.world.add_component(inhabitant, network_data);
 
         let request = Request {
             command: Command::Unknown("non_existent".to_string()),
@@ -261,13 +263,15 @@ mod tests {
 
         let (mock_socket, _) = network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
-        let inhabitant = build_inhabitant(
+        let inhabitant = server.world.spawn();
+        build_inhabitant_with_entity(
+            inhabitant,
             0,
             0,
             crate::utils::orientation::RelativeOrientation::Forward,
             &mut server.world,
-            network_data,
         );
+        server.world.add_component(inhabitant, network_data);
 
         let request = Request {
             command: Command::Unknown("GRAPHIC".to_string()),
@@ -281,41 +285,29 @@ mod tests {
 
     #[test]
     fn test_ai_auth() {
-        let mut server = Server {
-            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
-            _users: std::collections::HashMap::new(),
-            _freq: 100,
-            game_start: 0,
-            world: crate::ecs::storage::World::new(
-                crate::ecs::map_size::MapSize {
-                    width: 10,
-                    height: 10,
-                },
-                100,
-            ),
-            clients_nb: 10,
-            team_names: vec!["existing_team".to_string()],
-        };
+        let mut server = Server::default();
 
         let (mock_socket, _) = network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
-        let egg = server.world.spawn();
-        server.world.add_component(egg, Position { x: 0, y: 0 });
-        server.world.add_component(egg, Egg);
+        spawn_egg(server.world.map_size, &mut server.world, 0);
         let inhabitant = server.world.spawn();
+        build_inhabitant_with_entity(
+            inhabitant,
+            0,
+            0,
+            crate::utils::orientation::RelativeOrientation::Forward,
+            &mut server.world,
+        );
         server.world.add_component(inhabitant, network_data);
-        server
-            .world
-            .add_component(inhabitant, Team::WaitingForTeamName);
 
         let request = Request {
-            command: Command::Unknown("existing_team".to_string()),
+            command: Command::Unknown("TeamA".to_string()),
         };
 
         handle_auth_request(&mut server, inhabitant, request);
 
         let team = server.world.get_component::<Team>(inhabitant).unwrap();
-        assert_eq!(*team, Team::AuthenticatedAI("existing_team".to_string()));
+        assert_eq!(*team, Team::AuthenticatedAI("TeamA".to_string()));
     }
 
     #[test]
