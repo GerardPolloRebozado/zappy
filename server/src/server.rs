@@ -8,6 +8,7 @@ use crate::ecs::components::team::Team;
 use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::network::network_system;
 use crate::ecs::systems::run::run_systems;
+use crate::ecs::systems::tile_system::{setup_map, spawn_egg};
 use crate::protocol::{Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::utils::Config;
 use crate::utils::date::Date;
@@ -163,7 +164,8 @@ impl Server {
         for entity in requests_to_write {
             let mut responses = Vec::new();
             if let Some(c) = self.world.get_component_mut::<NetworkData>(entity) {
-                responses = c.pending_responses.drain(..).collect();
+                let limit = std::cmp::min(c.pending_responses.len(), 100);
+                responses = c.pending_responses.drain(..limit).collect();
             }
             for response in responses {
                 self.handle_response(entity, response);
@@ -205,7 +207,10 @@ impl Server {
     pub fn load(&mut self) {
         let width = self.world.map_size.width;
         let height = self.world.map_size.height;
-        crate::ecs::systems::tile_system::setup_map(&mut self.world, width, height);
+        setup_map(&mut self.world, width, height);
+        for _ in 0..(self.team_names.len() as u32 * self.clients_nb) {
+            spawn_egg(self.world.map_size, &mut self.world, 0);
+        }
     }
 
     pub fn get_tile_content(&self, x: u32, y: u32) -> Option<String> {
@@ -329,7 +334,7 @@ mod tests {
         let line_a = network_a.pending_responses[0].data.as_ref().unwrap();
         let line_b = network_b.pending_responses[0].data.as_ref().unwrap();
 
-        assert_eq!(line_a, "message 0, hello\n");
-        assert_eq!(line_b, "message 3, hello\n");
+        assert_eq!(line_a, "message 0, hello");
+        assert_eq!(line_b, "message 3, hello");
     }
 }

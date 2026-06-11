@@ -1,11 +1,13 @@
-use crate::ecs::components::inventory::Inventory;
-use crate::ecs::components::position::Position;
-use crate::ecs::components::terrain_type::TerrainType;
-use crate::ecs::components::tile::Tile;
+use crate::ecs::components::{
+    egg::Egg, inventory::Inventory, position::Position, terrain_type::TerrainType, tile::Tile,
+};
 use crate::ecs::map_size::MapSize;
 use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::resource_spawn::resource_spawn_system;
 use crate::ecs::builders::tile::build_tile;
+use crate::ecs::systems::task::broadcast_event;
+use crate::protocol::ServerEvent;
+use log::info;
 use noise::{NoiseFn, Perlin};
 use rand::{RngExt, rng};
 
@@ -59,6 +61,25 @@ pub fn setup_map(world: &mut World, width: u32, height: u32) {
     resource_spawn_system(world);
 }
 
+pub fn spawn_egg(size: MapSize, world: &mut World, player_id: u32) {
+    let mut rng = rng();
+    let x = rng.random_range(0..size.width);
+    let y = rng.random_range(0..size.height);
+    let entity = world.spawn();
+    world.add_component(entity, Egg);
+    world.add_component(entity, Position { x, y });
+    info!("Spawned egg at x: {} y: {}", x, y);
+    broadcast_event(
+        world,
+        ServerEvent::EggLaid {
+            egg_id: entity.id(),
+            player_id,
+            x,
+            y,
+        },
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,5 +125,29 @@ mod tests {
             }
         }
         assert!(found);
+    }
+
+    #[test]
+    fn test_spawn_egg() {
+        let mut world = World::default();
+        let size = MapSize {
+            width: 10,
+            height: 10,
+        };
+
+        spawn_egg(size, &mut world, 42);
+
+        let egg_storage = world
+            .get_storage::<Egg>()
+            .expect("Egg storage should exist");
+        assert_eq!(egg_storage.iter().count(), 1);
+
+        let (egg_ent, _) = egg_storage.iter().next().unwrap();
+        let pos = world
+            .get_component::<Position>(*egg_ent)
+            .expect("Egg should have a position");
+
+        assert!(pos.x < 10);
+        assert!(pos.y < 10);
     }
 }
