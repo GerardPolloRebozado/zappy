@@ -134,7 +134,7 @@ pub fn take_task(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ecs::builders::inhabitants::build_inhabitant;
+    use crate::ecs::builders::inhabitants::build_inhabitant_with_entity;
     use crate::ecs::builders::tile::build_tile;
     use crate::ecs::components::network::NetworkData;
     use crate::ecs::components::task::{Task, TaskList, TaskType};
@@ -150,14 +150,20 @@ mod tests {
 
         let (mock_socket, _) = crate::ecs::components::network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
-        let inhabitant = build_inhabitant(
+        let inhabitant = server.world.spawn();
+        build_inhabitant_with_entity(
+            inhabitant,
             0,
             0,
             crate::utils::orientation::RelativeOrientation::Forward,
             &mut server.world,
-            network_data,
         );
-        let tile_entity = build_tile(Position { x: 0, y: 0 }, &mut server.world, TerrainType::Grass);
+        server.world.add_component(inhabitant, network_data);
+        let tile_entity = build_tile(
+            Position { x: 0, y: 0 },
+            &mut server.world,
+            TerrainType::Grass,
+        );
         server
             .world
             .get_component_mut::<Inventory>(tile_entity)
@@ -182,7 +188,7 @@ mod tests {
         assert_eq!(task_list.vector.len(), 0);
 
         let inhabitant_invetory = server.world.get_component::<Inventory>(inhabitant).unwrap();
-        assert_eq!(inhabitant_invetory.get_item_count(Resource::Food), 1);
+        assert_eq!(inhabitant_invetory.get_item_count(Resource::Food), 11);
         let tile_inventory = server
             .world
             .get_component::<Inventory>(tile_entity)
@@ -218,14 +224,20 @@ mod tests {
 
         let (mock_socket, _) = crate::ecs::components::network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
-        let inhabitant = build_inhabitant(
+        let inhabitant = server.world.spawn();
+        build_inhabitant_with_entity(
+            inhabitant,
             0,
             0,
             crate::utils::orientation::RelativeOrientation::Forward,
             &mut server.world,
-            network_data,
         );
-        let tile_entity = build_tile(Position { x: 0, y: 0 }, &mut server.world, TerrainType::Grass);
+        server.world.add_component(inhabitant, network_data);
+        let tile_entity = build_tile(
+            Position { x: 0, y: 0 },
+            &mut server.world,
+            TerrainType::Grass,
+        );
         server
             .world
             .get_component_mut::<Inventory>(inhabitant)
@@ -250,7 +262,7 @@ mod tests {
         assert_eq!(task_list.vector.len(), 0);
 
         let inhabitant_invetory = server.world.get_component::<Inventory>(inhabitant).unwrap();
-        assert_eq!(inhabitant_invetory.get_item_count(Resource::Food), 0);
+        assert_eq!(inhabitant_invetory.get_item_count(Resource::Food), 10);
         let tile_inventory = server
             .world
             .get_component::<Inventory>(tile_entity)

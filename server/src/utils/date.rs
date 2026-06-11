@@ -9,6 +9,8 @@ pub struct Date {
     pub year: u16,
     pub hour: u8,
     pub minute: u8,
+    pub second: u8,
+    pub millisecond: u16,
 }
 
 impl Date {
@@ -22,11 +24,13 @@ impl Date {
             .unwrap();
 
         let total_seconds = current_time.as_secs();
+        let millisecond = current_time.subsec_millis() as u16;
         let mut days_since_epoch = total_seconds / SECONDS_IN_A_DAY;
         let seconds_today = total_seconds % SECONDS_IN_A_DAY;
 
         let hour = (seconds_today / 3600) as u8;
         let minute = ((seconds_today % 3600) / 60) as u8;
+        let second = (seconds_today % 60) as u8;
 
         let mut year = 1970;
         loop {
@@ -73,6 +77,8 @@ impl Date {
             year,
             hour,
             minute,
+            second,
+            millisecond,
         }
     }
 
@@ -107,7 +113,12 @@ impl Date {
 
         total_days += (self.day - 1) as u64;
 
-        total_days * SECONDS_IN_A_DAY + (self.hour as u64 * 3600) + (self.minute as u64 * 60)
+        (total_days * SECONDS_IN_A_DAY
+            + (self.hour as u64 * 3600)
+            + (self.minute as u64 * 60)
+            + self.second as u64)
+            * 1000
+            + self.millisecond as u64
     }
 
     pub fn from_string(string: &str) -> Option<Date> {
@@ -138,6 +149,8 @@ impl Date {
             year,
             hour,
             minute,
+            second: 0,
+            millisecond: 0,
         })
     }
 }
@@ -164,6 +177,8 @@ mod tests {
             year: 2026,
             hour: 12,
             minute: 30,
+            second: 0,
+            millisecond: 0,
         };
         assert_eq!(date.to_string(), "18/04/2026 12:30");
     }

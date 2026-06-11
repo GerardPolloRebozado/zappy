@@ -1,4 +1,4 @@
-use crate::ecs::components::life::Life;
+use crate::ecs::components::inhabitant_tag::InhabitantTag;
 use crate::ecs::components::position::Position;
 use crate::ecs::storage::{Entity, World};
 use crate::utils::orientation::RelativeOrientation;
@@ -10,7 +10,7 @@ pub fn parse_player_id(id: &str) -> Option<u32> {
 
 /// Finds an inhabitant entity by its protocol player id.
 pub fn find_inhabitant(world: &World, player_id: u32) -> Option<Entity> {
-    let life_storage = world.get_storage::<Life>()?;
+    let life_storage = world.get_storage::<InhabitantTag>()?;
 
     for (candidate, _) in life_storage.iter() {
         if candidate.id() == player_id {

@@ -14,3 +14,4 @@ pub const SIBUR_DENSITY: f32 = 0.1;
 pub const MENDIANE_DENSITY: f32 = 0.1;
 pub const PHIRAS_DENSITY: f32 = 0.08;
 pub const THYSTAME_DENSITY: f32 = 0.05;
+pub const STARTING_FOOD: u32 = 10;

@@ -1,10 +1,8 @@
-use crate::ecs::components::{
-    egg::Egg, inventory::Inventory, position::Position, terrain_type::TerrainType, tile::Tile,
-};
-use crate::ecs::map_size::MapSize;
-use crate::ecs::storage::{Entity, World};
-use crate::ecs::systems::resource_spawn::resource_spawn_system;
 use crate::ecs::builders::tile::build_tile;
+use crate::ecs::components::{egg::Egg, position::Position, terrain_type::TerrainType};
+use crate::ecs::map_size::MapSize;
+use crate::ecs::storage::World;
+use crate::ecs::systems::resource_spawn::resource_spawn_system;
 use crate::ecs::systems::task::broadcast_event;
 use crate::protocol::ServerEvent;
 use log::info;
@@ -82,6 +80,8 @@ pub fn spawn_egg(size: MapSize, world: &mut World, player_id: u32) {
 
 #[cfg(test)]
 mod tests {
+    use crate::ecs::components::{inventory::Inventory, tile::Tile};
+
     use super::*;
 
     #[test]

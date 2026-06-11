@@ -1,4 +1,4 @@
-pub mod life;
+pub mod food;
 pub mod network;
 pub mod resource_spawn;
 pub mod run;

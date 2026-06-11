@@ -1,6 +1,5 @@
 use crate::ecs::components::inventory::Inventory;
 use crate::ecs::components::level::Level;
-use crate::ecs::components::life::Life;
 use crate::ecs::components::position::Position;
 use crate::ecs::components::team::Team;
 use crate::ecs::storage::{Entity, World};
@@ -25,7 +24,6 @@ pub struct Inhabitant {
     y: u32,
     /// Facing direction on the map (`1` = north, `2` = east, `3` = south, `4` = west).
     orientation: RelativeOrientation,
-    life: Life,
     level: Level,
     inventory: Inventory,
     team: Team,
@@ -40,7 +38,6 @@ impl Default for Inhabitant {
             x: 0,
             y: 0,
             orientation: RelativeOrientation::Forward,
-            life: Life::new(100),
             level: Level::default(),
             inventory: Inventory::default(),
             team: Team::default(),
@@ -58,7 +55,6 @@ impl Inhabitant {
         x: u32,
         y: u32,
         orientation: RelativeOrientation,
-        life: Life,
         level: Level,
         inventory: Inventory,
         team: Team,
@@ -70,7 +66,6 @@ impl Inhabitant {
             x,
             y,
             orientation,
-            life,
             level,
             inventory,
             team,
@@ -123,12 +118,6 @@ impl Inhabitant {
         self
     }
 
-    // Creates an inhabitant with a specific life
-    pub fn with_life(mut self, life: Life) -> Self {
-        self.life = life;
-        self
-    }
-
     // Creates an inhabitant with a specific level
     pub fn with_level(mut self, level: Level) -> Self {
         self.level = level;
@@ -147,7 +136,6 @@ impl Inhabitant {
     pub fn get(entity: Entity, world: &World) -> Option<Self> {
         let pos = world.get_component::<Position>(entity)?;
         let ori = world.get_component::<RelativeOrientation>(entity)?;
-        let life = world.get_component::<Life>(entity)?;
         let team = world.get_component::<Team>(entity)?;
         let level = world.get_component::<Level>(entity)?;
         let inventory = world.get_component::<Inventory>(entity)?;
@@ -163,7 +151,6 @@ impl Inhabitant {
             x: pos.x,
             y: pos.y,
             orientation: *ori,
-            life: *life,
             level: *level,
             inventory: inventory.clone(),
             team: team.clone(),
@@ -207,11 +194,6 @@ impl Inhabitant {
     /// Returns the player's facing direction.
     pub fn orientation(&self) -> RelativeOrientation {
         self.orientation
-    }
-
-    /// Returns the player's life.
-    pub fn life(&self) -> Life {
-        self.life
     }
 
     /// Returns the player's level.

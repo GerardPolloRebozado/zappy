@@ -1,5 +1,5 @@
 use crate::ecs::{
-    components::{inventory::Inventory, position::Position, tile::Tile, terrain_type::TerrainType},
+    components::{inventory::Inventory, position::Position, terrain_type::TerrainType, tile::Tile},
     storage::{Entity, World},
 };
 
