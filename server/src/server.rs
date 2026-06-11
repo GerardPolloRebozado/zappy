@@ -13,7 +13,7 @@ use crate::protocol::{Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::utils::Config;
 use crate::utils::date::Date;
 use log::{error, info};
-use nix::poll::{PollFd, PollFlags};
+use nix::poll::{PollFd, PollFlags, PollTimeout};
 use std::collections::HashMap;
 use std::io::Write;
 use std::net::TcpListener;
@@ -95,7 +95,7 @@ impl Server {
                 ));
             }
         }
-        if let Err(_e) = nix::poll::poll(&mut fds, None::<u16>) {
+        if let Err(_e) = nix::poll::poll(&mut fds, PollTimeout::MAX) {
             return fds;
         }
 
