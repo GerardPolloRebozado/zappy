@@ -125,15 +125,45 @@ class ZappyEnv(gym.Env):
             print(f"[ENV] Network: {e}")
             response = "dead"
             self.client.is_dead = True
-
+        reward = -0.01
         if self.client.is_dead or response == "dead":
             terminated = True
             reward = -100.0
         elif response == "ok":
-            reward = 1.0
+            base_rewards = {
+                ZappyAction.FORWARD: 1.0,
+                ZappyAction.LEFT: 1.0,
+                ZappyAction.RIGHT: 1.0,
+                ZappyAction.LOOK: 1.0,
+                ZappyAction.INVENTORY: 1.0,
+                ZappyAction.BROADCAST: 1.0,
+                ZappyAction.CONNECT_NBR: 0.5,
+                ZappyAction.FORK: 2.0,
+                ZappyAction.EJECT: 3.0,
+                ZappyAction.SET: 0.0,
+                ZappyAction.INCANTATION: 10.0,
+            }
+            reward = base_rewards.get(zappy_action, 0.0)
+            if zappy_action == ZappyAction.TAKE:
+                reward = 4.0
+                inv = self.client.inventory()
+                if hasattr(inv, "food") and inv.food >= 15:
+                    reward = 0.0
+                else:
+                    stones = [
+                        "linemate",
+                        "sibur",
+                        "deraumere",
+                        "mendiane",
+                        "phiras",
+                        "thystame",
+                    ]
+                    for stone in stones:
+                        if getattr(inv, stone, 0) == 0:
+                            reward += 10.0
+                            break
         elif response == "ko":
-            reward = -0.1
-
+            reward = -1.0
         if not terminated:
             try:
                 observation = self._get_real_observation()
