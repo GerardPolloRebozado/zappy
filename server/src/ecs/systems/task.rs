@@ -60,6 +60,7 @@ use crate::{
 };
 use log::{debug, info};
 
+pub mod incantation;
 pub mod inventory;
 pub mod look;
 pub mod take_set;
@@ -68,6 +69,7 @@ pub mod take_set;
 /// task's timer, and handles command replies and broadcast events.
 pub fn any_finished_task(world: &mut World) {
     let mut completed: Vec<(Entity, TaskType)> = Vec::new();
+    let mut started_incantations: Vec<Entity> = Vec::new();
     let freq = world.freq;
 
     {
@@ -85,6 +87,10 @@ pub fn any_finished_task(world: &mut World) {
             if first_task.finish_on == TASK_NOT_STARTED {
                 first_task.finish_on =
                     Date::now().to_timestamp() + (first_task.task_type.duration() / freq);
+
+                if matches!(first_task.task_type, TaskType::Incantation) {
+                    started_incantations.push(*entity);
+                }
                 continue;
             }
 
@@ -103,6 +109,8 @@ pub fn any_finished_task(world: &mut World) {
         }
     }
 
+    incantation::process_started_incantations(world, started_incantations);
+
     for (entity, task_type) in completed {
         let (response, event) = execute_task(world, entity, &task_type);
 
@@ -114,10 +122,8 @@ pub fn any_finished_task(world: &mut World) {
                     .write_all(response.to_string().as_bytes());
             }
             world.despawn(entity);
-        } else {
-            if let Some(network_data) = world.get_component_mut::<NetworkData>(entity) {
-                network_data.pending_responses.push(response);
-            }
+        } else if let Some(network_data) = world.get_component_mut::<NetworkData>(entity) {
+            network_data.pending_responses.push(response);
         }
 
         if let Some(ev) = event {
@@ -255,6 +261,7 @@ fn execute_task(
         }
         TaskType::Take(resource) => take_task(world, entity, resource),
         TaskType::Set(resource) => take_set::set_task(world, entity, resource),
+        TaskType::Incantation => incantation::execute_incantation(world, entity),
         _ => (ok, None),
     }
 }
