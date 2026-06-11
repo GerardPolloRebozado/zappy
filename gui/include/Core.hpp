@@ -68,11 +68,36 @@ class Core {
      */
     void _setupTestingData();
 
+    /**
+     * @brief Builds the main menu UI components.
+     */
     void _setupMainMenu();
+
+    /**
+     * @brief Clears the current UI and builds the connection screen.
+     */
     void _showConnectionOverlay();
+
+    /**
+     * @brief Clears the current UI and builds the settings menu.
+     */
     void _setupSettingsMenu();
+
+    /**
+     * @brief Adds in-game HUD components (scoreboard and tile inspector).
+     */
     void _setupGameUI();
+
+    /**
+     * @brief Clears all UI components from the manager.
+     */
     void _clearMenuUI();
+
+    /**
+     * @brief Attempts a TCP connection to the server and transitions to the PLAYING state.
+     * @param host The server hostname or IP address.
+     * @param port The server port.
+     */
     void _connectToServer(const std::string& host, int port);
 
     std::unique_ptr<raylib::Window> _window; ///< The Raylib window instance.
