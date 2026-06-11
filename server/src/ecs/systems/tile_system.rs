@@ -4,21 +4,12 @@ use crate::ecs::components::{
 use crate::ecs::map_size::MapSize;
 use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::resource_spawn::resource_spawn_system;
+use crate::ecs::builders::tile::build_tile;
 use crate::ecs::systems::task::broadcast_event;
 use crate::protocol::ServerEvent;
 use log::info;
 use noise::{NoiseFn, Perlin};
 use rand::{RngExt, rng};
-
-/// Spawns a single tile entity with the required components.
-pub fn spawn_tile(world: &mut World, x: u32, y: u32, terrain: TerrainType) -> Entity {
-    let entity = world.spawn();
-    world.add_component(entity, Tile);
-    world.add_component(entity, Position { x, y });
-    world.add_component(entity, terrain);
-    world.add_component(entity, Inventory::default());
-    entity
-}
 
 /// Initializes the game map by registering components and spawning a grid of tiles using noise
 pub fn setup_map(world: &mut World, width: u32, height: u32) {
@@ -64,7 +55,7 @@ pub fn setup_map(world: &mut World, width: u32, height: u32) {
                 }
             };
 
-            spawn_tile(world, x, y, terrain);
+            build_tile(Position { x, y }, world, terrain);
         }
     }
     resource_spawn_system(world);
@@ -97,7 +88,7 @@ mod tests {
     fn test_spawn_tile() {
         let mut world = World::default();
 
-        let tile_ent = spawn_tile(&mut world, 10, 20, TerrainType::Grass);
+        let tile_ent = build_tile(Position { x: 10, y: 20 }, &mut world, TerrainType::Grass);
 
         assert!(world.is_alive(tile_ent));
         assert!(world.get_component::<Tile>(tile_ent).is_some());

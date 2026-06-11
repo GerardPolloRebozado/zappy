@@ -199,10 +199,11 @@ mod tests {
     use crate::ecs::builders::inhabitants::build_inhabitant;
     use crate::ecs::builders::tile::build_tile;
     use crate::ecs::components::network::{MockSocket, NetworkData};
+    use crate::ecs::components::terrain_type::TerrainType;
 
     fn setup_world_with_tile() -> (World, Entity) {
         let mut world = World::default();
-        let tile = build_tile(Position { x: 0, y: 0 }, &mut world);
+        let tile = build_tile(Position { x: 0, y: 0 }, &mut world, TerrainType::Grass);
         (world, tile)
     }
 
