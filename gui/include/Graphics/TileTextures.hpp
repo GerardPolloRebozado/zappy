@@ -10,7 +10,6 @@
 
 #include "Components/ComponentTile.hpp"
 #include "raylib-cpp.hpp"
-#include <cstdlib>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -54,29 +53,23 @@ class Tiletextures {
     }
 
     Tiletextures() {
-        constexpr int size = 32;
+        constexpr int size = 8;
+
         for (auto const& [type, palette] : _colors) {
-            raylib::Image image = GenImageColor(size, size, BLANK);
+            raylib::Image image = GenImageColor(size, size, palette[0]);
+
             for (int y = 0; y < size; y++) {
                 for (int x = 0; x < size; x++) {
-                    const int randVal = std::rand() % 100;
-                    raylib::Color pixelColor;
-
-                    if (randVal < 55) {
-                        pixelColor = palette[0];
-                    } else if (randVal < 80) {
-                        pixelColor = palette[1];
-                    } else if (randVal < 93) {
-                        pixelColor = palette[2];
-                    } else {
-                        pixelColor = palette[3];
+                    if (x == 0 || y == 0 || x == size - 1 || y == size - 1) {
+                        image.DrawPixel(x, y, palette[2]);
+                    } else if (x == 1 || y == 1) {
+                        image.DrawPixel(x, y, palette[1]);
                     }
-
-                    image.DrawPixel(x, y, pixelColor);
                 }
             }
 
             raylib::Texture2D texture(image);
+
             texture.SetFilter(TEXTURE_FILTER_POINT);
 
             _textures[type] = std::make_shared<raylib::Texture2D>(std::move(texture));
