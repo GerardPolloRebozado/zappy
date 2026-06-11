@@ -8,7 +8,7 @@ use std::collections::HashMap;
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Inventory {
     pub items: HashMap<Resource, u32>,
-    pub last_time_consumed: u64,
+    last_time_consumed: u64,
 }
 
 const RESOURCE_ORDER: [Resource; 7] = [
@@ -36,20 +36,28 @@ impl Inventory {
 
     ///removes some food to continue being alive till reaching 0
     pub fn consume_food(&mut self, freq: u64) {
-        let time_difference = Date::now().to_timestamp() - self.last_time_consumed;
-        let food_in_time_units = self.get_item_count(Food) * LIFE_UNIT_IN_TIME_UNITS as u32;
+        let now = Date::now().to_timestamp();
+        if now <= self.last_time_consumed {
+            return;
+        }
+        let time_difference = now - self.last_time_consumed;
 
-        let food_to_remove = (((food_in_time_units as i64 / freq as i64) - time_difference as i64)
-            as f64
-            / LIFE_UNIT_IN_TIME_UNITS as f64
-            / freq as f64)
-            .round();
-        if food_to_remove >= 1.0 {
-            self.remove_item(Food, food_to_remove as u32);
-            self.last_time_consumed = Date::now().to_timestamp();
-        } else if food_to_remove < 0.0 {
-            *self.items.get_mut(&Resource::Food).unwrap() = 0;
-            self.last_time_consumed = Date::now().to_timestamp();
+        let food_to_remove =
+            (time_difference as u128 * freq as u128) / (LIFE_UNIT_IN_TIME_UNITS as u128 * 1000);
+
+        if food_to_remove >= 1 {
+            let food_to_remove_u32 = food_to_remove as u32;
+            let current_food = self.get_item_count(Food);
+            if food_to_remove_u32 >= current_food {
+                *self.items.get_mut(&Resource::Food).unwrap() = 0;
+                self.last_time_consumed = now;
+            } else {
+                self.remove_item(Food, food_to_remove_u32);
+                let ms_consumed =
+                    (food_to_remove_u32 as u128 * LIFE_UNIT_IN_TIME_UNITS as u128 * 1000)
+                        / freq as u128;
+                self.last_time_consumed += ms_consumed as u64;
+            }
         }
     }
 
@@ -167,7 +175,7 @@ mod tests {
     fn test_consume_one_unit_of_food() {
         let mut inv = Inventory::new();
         inv.add_item(Food, 2);
-        inv.last_time_consumed -= LIFE_UNIT_IN_TIME_UNITS;
+        inv.last_time_consumed -= LIFE_UNIT_IN_TIME_UNITS * 1000;
         inv.consume_food(1);
         assert_eq!(inv.get_item_count(Food), 1);
         inv.consume_food(1);

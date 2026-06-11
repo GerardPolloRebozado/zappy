@@ -46,9 +46,9 @@ pub fn populate_tile_resources(world: &mut World, tile_ent: &Entity, terrain: Te
 /// System that runs every tick to spawn resources on the map till its full
 pub fn resource_spawn_system(world: &mut World) {
     let current_time = Date::now().to_timestamp();
-    let seconds_between_spawns = UNITS_BETWEEN_RESOURCE_SPAWN / world.freq;
+    let ms_between_spawns = (UNITS_BETWEEN_RESOURCE_SPAWN as u128 * 1000) / world.freq as u128;
 
-    if current_time - world.last_resource_spawn < seconds_between_spawns {
+    if current_time - world.last_resource_spawn < ms_between_spawns as u64 {
         return;
     }
 

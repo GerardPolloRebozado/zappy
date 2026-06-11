@@ -86,7 +86,7 @@ pub fn any_finished_task(world: &mut World) {
 
             if first_task.finish_on == TASK_NOT_STARTED {
                 first_task.finish_on =
-                    Date::now().to_timestamp() + (first_task.task_type.duration() / freq);
+                    Date::now().to_timestamp() + (first_task.task_type.duration() * 1000 / freq);
 
                 if matches!(first_task.task_type, TaskType::Incantation) {
                     started_incantations.push(*entity);
@@ -103,8 +103,8 @@ pub fn any_finished_task(world: &mut World) {
             task_list.vector.remove(0);
 
             if let Some(new_first_task) = task_list.vector.first_mut() {
-                new_first_task.finish_on =
-                    Date::now().to_timestamp() + (new_first_task.task_type.duration() / freq);
+                new_first_task.finish_on = Date::now().to_timestamp()
+                    + (new_first_task.task_type.duration() * 1000 / freq);
             }
         }
     }
@@ -466,7 +466,7 @@ mod tests {
         let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
         let task = Task {
             task_type: TaskType::Forward,
-            finish_on: TaskType::Forward.duration() + Date::now().to_timestamp(),
+            finish_on: TaskType::Forward.duration() * 1000 + Date::now().to_timestamp(),
         };
         task_list.vector.push(task);
         assert_eq!(task_list.vector.len(), 1);
@@ -483,7 +483,7 @@ mod tests {
             let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
             let task = Task {
                 task_type: TaskType::Forward,
-                finish_on: TaskType::Forward.duration() + Date::now().to_timestamp(),
+                finish_on: TaskType::Forward.duration() * 1000 + Date::now().to_timestamp(),
             };
             task_list.vector.push(task);
         }
