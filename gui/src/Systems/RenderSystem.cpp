@@ -186,7 +186,18 @@ void RenderSystem::_renderTerrain(World& w) {
         }
     }
 
+    std::unordered_map<int, std::unordered_map<int, TerrainType::Type>> mapGrid;
+    for (auto const& [entity, type] : *terrainStorage) {
+        auto pos = w.get_component<Position>(entity);
+        if (pos) {
+            mapGrid[pos->x][pos->y] = type->current_type;
+        }
+    }
+
     raylib::Vector3 cameraTarget = _camera.target;
+
+    static raylib::Model baseCubeModel = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
+    static Tiletextures textures;
 
     for (auto const& [entity, type] : *terrainStorage) {
         auto pos = w.get_component<Position>(entity);
@@ -201,10 +212,8 @@ void RenderSystem::_renderTerrain(World& w) {
             const raylib::Vector3 vpos(static_cast<float>(pos->x), 1.5f,
                                        static_cast<float>(pos->y));
 
-            static Tiletextures textures;
-            raylib::Model baseCubeModel = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
             std::shared_ptr<raylib::Texture2D> texture =
-                textures.GetTileTexture(type->current_type);
+                textures.GetTileTexture(pos->x, pos->y, type->current_type, mapGrid);
             if (texture) {
                 baseCubeModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *texture.get();
                 baseCubeModel.Draw(vpos, 1.0f, WHITE);

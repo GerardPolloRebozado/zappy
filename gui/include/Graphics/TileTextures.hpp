@@ -10,12 +10,42 @@
 
 #include "Components/ComponentTile.hpp"
 #include "raylib-cpp.hpp"
-#include <cstdlib>
+#include <cstdint>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 namespace zappy {
+
+// Caches textures because generating them pixel by pixel every frame is too slow
+// The key includes all 8 neighbor types. This way, if a missing tile later arrives
+// from the network, the cache invalidates and the border automatically draws
+struct TileCacheKey {
+    int x, y;
+    int types[9]; // self + 8 neighbors
+    bool operator==(const TileCacheKey& other) const {
+        if (x != other.x || y != other.y) {
+            return false;
+        }
+        for (int i = 0; i < 9; ++i) {
+            if (types[i] != other.types[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
+// Combines tile coordinates and neighbor types into a unique hash key
+struct TileCacheKeyHash {
+    std::size_t operator()(const TileCacheKey& k) const {
+        std::size_t h = std::hash<int>{}(k.x) ^ (std::hash<int>{}(k.y) << 1);
+        for (int i = 0; i < 9; ++i) {
+            h ^= std::hash<int>{}(k.types[i]) << (i % 8);
+        }
+        return h;
+    }
+};
 
 class Tiletextures {
     std::unordered_map<TerrainType::Type, std::vector<raylib::Color>> _colors = {
@@ -46,42 +76,141 @@ class Tiletextures {
         {TerrainType::MAGNETIC_TUNDRA,
          {raylib::Color(145, 205, 235), raylib::Color(190, 230, 250), raylib::Color(115, 175, 205),
           raylib::Color(240, 250, 255)}}};
-    std::unordered_map<TerrainType::Type, std::shared_ptr<raylib::Texture2D>> _textures;
+    std::unordered_map<TileCacheKey, std::shared_ptr<raylib::Texture2D>, TileCacheKeyHash>
+        _tileTextures;
 
   public:
-    std::shared_ptr<raylib::Texture2D> GetTileTexture(const TerrainType::Type type) {
-        return _textures.at(type);
-    }
+    std::shared_ptr<raylib::Texture2D> GetTileTexture(
+        int x, int y, TerrainType::Type type,
+        const std::unordered_map<int, std::unordered_map<int, TerrainType::Type>>& mapGrid) {
 
-    Tiletextures() {
-        constexpr int size = 32;
-        for (auto const& [type, palette] : _colors) {
-            raylib::Image image = GenImageColor(size, size, BLANK);
-            for (int y = 0; y < size; y++) {
-                for (int x = 0; x < size; x++) {
-                    const int randVal = std::rand() % 100;
-                    raylib::Color pixelColor;
-
-                    if (randVal < 55) {
-                        pixelColor = palette[0];
-                    } else if (randVal < 80) {
-                        pixelColor = palette[1];
-                    } else if (randVal < 93) {
-                        pixelColor = palette[2];
-                    } else {
-                        pixelColor = palette[3];
-                    }
-
-                    image.DrawPixel(x, y, pixelColor);
-                }
+        auto getMapType = [&](int nx, int ny) -> int {
+            if (mapGrid.count(nx) && mapGrid.at(nx).count(ny)) {
+                return static_cast<int>(mapGrid.at(nx).at(ny));
             }
+            return -1;
+        };
 
-            raylib::Texture2D texture(image);
-            texture.SetFilter(TEXTURE_FILTER_POINT);
+        TileCacheKey key;
+        key.x = x;
+        key.y = y;
+        key.types[0] = static_cast<int>(type);
+        key.types[1] = getMapType(x - 1, y);
+        key.types[2] = getMapType(x + 1, y);
+        key.types[3] = getMapType(x, y - 1);
+        key.types[4] = getMapType(x, y + 1);
+        key.types[5] = getMapType(x - 1, y - 1);
+        key.types[6] = getMapType(x + 1, y - 1);
+        key.types[7] = getMapType(x - 1, y + 1);
+        key.types[8] = getMapType(x + 1, y + 1);
 
-            _textures[type] = std::make_shared<raylib::Texture2D>(std::move(texture));
+        if (_tileTextures.find(key) != _tileTextures.end()) {
+            return _tileTextures[key];
         }
+
+        constexpr int size = 32;
+        raylib::Image image = GenImageColor(size, size, BLANK);
+
+        // Generates consistent noise so neighbor tiles always match perfectly at their borders
+        auto fast_hash = [](uint32_t a, uint32_t b) {
+            uint32_t h = (a * 374761393) ^ (b * 668265263);
+            h = (h ^ (h >> 16)) * 2246822507;
+            h = (h ^ (h >> 13)) * 3266489909;
+            return h ^ (h >> 16);
+        };
+
+        auto getPriority = [](TerrainType::Type t) {
+            switch (t) {
+                case TerrainType::WATER:
+                    return 90;
+                case TerrainType::MOUNTAIN:
+                    return 80;
+                case TerrainType::FOREST:
+                    return 70;
+                case TerrainType::GRASS:
+                    return 60;
+                case TerrainType::SAND:
+                    return 50;
+                case TerrainType::OBSIDIAN_BARRENS:
+                    return 40;
+                case TerrainType::LUMINOUS_ORCHARDS:
+                    return 30;
+                case TerrainType::CRYSTAL_CANYONS:
+                    return 20;
+                case TerrainType::MAGNETIC_TUNDRA:
+                    return 10;
+                default:
+                    return 0;
+            }
+        };
+
+        for (int py = 0; py < size; py++) {
+            for (int px = 0; px < size; px++) {
+                int world_px = x * size + px;
+                int world_pz = y * size + ((size - 1) - py);
+
+                TerrainType::Type pixelType = type;
+                int currentPriority = getPriority(type);
+
+                auto checkBleed = [&](int nx, int ny, int dist) {
+                    if (!mapGrid.count(nx) || !mapGrid.at(nx).count(ny)) {
+                        return;
+                    }
+                    TerrainType::Type nType = mapGrid.at(nx).at(ny);
+                    int nPriority = getPriority(nType);
+
+                    if (nPriority > currentPriority) {
+                        uint32_t noise = fast_hash(world_px, world_pz);
+                        if (dist < 3 + (noise % 6)) {
+                            pixelType = nType;
+                            currentPriority = nPriority;
+                        }
+                    }
+                };
+
+                // Check orthogonal neighbors (up, down, left, right)
+                // The distance is simply how close the pixel is to the flat edge
+                checkBleed(x - 1, y, px);              // left (-x)
+                checkBleed(x + 1, y, (size - 1) - px); // right (+x)
+                checkBleed(x, y - 1, (size - 1) - py); // top (-z)
+                checkBleed(x, y + 1, py);              // bottom (+z)
+
+                // Check diagonal neighbors to smoothly blend the 4 corners of the tile
+                // We use Chebyshev distance (std::max) because it correctly calculates
+                // distance to a corner on a square grid, giving organic rounded edges
+                // https://www.chessprogramming.org/index.php?title=Distance&diff=cur&oldid=5917
+                checkBleed(x - 1, y - 1, std::max(px, (size - 1) - py));
+                checkBleed(x + 1, y - 1, std::max((size - 1) - px, (size - 1) - py));
+                checkBleed(x - 1, y + 1, std::max(px, py));
+                checkBleed(x + 1, y + 1, std::max((size - 1) - px, py));
+
+                const auto& palette = _colors[pixelType];
+                const uint32_t randVal = fast_hash(world_px, world_pz) % 100;
+                raylib::Color pixelColor;
+
+                if (randVal < 55) {
+                    pixelColor = palette[0];
+                } else if (randVal < 80) {
+                    pixelColor = palette[1];
+                } else if (randVal < 93) {
+                    pixelColor = palette[2];
+                } else {
+                    pixelColor = palette[3];
+                }
+
+                image.DrawPixel(px, py, pixelColor);
+            }
+        }
+
+        raylib::Texture2D texture(image);
+        texture.SetFilter(TEXTURE_FILTER_POINT);
+
+        auto shared_tex = std::make_shared<raylib::Texture2D>(std::move(texture));
+        _tileTextures[key] = shared_tex;
+        return shared_tex;
     }
+
+    Tiletextures() = default;
 
     ~Tiletextures() = default;
 };
