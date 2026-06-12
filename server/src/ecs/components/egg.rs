@@ -2,6 +2,8 @@ use crate::ecs::storage::{Entity, World};
 
 pub struct Egg {
     pub team: String,
+    /// Player who laid the egg (`0` for server-spawned initial eggs).
+    pub player_id: u32,
 }
 
 impl Egg {
@@ -31,6 +33,7 @@ mod tests {
             egg1,
             Egg {
                 team: "test".to_string(),
+                player_id: 0,
             },
         );
 
@@ -46,6 +49,7 @@ mod tests {
             egg1,
             Egg {
                 team: "test".to_string(),
+                player_id: 0,
             },
         );
         let egg2 = world.spawn();
@@ -53,6 +57,7 @@ mod tests {
             egg2,
             Egg {
                 team: "test".to_string(),
+                player_id: 0,
             },
         );
 
@@ -68,6 +73,7 @@ mod tests {
             ent,
             Egg {
                 team: "test".to_string(),
+                player_id: 0,
             },
         );
         world.despawn(ent);
