@@ -117,7 +117,7 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
     }
     //
 
-    let egg = Egg::random_egg(&mut server.world);
+    let egg = Egg::egg_from_team(&mut server.world, team_name.clone()).unwrap();
     let egg_position = server.world.get_component::<Position>(egg).unwrap().clone();
     let entity = build_inhabitant_with_entity(
         entity,
@@ -296,7 +296,12 @@ mod tests {
 
         let (mock_socket, _) = network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
-        spawn_egg(server.world.map_size, &mut server.world, 0);
+        spawn_egg(
+            server.world.map_size,
+            &mut server.world,
+            0,
+            "TeamA".to_string(),
+        );
         let inhabitant = server.world.spawn();
         build_inhabitant_with_entity(
             inhabitant,
@@ -339,7 +344,12 @@ mod tests {
         let network_data = NetworkData::new(mock_socket);
         let egg = server.world.spawn();
         server.world.add_component(egg, Position { x: 5, y: 5 });
-        server.world.add_component(egg, Egg);
+        server.world.add_component(
+            egg,
+            Egg {
+                team: "existing_team".to_string(),
+            },
+        );
 
         let inhabitant = server.world.spawn();
         server.world.add_component(inhabitant, network_data);

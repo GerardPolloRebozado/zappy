@@ -1,7 +1,7 @@
 use crate::ecs::builders::tile::build_tile;
 use crate::ecs::components::{egg::Egg, position::Position, terrain_type::TerrainType};
 use crate::ecs::map_size::MapSize;
-use crate::ecs::storage::World;
+use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::resource_spawn::resource_spawn_system;
 use crate::ecs::systems::task::broadcast_event;
 use crate::protocol::ServerEvent;
@@ -59,12 +59,12 @@ pub fn setup_map(world: &mut World, width: u32, height: u32) {
     resource_spawn_system(world);
 }
 
-pub fn spawn_egg(size: MapSize, world: &mut World, player_id: u32) {
+pub fn spawn_egg(size: MapSize, world: &mut World, player_id: u32, team: String) -> Entity {
     let mut rng = rng();
     let x = rng.random_range(0..size.width);
     let y = rng.random_range(0..size.height);
     let entity = world.spawn();
-    world.add_component(entity, Egg);
+    world.add_component(entity, Egg { team });
     world.add_component(entity, Position { x, y });
     info!("Spawned egg at x: {} y: {}", x, y);
     broadcast_event(
@@ -76,6 +76,7 @@ pub fn spawn_egg(size: MapSize, world: &mut World, player_id: u32) {
             y,
         },
     );
+    entity
 }
 
 #[cfg(test)]
@@ -135,7 +136,7 @@ mod tests {
             height: 10,
         };
 
-        spawn_egg(size, &mut world, 42);
+        spawn_egg(size, &mut world, 42, "team".to_string());
 
         let egg_storage = world
             .get_storage::<Egg>()
@@ -149,5 +150,19 @@ mod tests {
 
         assert!(pos.x < 10);
         assert!(pos.y < 10);
+    }
+
+    #[test]
+    fn correct_egg_team_is_given() {
+        let mut world = World::default();
+        spawn_egg(world.map_size, &mut world, 0, "TeamB".to_string());
+        let correct_egg = spawn_egg(world.map_size, &mut world, 0, "TeamA".to_string());
+        spawn_egg(world.map_size, &mut world, 0, "TeamB".to_string());
+        spawn_egg(world.map_size, &mut world, 0, "TeamB".to_string());
+        spawn_egg(world.map_size, &mut world, 0, "TeamB".to_string());
+        assert_eq!(
+            correct_egg,
+            Egg::egg_from_team(&mut world, "TeamA".to_string()).unwrap()
+        );
     }
 }
