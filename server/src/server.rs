@@ -208,8 +208,10 @@ impl Server {
         let width = self.world.map_size.width;
         let height = self.world.map_size.height;
         setup_map(&mut self.world, width, height);
-        for _ in 0..(self.team_names.len() as u32 * self.clients_nb) {
-            spawn_egg(self.world.map_size, &mut self.world, 0);
+        for team in self.team_names.clone() {
+            for _ in 0..self.clients_nb {
+                spawn_egg(self.world.map_size, &mut self.world, 0, team.clone());
+            }
         }
     }
 
