@@ -62,7 +62,6 @@ pub fn collect_player_sync_events(world: &World) -> Vec<ServerEvent> {
 }
 
 /// Builds a [`ServerEvent::EggLaid`] for every [`Egg`] entity on the map.
-/// Uses `player_id: 0` to match the existing initial-egg convention.
 pub fn collect_egg_sync_events(world: &World) -> Vec<ServerEvent> {
     let egg_storage = match world.get_storage::<Egg>() {
         Some(s) => s,
@@ -71,7 +70,7 @@ pub fn collect_egg_sync_events(world: &World) -> Vec<ServerEvent> {
 
     let mut events = Vec::new();
 
-    for (entity, _) in egg_storage.iter() {
+    for (entity, egg) in egg_storage.iter() {
         let position = match world.get_component::<Position>(*entity) {
             Some(p) => p,
             None => continue,
@@ -79,7 +78,7 @@ pub fn collect_egg_sync_events(world: &World) -> Vec<ServerEvent> {
 
         events.push(ServerEvent::EggLaid {
             egg_id: entity.id(),
-            player_id: 0,
+            player_id: egg.player_id,
             x: position.x,
             y: position.y,
         });
@@ -164,7 +163,13 @@ mod tests {
     fn test_collect_egg_sync_events() {
         let mut world = World::default();
         let egg = world.spawn();
-        world.add_component(egg, Egg);
+        world.add_component(
+            egg,
+            Egg {
+                team: "team1".to_string(),
+                player_id: 0,
+            },
+        );
         world.add_component(egg, Position { x: 5, y: 9 });
 
         let events = collect_egg_sync_events(&world);
@@ -182,6 +187,28 @@ mod tests {
                 assert_eq!(*x, 5);
                 assert_eq!(*y, 9);
             }
+            other => panic!("Expected EggLaid, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_collect_egg_sync_events_preserves_player_id() {
+        let mut world = World::default();
+        let egg = world.spawn();
+        world.add_component(
+            egg,
+            Egg {
+                team: "team1".to_string(),
+                player_id: 99,
+            },
+        );
+        world.add_component(egg, Position { x: 2, y: 3 });
+
+        let events = collect_egg_sync_events(&world);
+        assert_eq!(events.len(), 1);
+
+        match &events[0] {
+            ServerEvent::EggLaid { player_id, .. } => assert_eq!(*player_id, 99),
             other => panic!("Expected EggLaid, got {:?}", other),
         }
     }
@@ -218,7 +245,13 @@ mod tests {
         let mut world = World::default();
 
         let egg = world.spawn();
-        world.add_component(egg, Egg);
+        world.add_component(
+            egg,
+            Egg {
+                team: "team2".to_string(),
+                player_id: 42,
+            },
+        );
         world.add_component(egg, Position { x: 1, y: 2 });
 
         let gui = world.spawn();

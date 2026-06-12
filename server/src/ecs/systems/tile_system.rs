@@ -64,7 +64,7 @@ pub fn spawn_egg(size: MapSize, world: &mut World, player_id: u32, team: String)
     let x = rng.random_range(0..size.width);
     let y = rng.random_range(0..size.height);
     let entity = world.spawn();
-    world.add_component(entity, Egg { team });
+    world.add_component(entity, Egg { team, player_id });
     world.add_component(entity, Position { x, y });
     info!("Spawned egg at x: {} y: {}", x, y);
     broadcast_event(

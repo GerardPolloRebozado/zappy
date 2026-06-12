@@ -247,7 +247,13 @@ mod tests {
             Team::AuthenticatedAI("existing_team".to_string());
 
         let egg = server.world.spawn();
-        server.world.add_component(egg, Egg);
+        server.world.add_component(
+            egg,
+            Egg {
+                team: "existing_team".to_string(),
+                player_id: 0,
+            },
+        );
         server.world.add_component(egg, Position { x: 5, y: 9 });
 
         let (mock_socket, _) = network::MockSocket::new(vec![]);
@@ -348,6 +354,7 @@ mod tests {
             egg,
             Egg {
                 team: "existing_team".to_string(),
+                player_id: 0,
             },
         );
 
