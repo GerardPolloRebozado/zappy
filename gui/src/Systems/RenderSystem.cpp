@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <memory>
 #include <ranges>
 #include <rlgl.h>
 #include <set>
@@ -269,10 +270,11 @@ void RenderSystem::_renderTerrain(World& w) {
 
             if (type->current_type == TerrainType::FOREST) {
                 raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
-                BoundingBox box = treeModel.GetBoundingBox();
+                auto& am = AssetManager::getInstance();
+                std::shared_ptr<BoundingBox> box = am.getBoundingBox("tree2", treeModel);
 
-                float sizeX = box.max.x - box.min.x;
-                float sizeZ = box.max.z - box.min.z;
+                float sizeX = box->max.x - box->min.x;
+                float sizeZ = box->max.z - box->min.z;
 
                 if (sizeX > 0 && sizeZ > 0) {
                     bool playerOnTile = inhabitantPositions.count(hashPos(pos->x, pos->y)) > 0;
@@ -280,9 +282,9 @@ void RenderSystem::_renderTerrain(World& w) {
                     if (!playerOnTile) {
                         float scale = 0.4f / std::max(sizeX, sizeZ);
 
-                        raylib::Vector3 centerOffset((box.max.x + box.min.x) / 2.0f * scale,
-                                                     box.min.y * scale,
-                                                     (box.max.z + box.min.z) / 2.0f * scale);
+                        raylib::Vector3 centerOffset((box->max.x + box->min.x) / 2.0f * scale,
+                                                     box->min.y * scale,
+                                                     (box->max.z + box->min.z) / 2.0f * scale);
 
                         // Sink the tree by 0.1f to hide its built-in grass base
                         raylib::Vector3 drawPos(vpos.x - centerOffset.x,
@@ -505,17 +507,17 @@ void RenderSystem::_renderResources(World& w) {
                 }
 
                 raylib::Model& foodModel = am.getModel(selectedAnimal);
-                BoundingBox cBox = foodModel.GetBoundingBox();
+                std::shared_ptr<BoundingBox> cBox = am.getBoundingBox(selectedAnimal, foodModel);
 
-                float sizeX = cBox.max.x - cBox.min.x;
-                float sizeZ = cBox.max.z - cBox.min.z;
-                float sizeY = cBox.max.y - cBox.min.y;
+                float sizeX = cBox->max.x - cBox->min.x;
+                float sizeZ = cBox->max.z - cBox->min.z;
+                float sizeY = cBox->max.y - cBox->min.y;
                 float maxDim = std::max({sizeX, sizeY, sizeZ});
                 // Make animals smaller: max dim is 0.2f
                 float scale = (maxDim > 0) ? (0.20f / maxDim) : 0.10f;
 
-                raylib::Vector3 cCenter = {(cBox.min.x + cBox.max.x) / 2.0f, cBox.min.y,
-                                           (cBox.min.z + cBox.max.z) / 2.0f};
+                raylib::Vector3 cCenter = {(cBox->min.x + cBox->max.x) / 2.0f, cBox->min.y,
+                                           (cBox->min.z + cBox->max.z) / 2.0f};
 
                 // Deterministic random offset for food within the tile
                 float rX = ((std::abs(pos->x * 71 + pos->y * 13)) % 81) / 100.0f - 0.4f;
@@ -534,15 +536,15 @@ void RenderSystem::_renderResources(World& w) {
             auto drawGem = [&](const std::string& modelName, float dx, float dz,
                                raylib::Color tint) {
                 raylib::Model& rockModel = am.getModel(modelName);
-                BoundingBox box = rockModel.GetBoundingBox();
-                float sizeX = box.max.x - box.min.x;
-                float sizeZ = box.max.z - box.min.z;
-                float sizeY = box.max.y - box.min.y;
+                auto box = am.getBoundingBox(modelName, rockModel);
+                float sizeX = box->max.x - box->min.x;
+                float sizeZ = box->max.z - box->min.z;
+                float sizeY = box->max.y - box->min.y;
                 float maxDim = std::max({sizeX, sizeY, sizeZ});
                 float rockScale = (maxDim > 0) ? (0.15f / maxDim) : 0.05f;
 
-                raylib::Vector3 rockCenter = {(box.min.x + box.max.x) / 2.0f, box.min.y,
-                                              (box.min.z + box.max.z) / 2.0f};
+                raylib::Vector3 rockCenter = {(box->min.x + box->max.x) / 2.0f, box->min.y,
+                                              (box->min.z + box->max.z) / 2.0f};
 
                 raylib::Vector3 drawPos((float)pos->x - 0.3f + dx - (rockCenter.x * rockScale),
                                         yBase - (rockCenter.y * rockScale),
