@@ -6,10 +6,15 @@
 */
 
 #include "Graphics/AssetManager.hpp"
+#include "BoundingBox.hpp"
 #include "Graphics/GraphicsErrors.hpp"
 #include "Logging/Logger.hpp"
+#include "Model.hpp"
+#include "raylib.h"
 #include <algorithm>
 #include <cctype>
+#include <iostream>
+#include <memory>
 
 namespace zappy {
 
@@ -63,6 +68,21 @@ raylib::Shader& AssetManager::getShader(const std::string& name) {
         _shaders[name] = std::make_unique<raylib::Shader>();
     }
     return *_shaders[name];
+}
+
+std::shared_ptr<raylib::BoundingBox> AssetManager::getBoundingBox(const std::string& name,
+                                                                  raylib::Model& model) {
+    std::shared_ptr<raylib::BoundingBox> cached_bounding_box = _boundingBoxes[name];
+    if (cached_bounding_box) {
+        return cached_bounding_box;
+    }
+
+    std::cout << "Cache fail" << std::endl;
+    BoundingBox new_bounding_box = model.GetBoundingBox();
+    cached_bounding_box = std::make_shared<raylib::BoundingBox>(new_bounding_box);
+    _boundingBoxes[name] = cached_bounding_box;
+
+    return cached_bounding_box;
 }
 
 // TODO: improve

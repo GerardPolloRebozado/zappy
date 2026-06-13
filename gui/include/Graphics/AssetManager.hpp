@@ -8,10 +8,12 @@
 #ifndef ZAPPY_GUI_ASSETMANAGER_HPP
 #define ZAPPY_GUI_ASSETMANAGER_HPP
 
+#include "BoundingBox.hpp"
 #include "raylib-cpp.hpp"
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 namespace zappy {
 
@@ -34,6 +36,9 @@ class AssetManager {
     // Shaders
     raylib::Shader& getShader(const std::string& name);
 
+    std::shared_ptr<raylib::BoundingBox> getBoundingBox(const std::string& name,
+                                                        raylib::Model& model);
+
   private:
     AssetManager() = default;
     ~AssetManager() = default;
@@ -44,6 +49,7 @@ class AssetManager {
     std::map<std::string, std::unique_ptr<raylib::Texture2D>> _textures;
     std::map<std::string, std::unique_ptr<raylib::Shader>> _shaders;
     std::map<std::string, std::unique_ptr<raylib::Font>> _fonts;
+    std::unordered_map<std::string, std::shared_ptr<raylib::BoundingBox>> _boundingBoxes;
 
     void _loadModels();
     void _loadTextures();
