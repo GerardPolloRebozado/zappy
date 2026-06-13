@@ -76,47 +76,19 @@ class Tiletextures {
         {TerrainType::MAGNETIC_TUNDRA,
          {raylib::Color(145, 205, 235), raylib::Color(190, 230, 250), raylib::Color(115, 175, 205),
           raylib::Color(240, 250, 255)}}};
-    std::unordered_map<TileCacheKey, std::shared_ptr<raylib::Texture2D>, TileCacheKeyHash>
-        _tileTextures;
+    std::shared_ptr<raylib::Texture2D> _atlas;
 
-  public:
-    std::shared_ptr<raylib::Texture2D>
-    GetTileTexture(int x, int y, TerrainType::Type type,
-                   const std::unordered_map<uint64_t, TerrainType::Type>& mapGrid) {
-
-        auto getMapType = [&](int nx, int ny) -> int {
-            uint64_t key = (static_cast<uint64_t>(static_cast<uint32_t>(nx)) << 32) |
-                           static_cast<uint32_t>(ny);
-            if (mapGrid.count(key)) {
-                return static_cast<int>(mapGrid.at(key));
-            }
-            return -1;
-        };
-
-        TileCacheKey key;
-        int variation = (x * 73856093 ^ y * 19349663) % 4; // 4 visual variations
-        if (variation < 0) {
-            variation += 4;
+    void generateAtlas() {
+        if (_atlas) {
+            return;
         }
-        key.variation = variation;
-        key.types[0] = static_cast<int>(type);
-        key.types[1] = getMapType(x - 1, y);
-        key.types[2] = getMapType(x + 1, y);
-        key.types[3] = getMapType(x, y - 1);
-        key.types[4] = getMapType(x, y + 1);
-        key.types[5] = getMapType(x - 1, y - 1);
-        key.types[6] = getMapType(x + 1, y - 1);
-        key.types[7] = getMapType(x - 1, y + 1);
-        key.types[8] = getMapType(x + 1, y + 1);
-
-        if (_tileTextures.find(key) != _tileTextures.end()) {
-            return _tileTextures[key];
-        }
-
         constexpr int size = 32;
-        raylib::Image image = GenImageColor(size, size, BLANK);
+        constexpr int biomes = 9;
+        constexpr int variations = 4;
+        constexpr int cols = 9; // 0: Solid, 1: N, 2: S, 3: E, 4: W, 5: NW, 6: NE, 7: SW, 8: SE
 
-        // Generates consistent noise so neighbor tiles always match perfectly at their borders
+        raylib::Image atlasImage = GenImageColor(cols * size, biomes * variations * size, BLANK);
+
         auto fast_hash = [](uint32_t a, uint32_t b) {
             uint32_t h = (a * 374761393) ^ (b * 668265263);
             h = (h ^ (h >> 16)) * 2246822507;
@@ -124,99 +96,128 @@ class Tiletextures {
             return h ^ (h >> 16);
         };
 
-        auto getPriority = [](TerrainType::Type t) {
-            switch (t) {
-                case TerrainType::WATER:
-                    return 90;
-                case TerrainType::MOUNTAIN:
-                    return 80;
-                case TerrainType::FOREST:
-                    return 70;
-                case TerrainType::GRASS:
-                    return 60;
-                case TerrainType::SAND:
-                    return 50;
-                case TerrainType::OBSIDIAN_BARRENS:
-                    return 40;
-                case TerrainType::LUMINOUS_ORCHARDS:
-                    return 30;
-                case TerrainType::CRYSTAL_CANYONS:
-                    return 20;
-                case TerrainType::MAGNETIC_TUNDRA:
-                    return 10;
-                default:
-                    return 0;
-            }
-        };
+        for (int b = 0; b < biomes; ++b) {
+            TerrainType::Type biomeType = static_cast<TerrainType::Type>(b);
+            const auto& palette = _colors[biomeType];
 
-        for (int py = 0; py < size; py++) {
-            for (int px = 0; px < size; px++) {
-                // Incorporate variation to offset the noise pattern so tiles don't look completely
-                // identical
-                int local_nx = px + variation * size;
-                int local_ny = py + variation * size;
+            for (int var = 0; var < variations; ++var) {
+                int row = b * variations + var;
 
-                TerrainType::Type pixelType = type;
-                int currentPriority = getPriority(type);
+                for (int col = 0; col < cols; ++col) {
+                    for (int py = 0; py < size; py++) {
+                        for (int px = 0; px < size; px++) {
+                            int local_nx = px + var * size;
+                            int local_ny = py + var * size;
 
-                auto checkBleed = [&](int nx, int ny, int dist) {
-                    uint64_t key = (static_cast<uint64_t>(static_cast<uint32_t>(nx)) << 32) |
-                                   static_cast<uint32_t>(ny);
-                    if (!mapGrid.count(key)) {
-                        return;
-                    }
-                    TerrainType::Type nType = mapGrid.at(key);
-                    int nPriority = getPriority(nType);
+                            bool drawPixel = false;
 
-                    if (nPriority > currentPriority) {
-                        uint32_t noise = fast_hash(local_nx, local_ny);
-                        if (dist < 3 + (noise % 6)) {
-                            pixelType = nType;
-                            currentPriority = nPriority;
+                            if (col == 0) {
+                                // Solid base
+                                drawPixel = true;
+                            } else {
+                                // Bleed decal
+                                int dist = 999;
+                                if (col == 1) {
+                                    dist = py; // North (y - 1)
+                                }
+                                if (col == 2) {
+                                    dist = (size - 1) - py; // South (y + 1)
+                                }
+                                if (col == 3) {
+                                    dist = (size - 1) - px; // East (x + 1)
+                                }
+                                if (col == 4) {
+                                    dist = px; // West (x - 1)
+                                }
+                                if (col == 5) {
+                                    dist = std::max(px, py); // NW
+                                }
+                                if (col == 6) {
+                                    dist = std::max((size - 1) - px, py); // NE
+                                }
+                                if (col == 7) {
+                                    dist = std::max(px, (size - 1) - py); // SW
+                                }
+                                if (col == 8) {
+                                    dist = std::max((size - 1) - px, (size - 1) - py); // SE
+                                }
+
+                                uint32_t noise = fast_hash(local_nx, local_ny);
+                                if (dist < 3 + (int)(noise % 6)) {
+                                    drawPixel = true;
+                                }
+                            }
+
+                            if (drawPixel) {
+                                const uint32_t randVal = fast_hash(local_nx, local_ny) % 100;
+                                raylib::Color pixelColor;
+
+                                if (randVal < 55) {
+                                    pixelColor = palette[0];
+                                } else if (randVal < 80) {
+                                    pixelColor = palette[1];
+                                } else if (randVal < 93) {
+                                    pixelColor = palette[2];
+                                } else {
+                                    pixelColor = palette[3];
+                                }
+
+                                atlasImage.DrawPixel(col * size + px, row * size + py, pixelColor);
+                            }
                         }
                     }
-                };
-
-                // Check orthogonal neighbors (up, down, left, right)
-                // The distance is simply how close the pixel is to the flat edge
-                checkBleed(x - 1, y, px);              // left (-x)
-                checkBleed(x + 1, y, (size - 1) - px); // right (+x)
-                checkBleed(x, y - 1, py);              // top (-z)
-                checkBleed(x, y + 1, (size - 1) - py); // bottom (+z)
-
-                // Check diagonal neighbors to smoothly blend the 4 corners of the tile
-                // We use Chebyshev distance (std::max) because it correctly calculates
-                // distance to a corner on a square grid, giving organic rounded edges
-                // https://www.chessprogramming.org/index.php?title=Distance&diff=cur&oldid=5917
-                checkBleed(x - 1, y - 1, std::max(px, py));
-                checkBleed(x + 1, y - 1, std::max((size - 1) - px, py));
-                checkBleed(x - 1, y + 1, std::max(px, (size - 1) - py));
-                checkBleed(x + 1, y + 1, std::max((size - 1) - px, (size - 1) - py));
-
-                const auto& palette = _colors[pixelType];
-                const uint32_t randVal = fast_hash(local_nx, local_ny) % 100;
-                raylib::Color pixelColor;
-
-                if (randVal < 55) {
-                    pixelColor = palette[0];
-                } else if (randVal < 80) {
-                    pixelColor = palette[1];
-                } else if (randVal < 93) {
-                    pixelColor = palette[2];
-                } else {
-                    pixelColor = palette[3];
                 }
-
-                image.DrawPixel(px, py, pixelColor);
             }
         }
 
-        raylib::Texture2D texture(image);
+        raylib::Texture2D texture(atlasImage);
         texture.SetFilter(TEXTURE_FILTER_POINT);
+        _atlas = std::make_shared<raylib::Texture2D>(std::move(texture));
+    }
 
-        auto shared_tex = std::make_shared<raylib::Texture2D>(std::move(texture));
-        _tileTextures[key] = shared_tex;
-        return shared_tex;
+  public:
+    std::shared_ptr<raylib::Texture2D> getAtlas() {
+        if (!_atlas) {
+            generateAtlas();
+        }
+        return _atlas;
+    }
+
+    int getPriority(TerrainType::Type t) const {
+        switch (t) {
+            case TerrainType::WATER:
+                return 90;
+            case TerrainType::MOUNTAIN:
+                return 80;
+            case TerrainType::FOREST:
+                return 70;
+            case TerrainType::GRASS:
+                return 60;
+            case TerrainType::SAND:
+                return 50;
+            case TerrainType::OBSIDIAN_BARRENS:
+                return 40;
+            case TerrainType::LUMINOUS_ORCHARDS:
+                return 30;
+            case TerrainType::CRYSTAL_CANYONS:
+                return 20;
+            case TerrainType::MAGNETIC_TUNDRA:
+                return 10;
+            default:
+                return 0;
+        }
+    }
+
+    void getTileUVs(TerrainType::Type type, int variation, int col, float& u, float& v, float& uw,
+                    float& vh) const {
+        int b = static_cast<int>(type);
+        int row = b * 4 + variation;
+
+        // cols = 9, rows = 36
+        u = static_cast<float>(col) / 9.0f;
+        v = static_cast<float>(row) / 36.0f;
+        uw = 1.0f / 9.0f;
+        vh = 1.0f / 36.0f;
     }
 
     Tiletextures() = default;

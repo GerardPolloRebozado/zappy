@@ -229,8 +229,23 @@ void RenderSystem::_renderTerrain(World& w) {
     static Tiletextures textures;
     VoxelBatcher batcher;
 
-    std::unordered_map<unsigned int, std::vector<raylib::Vector3>> topFaceBatches;
+    std::shared_ptr<raylib::Texture2D> atlas = textures.getAtlas();
+
+    struct TopFaceData {
+        raylib::Vector3 pos;
+        float u, v, uw, vh;
+    };
+    std::vector<TopFaceData> topFaceBatches;
+    std::vector<TopFaceData> decalBatches;
     std::vector<raylib::Vector3> sideFaceBatches;
+
+    auto getMapType = [&](int nx, int ny) -> TerrainType::Type {
+        uint64_t key = hashPos(nx, ny);
+        if (mapGrid.count(key)) {
+            return mapGrid.at(key);
+        }
+        return TerrainType::GRASS; // Fallback, shouldn't bleed since priority is low
+    };
 
     for (auto const& [entity, type] : *terrainStorage) {
         auto pos = w.get_component<Position>(entity);
@@ -253,19 +268,49 @@ void RenderSystem::_renderTerrain(World& w) {
             const raylib::Vector3 vpos(static_cast<float>(pos->x), 1.5f,
                                        static_cast<float>(pos->y));
 
-            std::shared_ptr<raylib::Texture2D> texture =
-                textures.GetTileTexture(pos->x, pos->y, type->current_type, mapGrid);
-            if (texture) {
-                raylib::Vector3 sidePos = vpos;
-                sidePos.y -= 0.02f; // Shift down slightly
+            raylib::Vector3 sidePos = vpos;
+            sidePos.y -= 0.02f; // Shift down slightly
+            sideFaceBatches.push_back(sidePos);
 
-                sideFaceBatches.push_back(sidePos);
+            raylib::Vector3 planePos = vpos;
+            planePos.y += 0.5f; // Plane rests exactly on top of the original cube height
 
-                raylib::Vector3 planePos = vpos;
-                planePos.y += 0.5f; // Plane rests exactly on top of the original cube height
-
-                topFaceBatches[texture->id].push_back(planePos);
+            int variation = (pos->x * 73856093 ^ pos->y * 19349663) % 4;
+            if (variation < 0) {
+                variation += 4;
             }
+
+            float u, v, uw, vh;
+            textures.getTileUVs(type->current_type, variation, 0, u, v, uw, vh); // Col 0 is Base
+            topFaceBatches.push_back({planePos, u, v, uw, vh});
+
+            // Now calculate decals
+            int currentPriority = textures.getPriority(type->current_type);
+
+            auto checkDecal = [&](int nx, int ny, int col) {
+                uint64_t key = hashPos(nx, ny);
+                if (!mapGrid.count(key)) {
+                    return;
+                }
+                TerrainType::Type nType = mapGrid.at(key);
+                int nPriority = textures.getPriority(nType);
+                if (nPriority > currentPriority) {
+                    float du, dv, duw, dvh;
+                    textures.getTileUVs(nType, variation, col, du, dv, duw, dvh);
+                    raylib::Vector3 decalPos = planePos;
+                    decalPos.y += 0.001f; // Slightly above to avoid Z-fighting
+                    decalBatches.push_back({decalPos, du, dv, duw, dvh});
+                }
+            };
+
+            checkDecal(pos->x, pos->y - 1, 1);     // North -> col 1
+            checkDecal(pos->x, pos->y + 1, 2);     // South -> col 2
+            checkDecal(pos->x + 1, pos->y, 3);     // East -> col 3
+            checkDecal(pos->x - 1, pos->y, 4);     // West -> col 4
+            checkDecal(pos->x - 1, pos->y - 1, 5); // NW -> col 5
+            checkDecal(pos->x + 1, pos->y - 1, 6); // NE -> col 6
+            checkDecal(pos->x - 1, pos->y + 1, 7); // SW -> col 7
+            checkDecal(pos->x + 1, pos->y + 1, 8); // SE -> col 8
 
             if (type->current_type == TerrainType::FOREST) {
                 raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
@@ -315,10 +360,13 @@ void RenderSystem::_renderTerrain(World& w) {
     }
     batcher.endBatch();
 
-    for (const auto& [textureId, positions] : topFaceBatches) {
-        batcher.beginBatch(textureId);
-        for (const auto& planePos : positions) {
-            batcher.addTopFace(planePos, 1.0f, 0.0f, 1.0f);
+    if (atlas) {
+        batcher.beginBatch(atlas->id);
+        for (const auto& face : topFaceBatches) {
+            batcher.addTopFaceUV(face.pos, 1.0f, 0.0f, 1.0f, face.u, face.v, face.uw, face.vh);
+        }
+        for (const auto& decal : decalBatches) {
+            batcher.addTopFaceUV(decal.pos, 1.0f, 0.0f, 1.0f, decal.u, decal.v, decal.uw, decal.vh);
         }
         batcher.endBatch();
     }
