@@ -21,10 +21,10 @@ namespace zappy {
 // The key includes all 8 neighbor types. This way, if a missing tile later arrives
 // from the network, the cache invalidates and the border automatically draws
 struct TileCacheKey {
-    int x, y;
+    int variation;
     int types[9]; // self + 8 neighbors
     bool operator==(const TileCacheKey& other) const {
-        if (x != other.x || y != other.y) {
+        if (variation != other.variation) {
             return false;
         }
         for (int i = 0; i < 9; ++i) {
@@ -39,7 +39,7 @@ struct TileCacheKey {
 // Combines tile coordinates and neighbor types into a unique hash key
 struct TileCacheKeyHash {
     std::size_t operator()(const TileCacheKey& k) const {
-        std::size_t h = std::hash<int>{}(k.x) ^ (std::hash<int>{}(k.y) << 1);
+        std::size_t h = std::hash<int>{}(k.variation);
         for (int i = 0; i < 9; ++i) {
             h ^= std::hash<int>{}(k.types[i]) << (i % 8);
         }
@@ -80,20 +80,25 @@ class Tiletextures {
         _tileTextures;
 
   public:
-    std::shared_ptr<raylib::Texture2D> GetTileTexture(
-        int x, int y, TerrainType::Type type,
-        const std::unordered_map<int, std::unordered_map<int, TerrainType::Type>>& mapGrid) {
+    std::shared_ptr<raylib::Texture2D>
+    GetTileTexture(int x, int y, TerrainType::Type type,
+                   const std::unordered_map<uint64_t, TerrainType::Type>& mapGrid) {
 
         auto getMapType = [&](int nx, int ny) -> int {
-            if (mapGrid.count(nx) && mapGrid.at(nx).count(ny)) {
-                return static_cast<int>(mapGrid.at(nx).at(ny));
+            uint64_t key = (static_cast<uint64_t>(static_cast<uint32_t>(nx)) << 32) |
+                           static_cast<uint32_t>(ny);
+            if (mapGrid.count(key)) {
+                return static_cast<int>(mapGrid.at(key));
             }
             return -1;
         };
 
         TileCacheKey key;
-        key.x = x;
-        key.y = y;
+        int variation = (x * 73856093 ^ y * 19349663) % 4; // 4 visual variations
+        if (variation < 0) {
+            variation += 4;
+        }
+        key.variation = variation;
         key.types[0] = static_cast<int>(type);
         key.types[1] = getMapType(x - 1, y);
         key.types[2] = getMapType(x + 1, y);
@@ -146,21 +151,25 @@ class Tiletextures {
 
         for (int py = 0; py < size; py++) {
             for (int px = 0; px < size; px++) {
-                int world_px = x * size + px;
-                int world_pz = y * size + ((size - 1) - py);
+                // Incorporate variation to offset the noise pattern so tiles don't look completely
+                // identical
+                int local_nx = px + variation * size;
+                int local_ny = py + variation * size;
 
                 TerrainType::Type pixelType = type;
                 int currentPriority = getPriority(type);
 
                 auto checkBleed = [&](int nx, int ny, int dist) {
-                    if (!mapGrid.count(nx) || !mapGrid.at(nx).count(ny)) {
+                    uint64_t key = (static_cast<uint64_t>(static_cast<uint32_t>(nx)) << 32) |
+                                   static_cast<uint32_t>(ny);
+                    if (!mapGrid.count(key)) {
                         return;
                     }
-                    TerrainType::Type nType = mapGrid.at(nx).at(ny);
+                    TerrainType::Type nType = mapGrid.at(key);
                     int nPriority = getPriority(nType);
 
                     if (nPriority > currentPriority) {
-                        uint32_t noise = fast_hash(world_px, world_pz);
+                        uint32_t noise = fast_hash(local_nx, local_ny);
                         if (dist < 3 + (noise % 6)) {
                             pixelType = nType;
                             currentPriority = nPriority;
@@ -172,20 +181,20 @@ class Tiletextures {
                 // The distance is simply how close the pixel is to the flat edge
                 checkBleed(x - 1, y, px);              // left (-x)
                 checkBleed(x + 1, y, (size - 1) - px); // right (+x)
-                checkBleed(x, y - 1, (size - 1) - py); // top (-z)
-                checkBleed(x, y + 1, py);              // bottom (+z)
+                checkBleed(x, y - 1, py);              // top (-z)
+                checkBleed(x, y + 1, (size - 1) - py); // bottom (+z)
 
                 // Check diagonal neighbors to smoothly blend the 4 corners of the tile
                 // We use Chebyshev distance (std::max) because it correctly calculates
                 // distance to a corner on a square grid, giving organic rounded edges
                 // https://www.chessprogramming.org/index.php?title=Distance&diff=cur&oldid=5917
-                checkBleed(x - 1, y - 1, std::max(px, (size - 1) - py));
-                checkBleed(x + 1, y - 1, std::max((size - 1) - px, (size - 1) - py));
-                checkBleed(x - 1, y + 1, std::max(px, py));
-                checkBleed(x + 1, y + 1, std::max((size - 1) - px, py));
+                checkBleed(x - 1, y - 1, std::max(px, py));
+                checkBleed(x + 1, y - 1, std::max((size - 1) - px, py));
+                checkBleed(x - 1, y + 1, std::max(px, (size - 1) - py));
+                checkBleed(x + 1, y + 1, std::max((size - 1) - px, (size - 1) - py));
 
                 const auto& palette = _colors[pixelType];
-                const uint32_t randVal = fast_hash(world_px, world_pz) % 100;
+                const uint32_t randVal = fast_hash(local_nx, local_ny) % 100;
                 raylib::Color pixelColor;
 
                 if (randVal < 55) {

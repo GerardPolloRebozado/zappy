@@ -21,7 +21,9 @@
 #include <cmath>
 #include <iostream>
 #include <ranges>
+#include <rlgl.h>
 #include <set>
+#include <unordered_set>
 
 namespace zappy {
 
@@ -55,6 +57,10 @@ void RenderSystem::render(World& w) {
     _renderInhabitants(w);
     _renderEggs(w);
     _camera.EndMode();
+
+    if (_showDebugHud) {
+        _renderDebugHud(w);
+    }
 }
 
 void RenderSystem::_lazyLoadAssets() {
@@ -133,6 +139,9 @@ void RenderSystem::_handleInput(float dt) {
         _selectedZ = _hoveredZ;
     }
 
+    _showDebugHud =
+        raylib::Keyboard::IsKeyDown(KEY_LEFT_SHIFT) || raylib::Keyboard::IsKeyDown(KEY_RIGHT_SHIFT);
+
     // Zoom (Mouse Wheel)
     float wheel = raylib::Mouse::GetWheelMove();
     if (wheel != 0) {
@@ -175,28 +184,33 @@ void RenderSystem::_renderTerrain(World& w) {
         return;
     }
 
-    std::vector<std::pair<int, int>> inhabitantPosList;
+    auto hashPos = [](int x, int z) -> uint64_t {
+        return (static_cast<uint64_t>(static_cast<uint32_t>(x)) << 32) | static_cast<uint32_t>(z);
+    };
+
+    std::unordered_set<uint64_t> inhabitantPositions;
     auto orientationStorage = w.get_storage<Orientation>();
     if (orientationStorage) {
         for (auto const& [entity, orientationPtr] : *orientationStorage) {
             auto ppos = w.get_component<Position>(entity);
             if (ppos) {
-                inhabitantPosList.push_back({ppos->x, ppos->y});
+                inhabitantPositions.insert(hashPos(ppos->x, ppos->y));
             }
         }
     }
 
-    std::unordered_map<int, std::unordered_map<int, TerrainType::Type>> mapGrid;
+    std::unordered_map<uint64_t, TerrainType::Type> mapGrid;
     for (auto const& [entity, type] : *terrainStorage) {
         auto pos = w.get_component<Position>(entity);
         if (pos) {
-            mapGrid[pos->x][pos->y] = type->current_type;
+            mapGrid[hashPos(pos->x, pos->y)] = type->current_type;
         }
     }
 
     raylib::Vector3 cameraTarget = _camera.target;
 
-    static raylib::Model baseCubeModel = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
+    static raylib::Model sideCubeModel = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
+    static raylib::Model topPlaneModel = LoadModelFromMesh(GenMeshPlane(1.0f, 1.0f, 1, 1));
     static Tiletextures textures;
 
     for (auto const& [entity, type] : *terrainStorage) {
@@ -215,8 +229,14 @@ void RenderSystem::_renderTerrain(World& w) {
             std::shared_ptr<raylib::Texture2D> texture =
                 textures.GetTileTexture(pos->x, pos->y, type->current_type, mapGrid);
             if (texture) {
-                baseCubeModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *texture.get();
-                baseCubeModel.Draw(vpos, 1.0f, WHITE);
+                raylib::Vector3 sidePos = vpos;
+                sidePos.y -= 0.001f; // Offset slightly to prevent Z-fighting with top plane
+                sideCubeModel.Draw(sidePos, 1.0f, raylib::Color(110, 110, 110, 255));
+
+                raylib::Vector3 planePos = vpos;
+                planePos.y += 0.5f; // Plane rests exactly on top of the cube
+                topPlaneModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *texture.get();
+                topPlaneModel.Draw(planePos, 1.0f, WHITE);
             }
 
             if (type->current_type == TerrainType::FOREST) {
@@ -227,13 +247,7 @@ void RenderSystem::_renderTerrain(World& w) {
                 float sizeZ = box.max.z - box.min.z;
 
                 if (sizeX > 0 && sizeZ > 0) {
-                    bool playerOnTile = false;
-                    for (const auto& p : inhabitantPosList) {
-                        if (p.first == pos->x && p.second == pos->y) {
-                            playerOnTile = true;
-                            break;
-                        }
-                    }
+                    bool playerOnTile = inhabitantPositions.count(hashPos(pos->x, pos->y)) > 0;
 
                     if (!playerOnTile) {
                         float scale = 0.4f / std::max(sizeX, sizeZ);
@@ -253,6 +267,7 @@ void RenderSystem::_renderTerrain(World& w) {
                         drawPos.x += rX;
                         drawPos.z += rZ;
 
+                        raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
                         treeModel.Draw(drawPos, scale, raylib::Color::White());
                     }
                 }
@@ -533,6 +548,45 @@ void RenderSystem::_renderHoverEffect(int x, int z) {
     raylib::Vector3((float)x, yB + wH / 2, (float)z - 0.5f).DrawCube(1.0f + wT, wH, wT, hCol);
     raylib::Vector3((float)x + 0.5f, yB + wH / 2, (float)z).DrawCube(wT, wH, 1.0f + wT, hCol);
     raylib::Vector3((float)x - 0.5f, yB + wH / 2, (float)z).DrawCube(wT, wH, 1.0f + wT, hCol);
+}
+
+void RenderSystem::_renderDebugHud(World& w) {
+    int padding = 15;
+    int y = padding;
+    int x = padding;
+    int spacing = 25;
+
+    auto drawText = [&](const std::string& text) {
+        ::DrawText(text.c_str(), x, y, 20, WHITE);
+        y += spacing;
+    };
+
+    ::DrawRectangle(5, 5, 450, 300, raylib::Color(0, 0, 0, 150));
+
+    drawText("--- DEBUG HUD (HOLD SHIFT) ---");
+    drawText("FPS: " + std::to_string(::GetFPS()));
+
+    char camPos[64];
+    snprintf(camPos, sizeof(camPos), "Camera Pos: %.2f, %.2f, %.2f", _camera.position.x,
+             _camera.position.y, _camera.position.z);
+    drawText(camPos);
+
+    char camTgt[64];
+    snprintf(camTgt, sizeof(camTgt), "Camera Tgt: %.2f, %.2f, %.2f", _camera.target.x,
+             _camera.target.y, _camera.target.z);
+    drawText(camTgt);
+
+    drawText("Hovered Tile: " + std::to_string(_hoveredX) + ", " + std::to_string(_hoveredZ));
+    drawText("Selected Tile: " + std::to_string(_selectedX) + ", " + std::to_string(_selectedZ));
+
+    auto terrainStorage = w.get_storage<TerrainType>();
+    drawText("Tiles Loaded: " + std::to_string(terrainStorage ? terrainStorage->size() : 0));
+
+    auto inhabitantStorage = w.get_storage<Orientation>();
+    drawText("Inhabitants: " + std::to_string(inhabitantStorage ? inhabitantStorage->size() : 0));
+
+    auto eggStorage = w.get_storage<Egg>();
+    drawText("Eggs on Map: " + std::to_string(eggStorage ? eggStorage->size() : 0));
 }
 
 } // namespace zappy
