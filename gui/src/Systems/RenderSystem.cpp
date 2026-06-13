@@ -16,6 +16,7 @@
 #include "Components/ComponentTile.hpp"
 #include "ECS/World.hpp"
 #include "Graphics/TileTextures.hpp"
+#include "Graphics/VoxelBatcher.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -225,9 +226,11 @@ void RenderSystem::_renderTerrain(World& w) {
         forward.z /= fLen;
     }
 
-    static raylib::Model sideCubeModel = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
-    static raylib::Model topPlaneModel = LoadModelFromMesh(GenMeshPlane(1.0f, 1.0f, 1, 1));
     static Tiletextures textures;
+    VoxelBatcher batcher;
+
+    std::unordered_map<unsigned int, std::vector<raylib::Vector3>> topFaceBatches;
+    std::vector<raylib::Vector3> sideFaceBatches;
 
     for (auto const& [entity, type] : *terrainStorage) {
         auto pos = w.get_component<Position>(entity);
@@ -255,15 +258,13 @@ void RenderSystem::_renderTerrain(World& w) {
             if (texture) {
                 raylib::Vector3 sidePos = vpos;
                 sidePos.y -= 0.02f; // Shift down slightly
-                // Scale Y by 0.96 so the bottom stays flush but the top face drops by 0.04,
-                // eliminating Z-fighting
-                sideCubeModel.Draw(sidePos, {0.0f, 1.0f, 0.0f}, 0.0f, {1.0f, 0.96f, 1.0f},
-                                   raylib::Color(110, 110, 110, 255));
+
+                sideFaceBatches.push_back(sidePos);
 
                 raylib::Vector3 planePos = vpos;
                 planePos.y += 0.5f; // Plane rests exactly on top of the original cube height
-                topPlaneModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *texture.get();
-                topPlaneModel.Draw(planePos, 1.0f, WHITE);
+
+                topFaceBatches[texture->id].push_back(planePos);
             }
 
             if (type->current_type == TerrainType::FOREST) {
@@ -304,6 +305,22 @@ void RenderSystem::_renderTerrain(World& w) {
                 _renderHoverEffect(pos->x, pos->y);
             }
         }
+    }
+
+    // Render batches
+    batcher.beginSolidBatch();
+    for (const auto& sidePos : sideFaceBatches) {
+        batcher.addSideFaces(sidePos, 1.0f, 0.96f, 1.0f, raylib::Color(110, 110, 110, 255), true,
+                             true, true, true);
+    }
+    batcher.endBatch();
+
+    for (const auto& [textureId, positions] : topFaceBatches) {
+        batcher.beginBatch(textureId);
+        for (const auto& planePos : positions) {
+            batcher.addTopFace(planePos, 1.0f, 0.0f, 1.0f);
+        }
+        batcher.endBatch();
     }
 }
 

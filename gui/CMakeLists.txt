@@ -39,6 +39,7 @@ set(CORE_SOURCES
         src/Network/TcpSocket.cpp
         src/Systems/RenderSystem.cpp
         src/Graphics/AssetManager.cpp
+        src/Graphics/VoxelBatcher.cpp
         src/UI/AUIComponent.cpp
         src/UI/UIManager.cpp
         src/UI/UIButton.cpp
