@@ -208,6 +208,22 @@ void RenderSystem::_renderTerrain(World& w) {
     }
 
     raylib::Vector3 cameraTarget = _camera.target;
+    raylib::Vector3 cameraPos = _camera.position;
+
+    // Calculate dynamic cull distance based on zoom level
+    float camZoomDist = std::sqrt(std::pow(cameraPos.x - cameraTarget.x, 2) +
+                                  std::pow(cameraPos.y - cameraTarget.y, 2) +
+                                  std::pow(cameraPos.z - cameraTarget.z, 2));
+    float cullRadius = camZoomDist * 1.5f + 30.0f; // Scale visibility with zoom
+    float cullDistSq = cullRadius * cullRadius;
+
+    // Flatten camera vectors to XZ plane for 2D frustum culling
+    raylib::Vector3 forward = {cameraTarget.x - cameraPos.x, 0.0f, cameraTarget.z - cameraPos.z};
+    float fLen = std::sqrt(forward.x * forward.x + forward.z * forward.z);
+    if (fLen > 0.0f) {
+        forward.x /= fLen;
+        forward.z /= fLen;
+    }
 
     static raylib::Model sideCubeModel = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
     static raylib::Model topPlaneModel = LoadModelFromMesh(GenMeshPlane(1.0f, 1.0f, 1, 1));
@@ -216,10 +232,18 @@ void RenderSystem::_renderTerrain(World& w) {
     for (auto const& [entity, type] : *terrainStorage) {
         auto pos = w.get_component<Position>(entity);
         if (pos) {
-            // Simple distance culling: only render tiles within 60 units of camera target
-            float dist = std::sqrt(std::pow(pos->x - cameraTarget.x, 2) +
-                                   std::pow(pos->y - cameraTarget.z, 2));
-            if (dist > 60.0f) {
+            // Dynamic distance culling
+            float dx = pos->x - cameraTarget.x;
+            float dz = pos->y - cameraTarget.z;
+            if (dx * dx + dz * dz > cullDistSq) {
+                continue;
+            }
+
+            // Frustum Culling: cull tiles that are well behind the camera
+            float cx = pos->x - cameraPos.x;
+            float cz = pos->y - cameraPos.z;
+            float dot = (cx * forward.x + cz * forward.z);
+            if (dot < -(camZoomDist * 0.8f + 10.0f)) { // Buffer heavily scales with zoom
                 continue;
             }
 
@@ -230,11 +254,14 @@ void RenderSystem::_renderTerrain(World& w) {
                 textures.GetTileTexture(pos->x, pos->y, type->current_type, mapGrid);
             if (texture) {
                 raylib::Vector3 sidePos = vpos;
-                sidePos.y -= 0.001f; // Offset slightly to prevent Z-fighting with top plane
-                sideCubeModel.Draw(sidePos, 1.0f, raylib::Color(110, 110, 110, 255));
+                sidePos.y -= 0.02f; // Shift down slightly
+                // Scale Y by 0.96 so the bottom stays flush but the top face drops by 0.04,
+                // eliminating Z-fighting
+                sideCubeModel.Draw(sidePos, {0.0f, 1.0f, 0.0f}, 0.0f, {1.0f, 0.96f, 1.0f},
+                                   raylib::Color(110, 110, 110, 255));
 
                 raylib::Vector3 planePos = vpos;
-                planePos.y += 0.5f; // Plane rests exactly on top of the cube
+                planePos.y += 0.5f; // Plane rests exactly on top of the original cube height
                 topPlaneModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = *texture.get();
                 topPlaneModel.Draw(planePos, 1.0f, WHITE);
             }
