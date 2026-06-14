@@ -94,6 +94,14 @@ cmake ..
 make train
 ```
 
+### Run AI Model  
+
+```bash
+python -m training.training_env.watch_ai
+#on different terminals
+./zappy_gui -p 8080 -h localhost
+```
+
 ### Run tests
 From inside build/
 ```bash
