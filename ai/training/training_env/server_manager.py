@@ -76,7 +76,7 @@ class ServerManager:
             "-c",
             "10",
             "-f",
-            "100",
+            "1000",
             "-n",
         ] + self.teams
 

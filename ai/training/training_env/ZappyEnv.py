@@ -1,4 +1,4 @@
-from enum import IntEnum
+from enum import Enum
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -6,23 +6,23 @@ from training.training_env.server_manager import ServerManager
 from src.client.ai_client import ZappyAiClient
 
 
-class ZappyAction(IntEnum):
+class ZappyAction(Enum):
     """
-    Enum mapping actions to their corresponding Zappy commands.
+    Enum mapping actions to their corresponding Zappy commands logic.
     """
 
-    FORWARD = 1
-    LEFT = 3
-    RIGHT = 7
-    LOOK = 10
-    INVENTORY = 11
-    BROADCAST = 12
-    CONNECT_NBR = 13
-    FORK = 14
-    EJECT = 15
-    TAKE = 16
-    SET = 17
-    INCANTATION = 18
+    FORWARD = "Forward"
+    LEFT = "Left"
+    RIGHT = "Right"
+    LOOK = "Look"
+    INVENTORY = "Inventory"
+    BROADCAST = "Broadcast"
+    CONNECT_NBR = "Connect_nbr"
+    FORK = "Fork"
+    EJECT = "Eject"
+    TAKE = "Take"
+    SET = "Set"
+    INCANTATION = "Incantation"
 
 
 class ZappyEnv(gym.Env):
@@ -34,10 +34,6 @@ class ZappyEnv(gym.Env):
     def __init__(self, port=4242, ip="127.0.0.1", team_name="TeamAI"):
         """
         Initializes the Zappy Environment.
-
-        :param port: The port number for the server.
-        :param ip: The IP address of the server.
-        :param team_name: The name of the AI team.
         """
         super(ZappyEnv, self).__init__()
         self.ip = ip
@@ -46,7 +42,7 @@ class ZappyEnv(gym.Env):
         self.server_manager = ServerManager(port=port)
         self.client = None
 
-        self.action_space = spaces.Discrete(19)
+        self.action_space = spaces.Discrete(24)
 
         self.observation_space = spaces.Box(
             low=0, high=10000, shape=(657,), dtype=np.int32
@@ -56,13 +52,15 @@ class ZappyEnv(gym.Env):
         """
         Resets the environment for a new episode.
         Restarts the Rust server, connects the AI client, and fetches the initial observation.
-
-        :param seed: Optional random seed.
-        :param options: Optional configuration dictionary.
-        :return: A tuple containing the initial observation and an info dictionary.
         """
         super().reset(seed=seed)
+
+        if self.client:
+            self.client.close()
+
         self.server_manager.start()
+
+        self.port = self.server_manager.port
 
         self.client = ZappyAiClient(self.port, self.team_name, self.ip)
         self.client.connect()
@@ -72,47 +70,71 @@ class ZappyEnv(gym.Env):
 
     def step(self, action):
         """
-        Executes a single step in the environment by converting the incoming
-
-        integer action into a ZappyAction Enum.
+        Executes a single step mapping PPO integers (0-23) to dynamic Zappy commands.
         """
-        reward = 0.0
+        action = int(action)
+        reward = -0.01
         terminated = False
         truncated = False
         response = None
 
-        try:
-            zappy_action = ZappyAction(action)
-        except ValueError:
-            zappy_action = None
+        zappy_action = None
+        item_target = None
+
+        ZAPPY_ITEMS = [
+            "food",
+            "linemate",
+            "deraumere",
+            "sibur",
+            "mendiane",
+            "phiras",
+            "thystame",
+        ]
 
         try:
-            match zappy_action:
-                case ZappyAction.FORWARD:
+            match action:
+                case 0:
                     response = self.client.forward()
-                case ZappyAction.LEFT:
+                    zappy_action = ZappyAction.FORWARD
+                case 1:
                     response = self.client.left()
-                case ZappyAction.RIGHT:
+                    zappy_action = ZappyAction.LEFT
+                case 2:
                     response = self.client.right()
-                case ZappyAction.LOOK:
+                    zappy_action = ZappyAction.RIGHT
+                case 3:
                     response = self.client.look()
-                case ZappyAction.INVENTORY:
+                    zappy_action = ZappyAction.LOOK
+                case 4:
                     response = self.client.inventory()
-                case ZappyAction.BROADCAST:
+                    zappy_action = ZappyAction.INVENTORY
+                case 5:
                     response = self.client.broadcast("Hola")
-                case ZappyAction.CONNECT_NBR:
+                    zappy_action = ZappyAction.BROADCAST
+                case 6:
                     response = self.client.connect_nbr()
-                case ZappyAction.FORK:
+                    zappy_action = ZappyAction.CONNECT_NBR
+                case 7:
                     response = self.client.fork()
-                case ZappyAction.EJECT:
+                    zappy_action = ZappyAction.FORK
+                case 8:
                     response = self.client.eject()
-                case ZappyAction.TAKE:
-                    response = self.client.take("food")  # TODO: dynamic item selection
-                case ZappyAction.SET:
-                    response = self.client.set("food")  # TODO: dynamic item selection
-                case ZappyAction.INCANTATION:
-                    response = "ko"
-                    reward = -1.0
+                    zappy_action = ZappyAction.EJECT
+
+                case _ if 9 <= action <= 15:
+                    item_target = ZAPPY_ITEMS[action - 9]
+                    response = self.client.take(item_target)
+                    zappy_action = ZappyAction.TAKE
+
+                case _ if 16 <= action <= 22:
+                    item_target = ZAPPY_ITEMS[action - 16]
+                    response = self.client.set(item_target)
+                    zappy_action = ZappyAction.SET
+
+                case 23:
+                    response = self.client.incantation()
+                    zappy_action = ZappyAction.INCANTATION
+
                 case _:
                     reward = -0.5
 
@@ -120,21 +142,21 @@ class ZappyEnv(gym.Env):
             print("[ENV] BrokenPipe: Dead Player")
             response = "dead"
             self.client.is_dead = True
-
         except Exception as e:
             print(f"[ENV] Network: {e}")
             response = "dead"
             self.client.is_dead = True
-        reward = -0.01
-        if self.client.is_dead or response == "dead":
+
+        if self.client.is_dead or response == "dead" or response is None:
             terminated = True
             reward = -100.0
+
         elif response == "ok":
             base_rewards = {
-                ZappyAction.FORWARD: 1.0,
+                ZappyAction.FORWARD: 1.0,  # could be 0
                 ZappyAction.LEFT: 1.0,
                 ZappyAction.RIGHT: 1.0,
-                ZappyAction.LOOK: 1.0,
+                ZappyAction.LOOK: 1.0,  # could be 0
                 ZappyAction.INVENTORY: 1.0,
                 ZappyAction.BROADCAST: 1.0,
                 ZappyAction.CONNECT_NBR: 0.5,
@@ -143,29 +165,28 @@ class ZappyEnv(gym.Env):
                 ZappyAction.SET: 0.0,
                 ZappyAction.INCANTATION: 10.0,
             }
-            reward = base_rewards.get(zappy_action, 0.0)
+            reward += base_rewards.get(zappy_action, 0.0)
+
             if zappy_action == ZappyAction.TAKE:
-                reward = 4.0
                 inv = self.client.inventory()
-                if hasattr(inv, "food") and inv.food >= 15:
-                    reward = 0.0
+
+                if item_target == "food":
+                    if hasattr(inv, "food") and inv.food >= 15:
+                        reward += 0.0
+                    else:
+                        reward += 4.0
                 else:
-                    stones = [
-                        "linemate",
-                        "sibur",
-                        "deraumere",
-                        "mendiane",
-                        "phiras",
-                        "thystame",
-                    ]
-                    for stone in stones:
-                        if getattr(inv, stone, 0) == 0:
-                            reward += 10.0
-                            break
+                    if getattr(inv, item_target, 0) >= 1:
+                        reward += 10.0
+                    else:
+                        reward += 2.0
+
         elif response == "ko":
             reward = -1.0
+
         elif isinstance(response, str) and response.startswith("Current level:"):
-            reward = +100.0
+            reward += 100.0
+
         if not terminated:
             try:
                 observation = self._get_real_observation()
@@ -184,8 +205,6 @@ class ZappyEnv(gym.Env):
         """
         Retrieves the player's inventory and vision from the server and maps them
         into the 657-dimensional numpy array used for neural network input.
-
-        :return: A 1D numpy array containing the parsed observation.
         """
         obs = np.zeros(657, dtype=np.int32)
         resources = [
