@@ -5,6 +5,30 @@ import numpy as np
 from training.training_env.server_manager import ServerManager
 from src.client.ai_client import ZappyAiClient
 
+"""
+-------------------------------------------
+| rollout/                |               |
+|    ep_len_mean          | 1.34e+04      |
+|    ep_rew_mean          | 2.64e+05      |
+| time/                   |               |
+|    fps                  | 450           |
+|    iterations           | 25            |
+|    time_elapsed         | 113           |
+|    total_timesteps      | 51200         |
+| train/                  |               |
+|    approx_kl            | 0.00025143527 |
+|    clip_fraction        | 0.00293       |
+|    clip_range           | 0.2           |
+|    entropy_loss         | -0.084        |
+|    explained_variance   | 7.75e-07      |
+|    learning_rate        | 0.0003        |
+|    loss                 | 3.2e+05       |
+|    n_updates            | 240           |
+|    policy_gradient_loss | -0.00196      |
+|    value_loss           | 6.39e+05      |
+-------------------------------------------
+"""
+
 
 class ZappyAction(Enum):
     """
@@ -153,17 +177,17 @@ class ZappyEnv(gym.Env):
 
         elif response == "ok":
             base_rewards = {
-                ZappyAction.FORWARD: 1.0,  # could be 0
-                ZappyAction.LEFT: 1.0,
-                ZappyAction.RIGHT: 1.0,
-                ZappyAction.LOOK: 1.0,  # could be 0
-                ZappyAction.INVENTORY: 1.0,
-                ZappyAction.BROADCAST: 1.0,
-                ZappyAction.CONNECT_NBR: 0.5,
-                ZappyAction.FORK: 2.0,
-                ZappyAction.EJECT: 3.0,
-                ZappyAction.SET: 0.0,
-                ZappyAction.INCANTATION: 10.0,
+                ZappyAction.FORWARD: 0.0,
+                ZappyAction.LEFT: 0.0,
+                ZappyAction.RIGHT: 0.0,
+                ZappyAction.LOOK: 0.0,
+                ZappyAction.INVENTORY: 0.0,
+                ZappyAction.BROADCAST: 0.0,
+                ZappyAction.CONNECT_NBR: 0.0,
+                ZappyAction.FORK: 50.0,
+                ZappyAction.EJECT: 10.0,
+                ZappyAction.SET: 5.0,
+                ZappyAction.INCANTATION: 0.0,
             }
             reward += base_rewards.get(zappy_action, 0.0)
 
