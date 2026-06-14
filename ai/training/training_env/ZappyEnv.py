@@ -6,27 +6,27 @@ from training.training_env.server_manager import ServerManager
 from src.client.ai_client import ZappyAiClient
 
 """
--------------------------------------------
-| rollout/                |               |
-|    ep_len_mean          | 1.34e+04      |
-|    ep_rew_mean          | 2.64e+05      |
-| time/                   |               |
-|    fps                  | 450           |
-|    iterations           | 25            |
-|    time_elapsed         | 113           |
-|    total_timesteps      | 51200         |
-| train/                  |               |
-|    approx_kl            | 0.00025143527 |
-|    clip_fraction        | 0.00293       |
-|    clip_range           | 0.2           |
-|    entropy_loss         | -0.084        |
-|    explained_variance   | 7.75e-07      |
-|    learning_rate        | 0.0003        |
-|    loss                 | 3.2e+05       |
-|    n_updates            | 240           |
-|    policy_gradient_loss | -0.00196      |
-|    value_loss           | 6.39e+05      |
--------------------------------------------
+---------------------------------------
+| rollout/                |           |
+|    ep_len_mean          | 2.67e+04  |
+|    ep_rew_mean          | 1.31e+06  |
+| time/                   |           |
+|    fps                  | 453       |
+|    iterations           | 489       |
+|    time_elapsed         | 2209      |
+|    total_timesteps      | 1001472   |
+| train/                  |           |
+|    approx_kl            | 0.0       |
+|    clip_fraction        | 0         |
+|    clip_range           | 0.2       |
+|    entropy_loss         | -0.000338 |
+|    explained_variance   | 0         |
+|    learning_rate        | 0.0003    |
+|    loss                 | 5.07e+04  |
+|    n_updates            | 4880      |
+|    policy_gradient_loss | 1.44e-05  |
+|    value_loss           | 1.04e+05  |
+---------------------------------------
 """
 
 
