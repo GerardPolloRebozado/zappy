@@ -123,8 +123,69 @@ void AssetManager::_loadTextures() {
 }
 
 void AssetManager::_loadShaders() {
-    // _shaders["ritual"] = std::make_unique<raylib::Shader>("assets/shaders/ritual.vs",
-    // "assets/shaders/ritual.fs");
+    const char* instancingVS = R"(#version 330
+in vec3 vertexPosition;
+in vec2 vertexTexCoord;
+in vec3 vertexNormal;
+in mat4 instanceTransform;
+
+uniform mat4 mvp;
+
+out vec2 fragTexCoord;
+out vec4 fragColor;
+out vec3 fragNormal;
+
+void main()
+{
+    fragTexCoord = vertexTexCoord;
+    fragColor = vec4(1.0);
+    gl_Position = mvp * instanceTransform * vec4(vertexPosition, 1.0);
+}
+)";
+
+    const char* instancingFS = R"(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+in vec3 fragNormal;
+
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+
+out vec4 finalColor;
+
+void main()
+{
+    vec4 texelColor = texture(texture0, fragTexCoord);
+    if (texelColor.a < 0.1) discard; // Support alpha cutouts
+    finalColor = texelColor * colDiffuse * fragColor;
+}
+)";
+
+    _shaders["instancing"] =
+        std::make_unique<raylib::Shader>(::LoadShaderFromMemory(instancingVS, instancingFS));
+
+    const char* alphaFS = R"(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+uniform sampler2D texture0;
+out vec4 finalColor;
+void main()
+{
+    vec4 texelColor = texture(texture0, fragTexCoord);
+    if (texelColor.a < 0.1) discard;
+    finalColor = texelColor * fragColor;
+}
+)";
+
+    _shaders["alphaCutout"] =
+        std::make_unique<raylib::Shader>(::LoadShaderFromMemory(nullptr, alphaFS));
+
+    auto& shader = *_shaders["instancing"];
+    for (auto& [name, model] : _models) {
+        for (int i = 0; i < model->materialCount; i++) {
+            model->materials[i].shader = shader;
+        }
+    }
 }
 
 void AssetManager::_loadFonts() {

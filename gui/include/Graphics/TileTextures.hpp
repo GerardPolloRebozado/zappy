@@ -106,8 +106,36 @@ class Tiletextures {
                 for (int col = 0; col < cols; ++col) {
                     for (int py = 0; py < size; py++) {
                         for (int px = 0; px < size; px++) {
-                            int local_nx = px + var * size;
-                            int local_ny = py + var * size;
+                            int noise_px = px;
+                            int noise_py = py;
+
+                            if (col == 1) {
+                                noise_py += size; // North bleed (extends South edge)
+                            } else if (col == 2) {
+                                noise_py -= size; // South bleed (extends North edge)
+                            } else if (col == 3) {
+                                noise_px -= size; // East bleed (extends West edge)
+                            } else if (col == 4) {
+                                noise_px += size; // West bleed (extends East edge)
+                            } else if (col == 5) {
+                                noise_px += size;
+                                noise_py += size;
+                            } // NW bleed
+                            else if (col == 6) {
+                                noise_px -= size;
+                                noise_py += size;
+                            } // NE bleed
+                            else if (col == 7) {
+                                noise_px += size;
+                                noise_py -= size;
+                            } // SW bleed
+                            else if (col == 8) {
+                                noise_px -= size;
+                                noise_py -= size;
+                            } // SE bleed
+
+                            int local_nx = noise_px + var * size;
+                            int local_ny = noise_py + var * size;
 
                             bool drawPixel = false;
 
@@ -214,10 +242,14 @@ class Tiletextures {
         int row = b * 4 + variation;
 
         // cols = 9, rows = 36
-        u = static_cast<float>(col) / 9.0f;
-        v = static_cast<float>(row) / 36.0f;
-        uw = 1.0f / 9.0f;
-        vh = 1.0f / 36.0f;
+        // Small inset to prevent texture bleeding from neighboring atlas cells
+        float eX = 0.1f / 288.0f;
+        float eY = 0.1f / 1152.0f;
+
+        u = (static_cast<float>(col) / 9.0f) + eX;
+        v = (static_cast<float>(row) / 36.0f) + eY;
+        uw = (1.0f / 9.0f) - 2.0f * eX;
+        vh = (1.0f / 36.0f) - 2.0f * eY;
     }
 
     Tiletextures() = default;

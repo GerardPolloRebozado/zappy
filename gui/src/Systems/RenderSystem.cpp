@@ -23,9 +23,40 @@
 #include <iostream>
 #include <memory>
 #include <ranges>
+#include <raymath.h>
 #include <rlgl.h>
 #include <set>
 #include <unordered_set>
+
+namespace {
+struct InstanceKey {
+    std::string modelName;
+    unsigned int tint;
+    bool operator==(const InstanceKey& o) const {
+        return modelName == o.modelName && tint == o.tint;
+    }
+};
+
+struct InstanceKeyHash {
+    std::size_t operator()(const InstanceKey& k) const {
+        return std::hash<std::string>{}(k.modelName) ^ std::hash<unsigned int>{}(k.tint);
+    }
+};
+
+std::unordered_map<InstanceKey, std::vector<Matrix>, InstanceKeyHash> g_instanceBatches;
+
+void addInstance(const std::string& modelName, raylib::Vector3 pos, raylib::Vector3 axis,
+                 float angle, raylib::Vector3 scale, raylib::Color tint,
+                 const Matrix& modelTransform) {
+    Matrix matScale = MatrixScale(scale.x, scale.y, scale.z);
+    Matrix matRot = MatrixRotate(axis, angle * DEG2RAD);
+    Matrix matTrans = MatrixTranslate(pos.x, pos.y, pos.z);
+    Matrix matTransform = MatrixMultiply(MatrixMultiply(matScale, matRot), matTrans);
+
+    Matrix finalTransform = MatrixMultiply(modelTransform, matTransform);
+    g_instanceBatches[{modelName, (unsigned int)ColorToInt(tint)}].push_back(finalTransform);
+}
+} // namespace
 
 namespace zappy {
 
@@ -51,6 +82,7 @@ void RenderSystem::update(World& w, float dt) {
 
 void RenderSystem::render(World& w) {
     _lazyLoadAssets();
+    g_instanceBatches.clear();
 
     _camera.BeginMode();
     _renderTerrain(w);
@@ -58,6 +90,30 @@ void RenderSystem::render(World& w) {
     _renderResources(w);
     _renderInhabitants(w);
     _renderEggs(w);
+
+    for (auto& [key, transforms] : g_instanceBatches) {
+        if (transforms.empty()) {
+            continue;
+        }
+        raylib::Model& model = AssetManager::getInstance().getModel(key.modelName);
+        Color tint = GetColor(key.tint);
+
+        for (int i = 0; i < model.meshCount; i++) {
+            Color oldColor =
+                model.materials[model.meshMaterial[i]].maps[MATERIAL_MAP_DIFFUSE].color;
+            Color combinedColor = {(unsigned char)((oldColor.r * tint.r) / 255),
+                                   (unsigned char)((oldColor.g * tint.g) / 255),
+                                   (unsigned char)((oldColor.b * tint.b) / 255),
+                                   (unsigned char)((oldColor.a * tint.a) / 255)};
+            model.materials[model.meshMaterial[i]].maps[MATERIAL_MAP_DIFFUSE].color = combinedColor;
+
+            DrawMeshInstanced(model.meshes[i], model.materials[model.meshMaterial[i]],
+                              transforms.data(), transforms.size());
+
+            model.materials[model.meshMaterial[i]].maps[MATERIAL_MAP_DIFFUSE].color = oldColor;
+        }
+    }
+
     _camera.EndMode();
 
     if (_showDebugHud) {
@@ -299,7 +355,6 @@ void RenderSystem::_renderTerrain(World& w) {
                     float du, dv, duw, dvh;
                     textures.getTileUVs(nType, variation, col, du, dv, duw, dvh);
                     raylib::Vector3 decalPos = planePos;
-                    decalPos.y += 0.001f; // Slightly above to avoid Z-fighting
                     decalBatches.push_back({decalPos, du, dv, duw, dvh});
                 }
             };
@@ -343,7 +398,8 @@ void RenderSystem::_renderTerrain(World& w) {
                         drawPos.z += rZ;
 
                         raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
-                        treeModel.Draw(drawPos, scale, raylib::Color::White());
+                        addInstance("tree2", drawPos, {0, 1, 0}, 0.0f, {scale, scale, scale}, WHITE,
+                                    treeModel.transform);
                     }
                 }
             }
@@ -363,14 +419,27 @@ void RenderSystem::_renderTerrain(World& w) {
     batcher.endBatch();
 
     if (atlas) {
+        raylib::Shader& alphaShader = AssetManager::getInstance().getShader("alphaCutout");
+        ::BeginShaderMode(alphaShader);
+
         batcher.beginBatch(atlas->id);
         for (const auto& face : topFaceBatches) {
             batcher.addTopFaceUV(face.pos, 1.0f, 0.0f, 1.0f, face.u, face.v, face.uw, face.vh);
         }
+        batcher.endBatch();
+
+        // Draw decals without writing to the depth buffer to avoid Z-fighting
+        // while allowing them to be drawn at the exact same height as the base tile
+        // to prevent perspective shift gaps
+        ::rlDisableDepthMask();
+        batcher.beginBatch(atlas->id);
         for (const auto& decal : decalBatches) {
             batcher.addTopFaceUV(decal.pos, 1.0f, 0.0f, 1.0f, decal.u, decal.v, decal.uw, decal.vh);
         }
         batcher.endBatch();
+        ::rlEnableDepthMask();
+
+        ::EndShaderMode();
     }
 }
 
@@ -388,7 +457,8 @@ void RenderSystem::_renderEggs(World& w) {
         if (pos) {
             const raylib::Vector3 vpos(static_cast<float>(pos->x), 2.3f,
                                        static_cast<float>(pos->y));
-            eggModel.Draw(vpos, scale, raylib::Color::White());
+            addInstance("egg", vpos, {0, 1, 0}, 0.0f, {scale, scale, scale}, WHITE,
+                        eggModel.transform);
         }
     }
 }
@@ -443,7 +513,8 @@ void RenderSystem::_renderInhabitants(World& w) {
             raylib::Vector3 vpos((float)pos->x - centerOffset.x, 2.01f - centerOffset.y,
                                  (float)pos->y - centerOffset.z);
 
-            robot.Draw(vpos, {0, 1, 0}, rotation, {scale, scale, scale}, WHITE);
+            addInstance("robot", vpos, {0, 1, 0}, rotation, {scale, scale, scale}, WHITE,
+                        robot.transform);
 
             auto team = w.get_component<TeamName>(entity);
             if (team) {
@@ -578,7 +649,8 @@ void RenderSystem::_renderResources(World& w) {
                 // Deterministic random rotation
                 float rotAngle = ((std::abs(pos->x * 47 + pos->y * 59)) % 360);
 
-                foodModel.Draw(cPos, {0, 1, 0}, rotAngle, {scale, scale, scale}, WHITE);
+                addInstance(selectedAnimal, cPos, {0, 1, 0}, rotAngle, {scale, scale, scale}, WHITE,
+                            foodModel.transform);
             }
 
             auto drawGem = [&](const std::string& modelName, float dx, float dz,
@@ -602,8 +674,8 @@ void RenderSystem::_renderResources(World& w) {
                 float rotAngle =
                     ((std::abs(pos->x * 31 + pos->y * 73 + (int)(dx * 10) + (int)(dz * 10))) % 360);
 
-                rockModel.Draw(drawPos, {0, 1, 0}, rotAngle, {rockScale, rockScale, rockScale},
-                               tint);
+                addInstance(modelName, drawPos, {0, 1, 0}, rotAngle,
+                            {rockScale, rockScale, rockScale}, tint, rockModel.transform);
             };
 
             if (inv->linemate > 0) {
