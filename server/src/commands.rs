@@ -15,6 +15,7 @@ use log::{error, info};
 
 pub mod ai;
 pub mod gui;
+pub mod gui_sync;
 pub mod ppo;
 
 pub fn queue_task(server: &mut Server, entity: Entity, task_type: TaskType) {
@@ -84,35 +85,8 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
                 *team = Team::AuthenticatedGUI;
                 info!("Entity {} authenticated as GRAPHIC", entity);
             }
-            // send spawned egg events
-            let mut events = Vec::new();
-            let eggs_storage = server.world.get_storage::<Egg>();
-            if eggs_storage.is_none() {
-                return;
-            }
-            for (entity, _) in eggs_storage.unwrap().iter() {
-                let position = server
-                    .world
-                    .get_component::<Position>(*entity)
-                    .unwrap()
-                    .clone();
-                let event = ServerEvent::EggLaid {
-                    egg_id: entity.id(),
-                    player_id: 0,
-                    x: position.x,
-                    y: position.y,
-                };
-                events.push(event.to_gui_string().unwrap());
-            }
-            let network_data = server
-                .world
-                .get_component_mut::<NetworkData>(entity)
-                .unwrap();
-            for e in events {
-                network_data
-                    .pending_responses
-                    .push(Response::new(ResponseCode::Status(StatusCode::Ok), Some(e)));
-            }
+            gui_sync::sync_players_to_gui(&mut server.world, entity);
+            gui_sync::sync_eggs_to_gui(&mut server.world, entity);
             return;
         }
 
@@ -261,26 +235,65 @@ mod tests {
             team_names: vec!["existing_team".to_string()],
         };
 
+        let ai = server.world.spawn();
+        build_inhabitant_with_entity(
+            ai,
+            3,
+            7,
+            crate::utils::orientation::RelativeOrientation::Forward,
+            &mut server.world,
+        );
+        *server.world.get_component_mut::<Team>(ai).unwrap() =
+            Team::AuthenticatedAI("existing_team".to_string());
+
+        let egg = server.world.spawn();
+        server.world.add_component(
+            egg,
+            Egg {
+                team: "existing_team".to_string(),
+                player_id: 0,
+            },
+        );
+        server.world.add_component(egg, Position { x: 5, y: 9 });
+
         let (mock_socket, _) = network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
-        let inhabitant = server.world.spawn();
+        let gui = server.world.spawn();
         build_inhabitant_with_entity(
-            inhabitant,
+            gui,
             0,
             0,
             crate::utils::orientation::RelativeOrientation::Forward,
             &mut server.world,
         );
-        server.world.add_component(inhabitant, network_data);
+        server.world.add_component(gui, network_data);
 
         let request = Request {
             command: Command::Unknown("GRAPHIC".to_string()),
         };
 
-        handle_auth_request(&mut server, inhabitant, request);
+        handle_auth_request(&mut server, gui, request);
 
-        let team = server.world.get_component::<Team>(inhabitant).unwrap();
+        let team = server.world.get_component::<Team>(gui).unwrap();
         assert_eq!(*team, Team::AuthenticatedGUI);
+
+        let nd = server.world.get_component::<NetworkData>(gui).unwrap();
+        let response_data: Vec<&str> = nd
+            .pending_responses
+            .iter()
+            .filter_map(|r| r.data.as_deref())
+            .collect();
+
+        assert!(
+            response_data.iter().any(|d| d.starts_with("pnw")),
+            "expected pnw in responses, got: {:?}",
+            response_data
+        );
+        assert!(
+            response_data.iter().any(|d| d.starts_with("enw")),
+            "expected enw in responses, got: {:?}",
+            response_data
+        );
     }
 
     #[test]
@@ -341,6 +354,7 @@ mod tests {
             egg,
             Egg {
                 team: "existing_team".to_string(),
+                player_id: 0,
             },
         );
 
