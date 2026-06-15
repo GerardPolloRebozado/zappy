@@ -21,7 +21,7 @@
 /** @brief Includes @ref log_error and @ref log_debug messages. */
 #define DEBUG 2
 /** @brief Includes all log macros (@ref log_error, @ref log_debug, @ref log_info). */
-#define INFO  3
+#define INFO 3
 
 #ifndef ZAPPY_LOG_LEVEL
 #define ZAPPY_LOG_LEVEL INFO

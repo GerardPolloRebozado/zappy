@@ -6,6 +6,7 @@ def forward(client):
     """
     client.connection.send_line("Forward")
 
+
 def right(client):
     """
     Turn the player 90 degrees right.
@@ -13,6 +14,7 @@ def right(client):
     Response: ok
     """
     client.connection.send_line("Right")
+
 
 def left(client):
     """
@@ -22,6 +24,7 @@ def left(client):
     """
     client.connection.send_line("Left")
 
+
 def look(client):
     """
     Look at the tiles in front of the player.
@@ -29,6 +32,7 @@ def look(client):
     Response: [tile1, tile2, ...]
     """
     client.connection.send_line("Look")
+
 
 def inventory(client):
     """
@@ -38,6 +42,7 @@ def inventory(client):
     """
     client.connection.send_line("Inventory")
 
+
 def broadcast(client, text):
     """
     Broadcast a message to all players.
@@ -45,6 +50,7 @@ def broadcast(client, text):
     Response: ok
     """
     client.connection.send_line(f"Broadcast {text}")
+
 
 def connect_nbr(client):
     """
@@ -54,6 +60,7 @@ def connect_nbr(client):
     """
     client.connection.send_line("Connect_nbr")
 
+
 def fork(client):
     """
     Forks a player
@@ -61,6 +68,7 @@ def fork(client):
     Response: ok
     """
     client.connection.send_line("Fork")
+
 
 def eject(client):
     """
@@ -70,6 +78,7 @@ def eject(client):
     """
     client.connection.send_line("Eject")
 
+
 def take(client, object):
     """
     Take an object from the tile.
@@ -78,6 +87,7 @@ def take(client, object):
     """
     client.connection.send_line(f"Take {object}")
 
+
 def set(client, object):
     """
     Sets an object on the tile.
@@ -85,7 +95,8 @@ def set(client, object):
     Response: ok/ko
     """
     client.connection.send_line(f"Set {object}")
-    
+
+
 def incantation(client):
     """
     Start incantation

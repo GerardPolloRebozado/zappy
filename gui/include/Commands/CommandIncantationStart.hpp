@@ -45,8 +45,8 @@ class CommandIncantationStart : public ACommand {
         }
 
         log_info("Protocol: Incantation started at (" + std::to_string(x) + ", " +
-                    std::to_string(y) + ") for level " + std::to_string(level) + " with " +
-                    std::to_string(playerIds.size()) + " players.");
+                 std::to_string(y) + ") for level " + std::to_string(level) + " with " +
+                 std::to_string(playerIds.size()) + " players.");
     }
 };
 } // namespace zappy

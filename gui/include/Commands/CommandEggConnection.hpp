@@ -43,7 +43,7 @@ class CommandEggConnection : public ACommand {
                 if (egg->id == eggId) {
                     world.despawn(entity);
                     log_info("Protocol: Player connected to egg #" + std::to_string(eggId) +
-                                " (egg removed)");
+                             " (egg removed)");
                     break;
                 }
             }

@@ -45,8 +45,8 @@ class CommandEggLayed : public ACommand {
         world.add_component<EggTag>(egg, EggTag{});
 
         log_info("Protocol: Egg #" + std::to_string(eggId) + " layed by player #" +
-                    std::to_string(playerId) + " at (" + std::to_string(x) + ", " +
-                    std::to_string(y) + ")");
+                 std::to_string(playerId) + " at (" + std::to_string(x) + ", " + std::to_string(y) +
+                 ")");
     }
 };
 } // namespace zappy

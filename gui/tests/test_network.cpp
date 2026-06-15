@@ -1,11 +1,11 @@
 #include "Commands/ACommand.hpp"
 #include "Commands/CommandsErrors.hpp"
 #include "Commands/FactoryCommands.hpp"
-#include "errors/IError.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
 #include "Components/ComponentTile.hpp"
 #include "ECS/World.hpp"
+#include "errors/IError.hpp"
 #include <criterion/criterion.h>
 
 using namespace zappy;

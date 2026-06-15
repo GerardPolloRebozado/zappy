@@ -1,5 +1,7 @@
 class Inventory:
-    def __init__(self, food=0, linemate=0, deraumere=0, sibur=0, mendiane=0, phiras=0, thystame=0):
+    def __init__(
+        self, food=0, linemate=0, deraumere=0, sibur=0, mendiane=0, phiras=0, thystame=0
+    ):
         """
         Initializes an Inventory object
         :param food: the food that gives energy to the player
@@ -40,7 +42,7 @@ class Inventory:
             sibur=inv_dict.get("sibur", 0),
             mendiane=inv_dict.get("mendiane", 0),
             phiras=inv_dict.get("phiras", 0),
-            thystame=inv_dict.get("thystame", 0)
+            thystame=inv_dict.get("thystame", 0),
         )
 
     def __repr__(self):
@@ -48,7 +50,9 @@ class Inventory:
         representation. how the object is printed
         :return: A string representation of the inventory
         """
-        return (f"Inventory(food={self.food}, linemate={self.linemate}, "
-                f"deraumere={self.deraumere}, sibur={self.sibur}, "
-                f"mendiane={self.mendiane}, phiras={self.phiras}, "
-                f"thystame={self.thystame})")
+        return (
+            f"Inventory(food={self.food}, linemate={self.linemate}, "
+            f"deraumere={self.deraumere}, sibur={self.sibur}, "
+            f"mendiane={self.mendiane}, phiras={self.phiras}, "
+            f"thystame={self.thystame})"
+        )
