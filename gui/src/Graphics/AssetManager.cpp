@@ -123,11 +123,30 @@ void AssetManager::_loadTextures() {
 }
 
 void AssetManager::_loadShaders() {
+    // explanations of... stuff:
+    // Pipeline: The sequence of steps the GPU takes to convert 3D data into 2D pixels
+
+    // VS (Vertex Shader): The first programmable stage of the pipeline. It executes once per
+    // vertex. Its primary role is transforming 3D coordinates into 2D screen space (gl_Position).
+
+    // FS (Fragment Shader): The final programmable stage. It executes once per rasterized pixel
+    // (fragment). Its primary role is calculating the final RGBA color output (finalColor).
+
+    // R"(...)": C++ Raw String Literal. Allows embedding multi-line GLSL code without escaping.
+    // in / out: Data flow qualifiers. 'in' receives data from the previous pipeline stage (e.g. CPU
+
+    // -> VS, or VS -> FS), and 'out' passes data to the next stage.
+
+    // uniform: Global variables set by the CPU that remain constant for the entire draw call.
+
+    // vec2/3/4: Mathematical vectors representing points, directions, or RGBA colors.
+    // mat4: A 4x4 transformation matrix (used to translate, rotate, and scale geometry).
+
     // Hardware Instancing Shader
-    // This shader handles rendering multiple instances of the same model in a single draw call
+    // This shader handles rendering multiple instances of the same model in a single draw call.
     // The vertex shader (instancingVS) applies an instance-specific transformation matrix
-    // (instanceTransform) to position each instance correctly in world space, to avoid the
-    // CPU overhead of individual draw commands
+    // (instanceTransform) to position each instance correctly in world space, bypassing the
+    // CPU overhead of individual draw commands.
     const char* instancingVS = R"(#version 330
 in vec3 vertexPosition;
 in vec2 vertexTexCoord;
