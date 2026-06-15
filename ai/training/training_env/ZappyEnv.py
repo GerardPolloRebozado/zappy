@@ -41,7 +41,6 @@ class ControllerAction(IntEnum):
     CONNECT_NBR = 6
     FORK = 7
     EJECT = 8
-
     TAKE_FOOD = 9
     TAKE_LINEMATE = 10
     TAKE_DERAUMERE = 11
@@ -49,7 +48,6 @@ class ControllerAction(IntEnum):
     TAKE_MENDIANE = 13
     TAKE_PHIRAS = 14
     TAKE_THYSTAME = 15
-
     SET_FOOD = 16
     SET_LINEMATE = 17
     SET_DERAUMERE = 18
@@ -79,192 +77,7 @@ class ZappyAction(Enum):
     INCANTATION = "Incantation"
 
 
-class ZappyEnv(gym.Env):
-    """
-    Custom Gymnasium environment for the Zappy AI.
-    Handles the translation between Stable Baselines 3 actions and the Zappy server protocol.
-    """
-
-    def __init__(self, port=4242, ip="127.0.0.1", team_name="TeamAI"):
-        """
-        Initializes the Zappy Environment.
-        """
-        super(ZappyEnv, self).__init__()
-        self.ip = ip
-        self.port = port
-        self.team_name = team_name
-        self.server_manager = ServerManager(port=port)
-        self.client = None
-
-        self.action_space = spaces.Discrete(24)
-
-        self.observation_space = spaces.Box(
-            low=0, high=10000, shape=(657,), dtype=np.int32
-        )
-
-    def reset(self, seed=None, options=None):
-        """
-        Resets the environment for a new episode.
-        Restarts the Rust server, connects the AI client, and fetches the initial observation.
-        """
-        super().reset(seed=seed)
-
-        if self.client:
-            self.client.close()
-
-        self.server_manager.start()
-
-        self.port = self.server_manager.port
-
-        self.client = ZappyAiClient(self.port, self.team_name, self.ip)
-        self.client.connect()
-        observation = self._get_real_observation()
-        info = {}
-        return observation, info
-
-    def step(self, action):
-        """
-        Executes a single step mapping PPO integers (0-23) to dynamic Zappy commands.
-        """
-        reward = -0.01
-        terminated = False
-        truncated = False
-        response = None
-
-        zappy_action = None
-        item_target = None
-
-        ZAPPY_ITEMS = [
-            "food",
-            "linemate",
-            "deraumere",
-            "sibur",
-            "mendiane",
-            "phiras",
-            "thystame",
-        ]
-
-        try:
-            bot_action = ControllerAction(int(action))
-        except ValueError:
-            bot_action = None
-        try:
-            match bot_action:
-                case ControllerAction.FORWARD:
-                    response = self.client.forward()
-                    zappy_action = ZappyAction.FORWARD
-                case ControllerAction.LEFT:
-                    response = self.client.left()
-                    zappy_action = ZappyAction.LEFT
-                case ControllerAction.RIGHT:
-                    response = self.client.right()
-                    zappy_action = ZappyAction.RIGHT
-                case ControllerAction.LOOK:
-                    response = self.client.look()
-                    zappy_action = ZappyAction.LOOK
-                case ControllerAction.INVENTORY:
-                    response = self.client.inventory()
-                    zappy_action = ZappyAction.INVENTORY
-                case ControllerAction.BROADCAST:
-                    response = self.client.broadcast("Hola")
-                    zappy_action = ZappyAction.BROADCAST
-                case ControllerAction.CONNECT_NBR:
-                    response = self.client.connect_nbr()
-                    zappy_action = ZappyAction.CONNECT_NBR
-                case ControllerAction.FORK:
-                    response = self.client.fork()
-                    zappy_action = ZappyAction.FORK
-                case ControllerAction.EJECT:
-                    response = self.client.eject()
-                    zappy_action = ZappyAction.EJECT
-
-                case _ if (
-                    ControllerAction.TAKE_FOOD
-                    <= bot_action
-                    <= ControllerAction.TAKE_THYSTAME
-                ):
-                    item_target = ZAPPY_ITEMS[bot_action - ControllerAction.TAKE_FOOD]
-                    response = self.client.take(item_target)
-                    zappy_action = ZappyAction.TAKE
-
-                case _ if (
-                    ControllerAction.SET_FOOD
-                    <= bot_action
-                    <= ControllerAction.SET_THYSTAME
-                ):
-                    item_target = ZAPPY_ITEMS[bot_action - ControllerAction.SET_FOOD]
-                    response = self.client.set(item_target)
-                    zappy_action = ZappyAction.SET
-
-                case ControllerAction.INCANTATION:
-                    response = self.client.incantation()
-                    zappy_action = ZappyAction.INCANTATION
-                case _:
-                    reward = -0.5
-
-        except BrokenPipeError:
-            print("[ENV] BrokenPipe: Dead Player")
-            response = "dead"
-            self.client.is_dead = True
-        except Exception as e:
-            print(f"[ENV] Network: {e}")
-            response = "dead"
-            self.client.is_dead = True
-
-        if self.client.is_dead or response == "dead" or response is None:
-            terminated = True
-            reward = -100.0
-
-        elif response == "ok":
-            base_rewards = {
-                ZappyAction.FORWARD: 0.0,
-                ZappyAction.LEFT: 0.0,
-                ZappyAction.RIGHT: 0.0,
-                ZappyAction.LOOK: 0.0,
-                ZappyAction.INVENTORY: 0.0,
-                ZappyAction.BROADCAST: 0.0,
-                ZappyAction.CONNECT_NBR: 0.0,
-                ZappyAction.FORK: 50.0,
-                ZappyAction.EJECT: 10.0,
-                ZappyAction.SET: 5.0,
-                ZappyAction.INCANTATION: 0.0,
-            }
-            reward += base_rewards.get(zappy_action, 0.0)
-
-            if zappy_action == ZappyAction.TAKE:
-                inv = self.client.inventory()
-
-                if item_target == "food":
-                    if hasattr(inv, "food") and inv.food >= 15:
-                        reward += 0.0
-                    else:
-                        reward += 4.0
-                else:
-                    if getattr(inv, item_target, 0) >= 1:
-                        reward += 10.0
-                    else:
-                        reward += 2.0
-
-        elif response == "ko":
-            reward = -1.0
-
-        elif isinstance(response, str) and response.startswith("Current level:"):
-            reward += 100.0
-
-        if not terminated:
-            try:
-                observation = self._get_real_observation()
-            except Exception as e:
-                print(f"[ENV] Error: {e}")
-                observation = np.zeros(657, dtype=np.int32)
-                terminated = True
-                reward = -100.0
-        else:
-            observation = np.zeros(657, dtype=np.int32)
-
-        info = {}
-        return observation, reward, terminated, truncated, info
-
+class ObservationZappyEnv:
     def _get_real_observation(self):
         """
         Retrieves the player's inventory and vision from the server and maps them
@@ -313,7 +126,6 @@ class ZappyEnv(gym.Env):
             for i, tile_str in enumerate(vision_list):
                 if i >= 81:
                     break
-
                 if isinstance(tile_str, str):
                     entities = tile_str.strip().split(" ")
                 else:
@@ -327,10 +139,183 @@ class ZappyEnv(gym.Env):
 
         return obs
 
+
+class NetworkZappyEnv:
+    def reset(self, seed=None, options=None):
+        """
+        Resets the environment for a new episode.
+        Restarts the Rust server, connects the AI client, and fetches the initial observation.
+        """
+        super().reset(seed=seed)
+
+        if self.client:
+            self.client.close()
+
+        self.server_manager.start()
+        self.port = self.server_manager.port
+
+        self.client = ZappyAiClient(self.port, self.team_name, self.ip)
+        self.client.connect()
+
+        observation = self._get_real_observation()
+        info = {}
+        return observation, info
+
     def close(self):
-        """
-        Closes the environment, disconnects the socket, and stops the server process.
-        """
         if self.client:
             self.client.close()
         self.server_manager.stop()
+
+
+class ZappyEnv(NetworkZappyEnv, ObservationZappyEnv, gym.Env):
+    """
+    Custom Gymnasium environment for the Zappy AI.
+    """
+
+    def __init__(self, port=4242, ip="127.0.0.1", team_name="TeamAI"):
+        super(ZappyEnv, self).__init__()
+        self.ip = ip
+        self.port = port
+        self.team_name = team_name
+        self.server_manager = ServerManager(port=port)
+        self.client = None
+
+        self.action_space = spaces.Discrete(24)
+        self.observation_space = spaces.Box(
+            low=0, high=10000, shape=(657,), dtype=np.int32
+        )
+
+    def step(self, action):
+        """
+        Executes a single step mapping PPO integers (0-23) to dynamic Zappy commands.
+        """
+        reward = -0.01
+        terminated = False
+        truncated = False
+        response = None
+        zappy_action = None
+        item_target = None
+
+        ZAPPY_ITEMS = [
+            "food",
+            "linemate",
+            "deraumere",
+            "sibur",
+            "mendiane",
+            "phiras",
+            "thystame",
+        ]
+
+        try:
+            bot_action = ControllerAction(int(action))
+        except ValueError:
+            bot_action = None
+        try:
+            match bot_action:
+                case ControllerAction.FORWARD:
+                    response = self.client.forward()
+                    zappy_action = ZappyAction.FORWARD
+                case ControllerAction.LEFT:
+                    response = self.client.left()
+                    zappy_action = ZappyAction.LEFT
+                case ControllerAction.RIGHT:
+                    response = self.client.right()
+                    zappy_action = ZappyAction.RIGHT
+                case ControllerAction.LOOK:
+                    response = self.client.look()
+                    zappy_action = ZappyAction.LOOK
+                case ControllerAction.INVENTORY:
+                    response = self.client.inventory()
+                    zappy_action = ZappyAction.INVENTORY
+                case ControllerAction.BROADCAST:
+                    response = self.client.broadcast("Hola")
+                    zappy_action = ZappyAction.BROADCAST
+                case ControllerAction.CONNECT_NBR:
+                    response = self.client.connect_nbr()
+                    zappy_action = ZappyAction.CONNECT_NBR
+                case ControllerAction.FORK:
+                    response = self.client.fork()
+                    zappy_action = ZappyAction.FORK
+                case ControllerAction.EJECT:
+                    response = self.client.eject()
+                    zappy_action = ZappyAction.EJECT
+                case _ if (
+                    ControllerAction.TAKE_FOOD
+                    <= bot_action
+                    <= ControllerAction.TAKE_THYSTAME
+                ):
+                    item_target = ZAPPY_ITEMS[bot_action - ControllerAction.TAKE_FOOD]
+                    response = self.client.take(item_target)
+                    zappy_action = ZappyAction.TAKE
+                case _ if (
+                    ControllerAction.SET_FOOD
+                    <= bot_action
+                    <= ControllerAction.SET_THYSTAME
+                ):
+                    item_target = ZAPPY_ITEMS[bot_action - ControllerAction.SET_FOOD]
+                    response = self.client.set(item_target)
+                    zappy_action = ZappyAction.SET
+                case ControllerAction.INCANTATION:
+                    response = self.client.incantation()
+                    zappy_action = ZappyAction.INCANTATION
+                case _:
+                    reward = -0.5
+
+        except BrokenPipeError:
+            print("[ENV] BrokenPipe: Dead Player")
+            response = "dead"
+            self.client.is_dead = True
+        except Exception as e:
+            print(f"[ENV] Network: {e}")
+            response = "dead"
+            self.client.is_dead = True
+
+        if self.client.is_dead or response == "dead" or response is None:
+            terminated = True
+            reward = -100.0
+        elif response == "ok":
+            base_rewards = {
+                ZappyAction.FORWARD: 0.0,
+                ZappyAction.LEFT: 0.0,
+                ZappyAction.RIGHT: 0.0,
+                ZappyAction.LOOK: 0.0,
+                ZappyAction.INVENTORY: 0.0,
+                ZappyAction.BROADCAST: 0.0,
+                ZappyAction.CONNECT_NBR: 0.0,
+                ZappyAction.FORK: 50.0,
+                ZappyAction.EJECT: 10.0,
+                ZappyAction.SET: 5.0,
+                ZappyAction.INCANTATION: 0.0,
+            }
+            reward += base_rewards.get(zappy_action, 0.0)
+
+            if zappy_action == ZappyAction.TAKE:
+                inv = self.client.inventory()
+                if item_target == "food":
+                    if hasattr(inv, "food") and inv.food >= 15:
+                        reward += 0.0
+                    else:
+                        reward += 4.0
+                else:
+                    if getattr(inv, item_target, 0) >= 1:
+                        reward += 10.0
+                    else:
+                        reward += 2.0
+        elif response == "ko":
+            reward = -1.0
+        elif isinstance(response, str) and response.startswith("Current level:"):
+            reward += 100.0
+
+        if not terminated:
+            try:
+                observation = self._get_real_observation()
+            except Exception as e:
+                print(f"[ENV] Error: {e}")
+                observation = np.zeros(657, dtype=np.int32)
+                terminated = True
+                reward = -100.0
+        else:
+            observation = np.zeros(657, dtype=np.int32)
+
+        info = {}
+        return observation, reward, terminated, truncated, info
