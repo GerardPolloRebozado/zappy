@@ -6,5 +6,8 @@ corrosion_import_crate(
         CRATE_TYPES bin
 )
 
-add_custom_target(zappy_server ALL)
-add_dependencies(zappy_server cargo-build_zappy_server_rust)
+add_custom_target(zappy_server ALL
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/zappy_server_rust" "${CMAKE_BINARY_DIR}/zappy_server"
+    DEPENDS cargo-build_zappy_server_rust
+)
+
