@@ -142,6 +142,9 @@ class RenderSystem {
     int _hoveredZ = InvalidTileCoord;
     int _selectedX = InvalidTileCoord;
     int _selectedZ = InvalidTileCoord;
+
+    bool _showDebugHud = false;
+    void _renderDebugHud(World& w);
 };
 } // namespace zappy
 

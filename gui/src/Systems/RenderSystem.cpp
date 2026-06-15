@@ -15,11 +15,55 @@
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
 #include "ECS/World.hpp"
+#include "Graphics/TileTextures.hpp"
+#include "Graphics/VoxelBatcher.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <memory>
 #include <ranges>
+#include <raymath.h>
+#include <rlgl.h>
 #include <set>
+#include <unordered_set>
+
+namespace {
+struct InstanceKey {
+    std::string modelName;
+    unsigned int tint;
+    bool operator==(const InstanceKey& o) const {
+        return modelName == o.modelName && tint == o.tint;
+    }
+};
+
+struct InstanceKeyHash {
+    std::size_t operator()(const InstanceKey& k) const {
+        return std::hash<std::string>{}(k.modelName) ^ std::hash<unsigned int>{}(k.tint);
+    }
+};
+
+std::unordered_map<InstanceKey, std::vector<Matrix>, InstanceKeyHash> g_instanceBatches;
+
+// Computes and queues an instance transform matrix for batched rendering.
+// Scales, rotates, and translates the instance, multiplying the result
+// by the base model transform to produce a single transformation matrix.
+// This matrix is then queued into the rendering batch for later instancing.
+void addInstance(const std::string& modelName, raylib::Vector3 pos, raylib::Vector3 axis,
+                 float angle, raylib::Vector3 scale, raylib::Color tint,
+                 const Matrix& modelTransform) {
+    Matrix matScale = MatrixScale(scale.x, scale.y, scale.z);
+    Matrix matRot = MatrixRotate(axis, angle * DEG2RAD);
+    Matrix matTrans = MatrixTranslate(pos.x, pos.y, pos.z);
+
+    // Combine transformations: Scale * Rotation * Translation
+    Matrix matTransform = MatrixMultiply(MatrixMultiply(matScale, matRot), matTrans);
+
+    // Apply any existing base model transform
+    Matrix finalTransform = MatrixMultiply(modelTransform, matTransform);
+    g_instanceBatches[{modelName, (unsigned int)ColorToInt(tint)}].push_back(finalTransform);
+}
+} // namespace
 
 namespace zappy {
 
@@ -45,6 +89,7 @@ void RenderSystem::update(World& w, float dt) {
 
 void RenderSystem::render(World& w) {
     _lazyLoadAssets();
+    g_instanceBatches.clear();
 
     _camera.BeginMode();
     _renderTerrain(w);
@@ -52,7 +97,38 @@ void RenderSystem::render(World& w) {
     _renderResources(w);
     _renderInhabitants(w);
     _renderEggs(w);
+
+    // Hardware Instancing Rendering Phase
+    // Iterate through batches of grouped models and pass their accumulated
+    // transformation matrices to the GPU via DrawMeshInstanced, significantly
+    for (auto& [key, transforms] : g_instanceBatches) {
+        if (transforms.empty()) {
+            continue;
+        }
+        raylib::Model& model = AssetManager::getInstance().getModel(key.modelName);
+        Color tint = GetColor(key.tint);
+
+        for (int i = 0; i < model.meshCount; i++) {
+            Color oldColor =
+                model.materials[model.meshMaterial[i]].maps[MATERIAL_MAP_DIFFUSE].color;
+            Color combinedColor = {(unsigned char)((oldColor.r * tint.r) / 255),
+                                   (unsigned char)((oldColor.g * tint.g) / 255),
+                                   (unsigned char)((oldColor.b * tint.b) / 255),
+                                   (unsigned char)((oldColor.a * tint.a) / 255)};
+            model.materials[model.meshMaterial[i]].maps[MATERIAL_MAP_DIFFUSE].color = combinedColor;
+
+            DrawMeshInstanced(model.meshes[i], model.materials[model.meshMaterial[i]],
+                              transforms.data(), transforms.size());
+
+            model.materials[model.meshMaterial[i]].maps[MATERIAL_MAP_DIFFUSE].color = oldColor;
+        }
+    }
+
     _camera.EndMode();
+
+    if (_showDebugHud) {
+        _renderDebugHud(w);
+    }
 }
 
 void RenderSystem::_lazyLoadAssets() {
@@ -131,6 +207,9 @@ void RenderSystem::_handleInput(float dt) {
         _selectedZ = _hoveredZ;
     }
 
+    _showDebugHud =
+        raylib::Keyboard::IsKeyDown(KEY_LEFT_SHIFT) || raylib::Keyboard::IsKeyDown(KEY_RIGHT_SHIFT);
+
     // Zoom (Mouse Wheel)
     float wheel = raylib::Mouse::GetWheelMove();
     if (wheel != 0) {
@@ -173,95 +252,150 @@ void RenderSystem::_renderTerrain(World& w) {
         return;
     }
 
-    std::vector<std::pair<int, int>> inhabitantPosList;
+    auto hashPos = [](int x, int z) -> uint64_t {
+        return (static_cast<uint64_t>(static_cast<uint32_t>(x)) << 32) | static_cast<uint32_t>(z);
+    };
+
+    std::unordered_set<uint64_t> inhabitantPositions;
     auto orientationStorage = w.get_storage<Orientation>();
     if (orientationStorage) {
         for (auto const& [entity, orientationPtr] : *orientationStorage) {
             auto ppos = w.get_component<Position>(entity);
             if (ppos) {
-                inhabitantPosList.push_back({ppos->x, ppos->y});
+                inhabitantPositions.insert(hashPos(ppos->x, ppos->y));
             }
         }
     }
 
-    auto eggStorage = w.get_storage<Egg>();
-    if (eggStorage) {
-        for (auto const& [entity, eggPtr] : *eggStorage) {
-            auto ppos = w.get_component<Position>(entity);
-            if (ppos) {
-                inhabitantPosList.push_back({ppos->x, ppos->y});
-            }
+    std::unordered_map<uint64_t, TerrainType::Type> mapGrid;
+    for (auto const& [entity, type] : *terrainStorage) {
+        auto pos = w.get_component<Position>(entity);
+        if (pos) {
+            mapGrid[hashPos(pos->x, pos->y)] = type->current_type;
         }
     }
 
     raylib::Vector3 cameraTarget = _camera.target;
+    raylib::Vector3 cameraPos = _camera.position;
+
+    // Calculate dynamic cull distance based on zoom level
+    float camZoomDist = std::sqrt(std::pow(cameraPos.x - cameraTarget.x, 2) +
+                                  std::pow(cameraPos.y - cameraTarget.y, 2) +
+                                  std::pow(cameraPos.z - cameraTarget.z, 2));
+    float cullRadius = camZoomDist * 1.5f + 30.0f; // Scale visibility with zoom
+    float cullDistSq = cullRadius * cullRadius;
+
+    // Flatten camera vectors to XZ plane for 2D frustum culling
+    raylib::Vector3 forward = {cameraTarget.x - cameraPos.x, 0.0f, cameraTarget.z - cameraPos.z};
+    float fLen = std::sqrt(forward.x * forward.x + forward.z * forward.z);
+    if (fLen > 0.0f) {
+        forward.x /= fLen;
+        forward.z /= fLen;
+    }
+
+    static Tiletextures textures;
+    VoxelBatcher batcher;
+
+    std::shared_ptr<raylib::Texture2D> atlas = textures.getAtlas();
+
+    struct TopFaceData {
+        raylib::Vector3 pos;
+        float u, v, uw, vh;
+    };
+    std::vector<TopFaceData> topFaceBatches;
+    std::vector<TopFaceData> decalBatches;
+    std::vector<raylib::Vector3> sideFaceBatches;
+
+    auto getMapType = [&](int nx, int ny) -> TerrainType::Type {
+        uint64_t key = hashPos(nx, ny);
+        if (mapGrid.count(key)) {
+            return mapGrid.at(key);
+        }
+        return TerrainType::GRASS; // Fallback, shouldn't bleed since priority is low
+    };
 
     for (auto const& [entity, type] : *terrainStorage) {
         auto pos = w.get_component<Position>(entity);
         if (pos) {
-            // Simple distance culling: only render tiles within 60 units of camera target
-            float dist = std::sqrt(std::pow(pos->x - cameraTarget.x, 2) +
-                                   std::pow(pos->y - cameraTarget.z, 2));
-            if (dist > 60.0f) {
+            // Dynamic distance culling
+            float dx = pos->x - cameraTarget.x;
+            float dz = pos->y - cameraTarget.z;
+            if (dx * dx + dz * dz > cullDistSq) {
                 continue;
             }
 
-            raylib::Vector3 vpos((float)pos->x, 1.5f, (float)pos->y);
-
-            raylib::Color color = GRAY;
-            switch (type->current_type) {
-                case TerrainType::GRASS:
-                    color = raylib::Color::Green();
-                    break;
-                case TerrainType::MOUNTAIN:
-                    color = raylib::Color::DarkGray();
-                    break;
-                case TerrainType::WATER:
-                    color = raylib::Color::Blue();
-                    break;
-                case TerrainType::SAND:
-                    color = raylib::Color::Gold();
-                    break;
-                case TerrainType::FOREST:
-                    color = raylib::Color::DarkGreen();
-                    break;
-                case TerrainType::OBSIDIAN_BARRENS:
-                    color = raylib::Color::Black();
-                    break;
-                case TerrainType::LUMINOUS_ORCHARDS:
-                    color = raylib::Color::Lime();
-                    break;
-                case TerrainType::CRYSTAL_CANYONS:
-                    color = raylib::Color::Purple();
-                    break;
-                case TerrainType::MAGNETIC_TUNDRA:
-                    color = raylib::Color::SkyBlue();
-                    break;
+            // Frustum Culling: cull tiles that are well behind the camera
+            float cx = pos->x - cameraPos.x;
+            float cz = pos->y - cameraPos.z;
+            float dot = (cx * forward.x + cz * forward.z);
+            if (dot < -(camZoomDist * 0.8f + 10.0f)) { // Buffer heavily scales with zoom
+                continue;
             }
-            vpos.DrawCube(1.0f, 1.0f, 1.0f, color);
+
+            const raylib::Vector3 vpos(static_cast<float>(pos->x), 1.5f,
+                                       static_cast<float>(pos->y));
+
+            raylib::Vector3 sidePos = vpos;
+            sidePos.y -= 0.02f; // Shift down slightly
+            sideFaceBatches.push_back(sidePos);
+
+            raylib::Vector3 planePos = vpos;
+            planePos.y += 0.5f; // Plane rests exactly on top of the original cube height
+
+            int variation = (pos->x * 73856093 ^ pos->y * 19349663) % 4;
+            if (variation < 0) {
+                variation += 4;
+            }
+
+            float u, v, uw, vh;
+            textures.getTileUVs(type->current_type, variation, 0, u, v, uw, vh); // Col 0 is Base
+            topFaceBatches.push_back({planePos, u, v, uw, vh});
+
+            // Now calculate decals
+            int currentPriority = textures.getPriority(type->current_type);
+
+            auto checkDecal = [&](int nx, int ny, DecalDirection col) {
+                uint64_t key = hashPos(nx, ny);
+                if (!mapGrid.count(key)) {
+                    return;
+                }
+                TerrainType::Type nType = mapGrid.at(key);
+                int nPriority = textures.getPriority(nType);
+                if (nPriority > currentPriority) {
+                    float du, dv, duw, dvh;
+                    textures.getTileUVs(nType, variation, static_cast<int>(col), du, dv, duw, dvh);
+                    raylib::Vector3 decalPos = planePos;
+                    decalBatches.push_back({decalPos, du, dv, duw, dvh});
+                }
+            };
+
+            checkDecal(pos->x, pos->y - 1, DecalDirection::NORTH); // North
+            checkDecal(pos->x, pos->y + 1, DecalDirection::SOUTH); // South
+            checkDecal(pos->x + 1, pos->y, DecalDirection::EAST);  // East
+            checkDecal(pos->x - 1, pos->y, DecalDirection::WEST);  // West
+
+            checkDecal(pos->x - 1, pos->y - 1, DecalDirection::NORTH_WEST); // NW
+            checkDecal(pos->x + 1, pos->y - 1, DecalDirection::NORTH_EAST); // NE
+            checkDecal(pos->x - 1, pos->y + 1, DecalDirection::SOUTH_WEST); // SW
+            checkDecal(pos->x + 1, pos->y + 1, DecalDirection::SOUTH_EAST); // SE
 
             if (type->current_type == TerrainType::FOREST) {
                 raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
-                BoundingBox box = treeModel.GetBoundingBox();
+                auto& am = AssetManager::getInstance();
+                std::shared_ptr<BoundingBox> box = am.getBoundingBox("tree2", treeModel);
 
-                float sizeX = box.max.x - box.min.x;
-                float sizeZ = box.max.z - box.min.z;
+                float sizeX = box->max.x - box->min.x;
+                float sizeZ = box->max.z - box->min.z;
 
                 if (sizeX > 0 && sizeZ > 0) {
-                    bool playerOnTile = false;
-                    for (const auto& p : inhabitantPosList) {
-                        if (p.first == pos->x && p.second == pos->y) {
-                            playerOnTile = true;
-                            break;
-                        }
-                    }
+                    bool playerOnTile = inhabitantPositions.count(hashPos(pos->x, pos->y)) > 0;
 
                     if (!playerOnTile) {
                         float scale = 0.4f / std::max(sizeX, sizeZ);
 
-                        raylib::Vector3 centerOffset((box.max.x + box.min.x) / 2.0f * scale,
-                                                     box.min.y * scale,
-                                                     (box.max.z + box.min.z) / 2.0f * scale);
+                        raylib::Vector3 centerOffset((box->max.x + box->min.x) / 2.0f * scale,
+                                                     box->min.y * scale,
+                                                     (box->max.z + box->min.z) / 2.0f * scale);
 
                         // Sink the tree by 0.1f to hide its built-in grass base
                         raylib::Vector3 drawPos(vpos.x - centerOffset.x,
@@ -274,7 +408,9 @@ void RenderSystem::_renderTerrain(World& w) {
                         drawPos.x += rX;
                         drawPos.z += rZ;
 
-                        treeModel.Draw(drawPos, scale, raylib::Color::White());
+                        raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
+                        addInstance("tree2", drawPos, {0, 1, 0}, 0.0f, {scale, scale, scale}, WHITE,
+                                    treeModel.transform);
                     }
                 }
             }
@@ -283,6 +419,38 @@ void RenderSystem::_renderTerrain(World& w) {
                 _renderHoverEffect(pos->x, pos->y);
             }
         }
+    }
+
+    // Render batches
+    batcher.beginSolidBatch();
+    for (const auto& sidePos : sideFaceBatches) {
+        batcher.addSideFaces(sidePos, 1.0f, 0.96f, 1.0f, raylib::Color(110, 110, 110, 255), true,
+                             true, true, true);
+    }
+    batcher.endBatch();
+
+    if (atlas) {
+        raylib::Shader& alphaShader = AssetManager::getInstance().getShader("alphaCutout");
+        ::BeginShaderMode(alphaShader);
+
+        batcher.beginBatch(atlas->id);
+        for (const auto& face : topFaceBatches) {
+            batcher.addTopFaceUV(face.pos, 1.0f, 0.0f, 1.0f, face.u, face.v, face.uw, face.vh);
+        }
+        batcher.endBatch();
+
+        // Draw decals without writing to the depth buffer to avoid Z-fighting
+        // while allowing them to be drawn at the exact same height as the base tile
+        // to prevent perspective shift gaps
+        ::rlDisableDepthMask();
+        batcher.beginBatch(atlas->id);
+        for (const auto& decal : decalBatches) {
+            batcher.addTopFaceUV(decal.pos, 1.0f, 0.0f, 1.0f, decal.u, decal.v, decal.uw, decal.vh);
+        }
+        batcher.endBatch();
+        ::rlEnableDepthMask();
+
+        ::EndShaderMode();
     }
 }
 
@@ -300,7 +468,8 @@ void RenderSystem::_renderEggs(World& w) {
         if (pos) {
             const raylib::Vector3 vpos(static_cast<float>(pos->x), 2.3f,
                                        static_cast<float>(pos->y));
-            eggModel.Draw(vpos, scale, raylib::Color::White());
+            addInstance("egg", vpos, {0, 1, 0}, 0.0f, {scale, scale, scale}, WHITE,
+                        eggModel.transform);
         }
     }
 }
@@ -355,7 +524,8 @@ void RenderSystem::_renderInhabitants(World& w) {
             raylib::Vector3 vpos((float)pos->x - centerOffset.x, 2.01f - centerOffset.y,
                                  (float)pos->y - centerOffset.z);
 
-            robot.Draw(vpos, {0, 1, 0}, rotation, {scale, scale, scale}, WHITE);
+            addInstance("robot", vpos, {0, 1, 0}, rotation, {scale, scale, scale}, WHITE,
+                        robot.transform);
 
             auto team = w.get_component<TeamName>(entity);
             if (team) {
@@ -467,17 +637,17 @@ void RenderSystem::_renderResources(World& w) {
                 }
 
                 raylib::Model& foodModel = am.getModel(selectedAnimal);
-                BoundingBox cBox = foodModel.GetBoundingBox();
+                std::shared_ptr<BoundingBox> cBox = am.getBoundingBox(selectedAnimal, foodModel);
 
-                float sizeX = cBox.max.x - cBox.min.x;
-                float sizeZ = cBox.max.z - cBox.min.z;
-                float sizeY = cBox.max.y - cBox.min.y;
+                float sizeX = cBox->max.x - cBox->min.x;
+                float sizeZ = cBox->max.z - cBox->min.z;
+                float sizeY = cBox->max.y - cBox->min.y;
                 float maxDim = std::max({sizeX, sizeY, sizeZ});
                 // Make animals smaller: max dim is 0.2f
                 float scale = (maxDim > 0) ? (0.20f / maxDim) : 0.10f;
 
-                raylib::Vector3 cCenter = {(cBox.min.x + cBox.max.x) / 2.0f, cBox.min.y,
-                                           (cBox.min.z + cBox.max.z) / 2.0f};
+                raylib::Vector3 cCenter = {(cBox->min.x + cBox->max.x) / 2.0f, cBox->min.y,
+                                           (cBox->min.z + cBox->max.z) / 2.0f};
 
                 // Deterministic random offset for food within the tile
                 float rX = ((std::abs(pos->x * 71 + pos->y * 13)) % 81) / 100.0f - 0.4f;
@@ -490,21 +660,22 @@ void RenderSystem::_renderResources(World& w) {
                 // Deterministic random rotation
                 float rotAngle = ((std::abs(pos->x * 47 + pos->y * 59)) % 360);
 
-                foodModel.Draw(cPos, {0, 1, 0}, rotAngle, {scale, scale, scale}, WHITE);
+                addInstance(selectedAnimal, cPos, {0, 1, 0}, rotAngle, {scale, scale, scale}, WHITE,
+                            foodModel.transform);
             }
 
             auto drawGem = [&](const std::string& modelName, float dx, float dz,
                                raylib::Color tint) {
                 raylib::Model& rockModel = am.getModel(modelName);
-                BoundingBox box = rockModel.GetBoundingBox();
-                float sizeX = box.max.x - box.min.x;
-                float sizeZ = box.max.z - box.min.z;
-                float sizeY = box.max.y - box.min.y;
+                auto box = am.getBoundingBox(modelName, rockModel);
+                float sizeX = box->max.x - box->min.x;
+                float sizeZ = box->max.z - box->min.z;
+                float sizeY = box->max.y - box->min.y;
                 float maxDim = std::max({sizeX, sizeY, sizeZ});
                 float rockScale = (maxDim > 0) ? (0.15f / maxDim) : 0.05f;
 
-                raylib::Vector3 rockCenter = {(box.min.x + box.max.x) / 2.0f, box.min.y,
-                                              (box.min.z + box.max.z) / 2.0f};
+                raylib::Vector3 rockCenter = {(box->min.x + box->max.x) / 2.0f, box->min.y,
+                                              (box->min.z + box->max.z) / 2.0f};
 
                 raylib::Vector3 drawPos((float)pos->x - 0.3f + dx - (rockCenter.x * rockScale),
                                         yBase - (rockCenter.y * rockScale),
@@ -514,8 +685,8 @@ void RenderSystem::_renderResources(World& w) {
                 float rotAngle =
                     ((std::abs(pos->x * 31 + pos->y * 73 + (int)(dx * 10) + (int)(dz * 10))) % 360);
 
-                rockModel.Draw(drawPos, {0, 1, 0}, rotAngle, {rockScale, rockScale, rockScale},
-                               tint);
+                addInstance(modelName, drawPos, {0, 1, 0}, rotAngle,
+                            {rockScale, rockScale, rockScale}, tint, rockModel.transform);
             };
 
             if (inv->linemate > 0) {
@@ -554,6 +725,45 @@ void RenderSystem::_renderHoverEffect(int x, int z) {
     raylib::Vector3((float)x, yB + wH / 2, (float)z - 0.5f).DrawCube(1.0f + wT, wH, wT, hCol);
     raylib::Vector3((float)x + 0.5f, yB + wH / 2, (float)z).DrawCube(wT, wH, 1.0f + wT, hCol);
     raylib::Vector3((float)x - 0.5f, yB + wH / 2, (float)z).DrawCube(wT, wH, 1.0f + wT, hCol);
+}
+
+void RenderSystem::_renderDebugHud(World& w) {
+    int padding = 15;
+    int y = padding;
+    int x = padding;
+    int spacing = 25;
+
+    auto drawText = [&](const std::string& text) {
+        ::DrawText(text.c_str(), x, y, 20, WHITE);
+        y += spacing;
+    };
+
+    ::DrawRectangle(5, 5, 450, 300, raylib::Color(0, 0, 0, 150));
+
+    drawText("--- DEBUG HUD (HOLD SHIFT) ---");
+    drawText("FPS: " + std::to_string(::GetFPS()));
+
+    char camPos[64];
+    snprintf(camPos, sizeof(camPos), "Camera Pos: %.2f, %.2f, %.2f", _camera.position.x,
+             _camera.position.y, _camera.position.z);
+    drawText(camPos);
+
+    char camTgt[64];
+    snprintf(camTgt, sizeof(camTgt), "Camera Tgt: %.2f, %.2f, %.2f", _camera.target.x,
+             _camera.target.y, _camera.target.z);
+    drawText(camTgt);
+
+    drawText("Hovered Tile: " + std::to_string(_hoveredX) + ", " + std::to_string(_hoveredZ));
+    drawText("Selected Tile: " + std::to_string(_selectedX) + ", " + std::to_string(_selectedZ));
+
+    auto terrainStorage = w.get_storage<TerrainType>();
+    drawText("Tiles Loaded: " + std::to_string(terrainStorage ? terrainStorage->size() : 0));
+
+    auto inhabitantStorage = w.get_storage<Orientation>();
+    drawText("Inhabitants: " + std::to_string(inhabitantStorage ? inhabitantStorage->size() : 0));
+
+    auto eggStorage = w.get_storage<Egg>();
+    drawText("Eggs on Map: " + std::to_string(eggStorage ? eggStorage->size() : 0));
 }
 
 } // namespace zappy

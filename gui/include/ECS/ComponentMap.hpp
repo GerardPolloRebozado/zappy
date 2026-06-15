@@ -77,6 +77,9 @@ class ComponentMap : public IComponentStorage {
     auto end() { return entries.end(); }
     auto begin() const { return entries.begin(); }
     auto end() const { return entries.end(); }
+    void clear() { entries.clear(); }
+
+    size_t size() const { return entries.size(); }
 };
 } // namespace zappy
 
