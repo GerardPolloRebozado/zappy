@@ -58,6 +58,13 @@ When an inhabitant completes a move or turn, connected GUI clients are notified 
 
 The GUI may also query an inhabitant's current position and orientation on demand.
 
+When a GUI client authenticates with `GRAPHIC`, the server replays the current world state as protocol notifications so it starts with a complete picture:
+
+- `pnw` for every connected AI inhabitant (position, orientation, level, team)
+- `enw` for every egg still on the map
+
+This complements live `broadcast_event` updates that only reach clients already connected at the time of the event. See `server/src/commands/gui_sync.rs` for the implementation.
+
 Vision range is configurable through the game configuration.
 
 ## Inventory
