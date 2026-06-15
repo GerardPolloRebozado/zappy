@@ -8,4 +8,9 @@ FetchContent_Declare(Corrosion GIT_REPOSITORY https://github.com/corrosion-rs/co
 FetchContent_MakeAvailable(Corrosion)
 
 add_subdirectory(gui)
+<<<<<<< Updated upstream
 add_subdirectory(server)
+=======
+add_subdirectory(server)
+add_subdirectory(ai)
+>>>>>>> Stashed changes
