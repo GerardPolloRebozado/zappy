@@ -8,7 +8,9 @@ class TestZappyEnv(unittest.TestCase):
         print("\n[Test Env] Starting training_env")
 
         os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../../server/zappy_server")
+            os.path.join(
+                os.path.dirname(__file__), "../../cmake-build-debug/zappy_server"
+            )
         )
 
         env = ZappyEnv(team_name="TeamAI")
