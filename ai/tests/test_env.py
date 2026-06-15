@@ -1,17 +1,10 @@
 import unittest
-import os
 from training.training_env.ZappyEnv import ZappyEnv
 
 
 class TestZappyEnv(unittest.TestCase):
     def test_environment_lifecycle(self):
         print("\n[Test Env] Starting training_env")
-
-        os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__), "../../cmake-build-debug/zappy_server"
-            )
-        )
 
         env = ZappyEnv(team_name="TeamAI")
 

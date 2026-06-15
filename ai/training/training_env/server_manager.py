@@ -2,6 +2,7 @@ import subprocess
 import time
 import socket
 import os
+from pathlib import Path
 
 
 class ServerManager:
@@ -34,13 +35,30 @@ class ServerManager:
         self.teams = teams
         self.process = None
 
-        if binary_path is None:
-            base_directory = os.path.dirname(os.path.abspath(__file__))
-            self.binary_path = os.path.abspath(
-                os.path.join(base_directory, "../../../cmake-build-debug/zappy_server")
-            )
-        else:
+        if binary_path:
             self.binary_path = binary_path
+        else:
+            self.binary_path = self._resolve_binary_path()
+
+    def _resolve_binary_path(self):
+        if env_path := os.getenv("ZAPPY_SERVER_PATH"):
+            return env_path
+
+        base_dir = Path(__file__).resolve().parents[3]
+
+        possible_locations = [
+            base_dir / "zappy_server",
+            base_dir / "cmake-build-debug" / "zappy_server",
+            base_dir / "server" / "zappy_server",
+        ]
+
+        for path in possible_locations:
+            if path.is_file() and os.access(path, os.X_OK):
+                return str(path)
+
+        raise FileNotFoundError(
+            "zappy_server executable not found. Please compile the server or set the ZAPPY_SERVER_PATH environment variable."
+        )
 
     def get_free_port(self, current_port):
         """
@@ -80,7 +98,6 @@ class ServerManager:
             "-n",
         ] + self.teams
 
-        # stdout and stderr are suppressed to avoid polluting the AI training logs
         self.process = subprocess.Popen(
             cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
