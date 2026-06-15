@@ -123,6 +123,10 @@ void AssetManager::_loadTextures() {
 }
 
 void AssetManager::_loadShaders() {
+    // Hardware Instancing Shader
+    // Instead of telling the GPU to draw a tree 1000 times (which is slow),
+    // this shader lets us send 1 tree and a list of 1000 positions.
+    // The GPU then magically clones the tree at all those positions at once.
     const char* instancingVS = R"(#version 330
 in vec3 vertexPosition;
 in vec2 vertexTexCoord;
@@ -164,6 +168,10 @@ void main()
     _shaders["instancing"] =
         std::make_unique<raylib::Shader>(::LoadShaderFromMemory(instancingVS, instancingFS));
 
+    // Alpha Cutout Shader
+    // If a texture has transparent pixels (like the edges of a decal),
+    // we use "discard" to drop them immediately. This stops the invisible pixels
+    // from acting like an invisible wall that blocks objects standing behind them.
     const char* alphaFS = R"(#version 330
 in vec2 fragTexCoord;
 in vec4 fragColor;

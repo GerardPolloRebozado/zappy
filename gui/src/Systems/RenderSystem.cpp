@@ -45,14 +45,19 @@ struct InstanceKeyHash {
 
 std::unordered_map<InstanceKey, std::vector<Matrix>, InstanceKeyHash> g_instanceBatches;
 
+// Adds a 3D model to the giant batch for drawing later
 void addInstance(const std::string& modelName, raylib::Vector3 pos, raylib::Vector3 axis,
                  float angle, raylib::Vector3 scale, raylib::Color tint,
                  const Matrix& modelTransform) {
+    // Calculate the math to resize, spin, and place the object
     Matrix matScale = MatrixScale(scale.x, scale.y, scale.z);
     Matrix matRot = MatrixRotate(axis, angle * DEG2RAD);
     Matrix matTrans = MatrixTranslate(pos.x, pos.y, pos.z);
+
+    // Smash them all together into a single Matrix (order matters!!!!)
     Matrix matTransform = MatrixMultiply(MatrixMultiply(matScale, matRot), matTrans);
 
+    // Apply any base offsets the model already had, then save it to the batch list
     Matrix finalTransform = MatrixMultiply(modelTransform, matTransform);
     g_instanceBatches[{modelName, (unsigned int)ColorToInt(tint)}].push_back(finalTransform);
 }
@@ -91,6 +96,10 @@ void RenderSystem::render(World& w) {
     _renderInhabitants(w);
     _renderEggs(w);
 
+    // Render all batched 3D models at once (Instancing)
+    // We group identical models (like all "tree" objects) and pass their
+    // positions/rotations as a giant list of matrices. This drastically
+    // cuts down GPU draw calls and boosts performance.
     for (auto& [key, transforms] : g_instanceBatches) {
         if (transforms.empty()) {
             continue;
