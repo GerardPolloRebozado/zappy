@@ -24,8 +24,9 @@
 namespace zappy {
 
 Core::Core(int port, const std::string& host) : _port(port), _host(host) {
-    _window = std::make_unique<raylib::Window>(1280, 720, "Zappy GUI", FLAG_WINDOW_RESIZABLE);
-    _window->SetTargetFPS(60);
+    SetConfigFlags(FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
+    _window = std::make_unique<raylib::Window>(1280, 720, "Zappy");
+    _window->SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));
 
     // Prevent ESC from instantly closing the entire application
     _window->SetExitKey(0);
@@ -50,6 +51,7 @@ void Core::run() {
 }
 
 void Core::_update() {
+
     float dt = _window->GetFrameTime();
     _uiManager.update(dt);
 
@@ -120,13 +122,14 @@ void Core::_setupMainMenu() {
     _menuState = MenuState::MAIN;
     _clearMenuUI();
 
-    int cx = _window->GetWidth() / 2;
-    int cy = _window->GetHeight() / 2;
+    int sw = GetScreenWidth();
+    int sh = GetScreenHeight();
+    int cx = sw / 2;
+    int cy = sh / 2;
 
     // Background panel
-    _uiManager.addComponent(std::make_shared<UIPanel>(
-        raylib::Rectangle{0, 0, (float)_window->GetWidth(), (float)_window->GetHeight()},
-        raylib::Color(15, 20, 40, 255), 0));
+    _uiManager.addComponent(std::make_shared<UIPanel>(raylib::Rectangle{0, 0, (float)sw, (float)sh},
+                                                      raylib::Color(15, 20, 40, 255), 0));
 
     // Title
     _uiManager.addComponent(
