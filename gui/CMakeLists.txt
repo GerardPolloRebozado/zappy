@@ -11,6 +11,10 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose Release or Debug" FORCE)
 endif ()
 
+if (APPLE)
+  set(GRAPHICS "GRAPHICS_API_OPENGL_ES2" CACHE STRING "Graphics API to use" FORCE)
+endif ()
+
 #Raylib
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
@@ -86,6 +90,7 @@ add_library(zappy_gui_core STATIC ${CORE_SOURCES})
 
 target_include_directories(zappy_gui_core PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/angle/include
         ${raylib-cpp_SOURCE_DIR}/include
 )
 
@@ -103,8 +108,20 @@ if (APPLE)
   target_link_libraries(zappy_gui_core PUBLIC
             "-framework IOKit"
             "-framework Cocoa"
-            "-framework OpenGL"
+            "-framework CoreFoundation"
+            "-framework CoreVideo"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/angle/libEGL.dylib"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/angle/libGLESv2.dylib"
     )
+
+  # Copy dylibs to build folder and fix paths for runtime loading
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/vendor/angle/libEGL.dylib" $<TARGET_FILE_DIR:${PROJECT_NAME}>/
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/vendor/angle/libGLESv2.dylib" $<TARGET_FILE_DIR:${PROJECT_NAME}>/
+    COMMAND install_name_tool -change "./libEGL.dylib" "@executable_path/libEGL.dylib" $<TARGET_FILE:${PROJECT_NAME}>
+    COMMAND install_name_tool -change "./libGLESv2.dylib" "@executable_path/libGLESv2.dylib" $<TARGET_FILE:${PROJECT_NAME}>
+    COMMENT "Copying ANGLE libraries and fixing runtime paths..."
+  )
 endif()
 
 include(CheckIPOSupported)
