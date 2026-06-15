@@ -24,6 +24,7 @@
 namespace zappy {
 
 enum class AppState { MENU, PLAYING };
+enum class MenuState { MAIN, SETTINGS, CONNECTION };
 
 /**
  * @class Core
@@ -108,6 +109,7 @@ class Core {
     int _port;                               ///< Server port.
     std::string _host;                       ///< Server host.
     AppState _appState = AppState::MENU;     ///< Current application state.
+    MenuState _menuState = MenuState::MAIN;  ///< Current menu state.
     bool _shouldClose = false;               ///< Flag to request application shutdown.
 };
 
