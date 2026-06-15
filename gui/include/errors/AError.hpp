@@ -28,8 +28,7 @@ namespace zappy {
  */
 class AError : public IError {
   public:
-    AError(const std::string& typePrefix, const std::string& detail,
-           error_severity_e severity)
+    AError(const std::string& typePrefix, const std::string& detail, error_severity_e severity)
         : _message(typePrefix + detail), _severity(severity) {}
 
     const char* what() const noexcept override { return _message.c_str(); }

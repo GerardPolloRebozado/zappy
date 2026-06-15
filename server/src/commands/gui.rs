@@ -76,6 +76,8 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
             }
         }
 
+        // Returns the current server time unit (frequency).
+        // Response: `sgt T` where T is the current frequency.
         Command::Sgt => {
             let freq = server.world.freq;
             let network_data = server.world.get_component_mut::<NetworkData>(entity);
@@ -86,6 +88,23 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
             network_data.pending_responses.push(Response::new(
                 ResponseCode::Status(StatusCode::Ok),
                 Some(format!("sgt {}", freq)),
+            ));
+        }
+
+        // Sets a new server time unit (frequency).
+        // Updates `world.freq` which affects all time-based calculations
+        // (task durations, food consumption, resource spawning).
+        // Response: `sst T` where T is the newly set frequency.
+        Command::Sst(new_freq) => {
+            server.world.freq = new_freq as u64;
+            let network_data = server.world.get_component_mut::<NetworkData>(entity);
+            if network_data.is_none() {
+                return;
+            }
+            let network_data = network_data.unwrap();
+            network_data.pending_responses.push(Response::new(
+                ResponseCode::Status(StatusCode::Ok),
+                Some(format!("sst {}", new_freq)),
             ));
         }
 
@@ -147,29 +166,112 @@ mod tests {
     use crate::ecs::components::network::MockSocket;
     use crate::ecs::storage::World;
 
-    #[test]
-    fn test_tna_command() {
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let mut server = Server {
-            listener,
+    fn create_test_server(freq: u32) -> Server {
+        Server {
+            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
             _users: std::collections::HashMap::new(),
-            _freq: 100,
+            _freq: freq,
             game_start: 0,
             world: World::new(
                 crate::ecs::map_size::MapSize {
                     width: 10,
                     height: 10,
                 },
-                100,
+                freq as u64,
             ),
             clients_nb: 1,
             team_names: vec!["TeamA".to_string(), "TeamB".to_string()],
-        };
-        let entity = server.world.spawn();
+        }
+    }
 
+    fn spawn_gui_entity(server: &mut Server) -> Entity {
+        let entity = server.world.spawn();
         let (mock_socket, _) = MockSocket::new(Vec::from(""));
         let network_data = NetworkData::new(mock_socket);
         server.world.add_component(entity, network_data);
+        entity
+    }
+
+    #[test]
+    fn test_sgt_command() {
+        let mut server = create_test_server(100);
+        let entity = spawn_gui_entity(&mut server);
+
+        handle_gui_command(
+            &mut server,
+            entity,
+            Request {
+                command: Command::Sgt,
+            },
+        );
+
+        let network_data = server.world.get_component::<NetworkData>(entity).unwrap();
+        assert_eq!(network_data.pending_responses.len(), 1);
+        assert_eq!(
+            network_data.pending_responses[0].data.as_ref().unwrap(),
+            "sgt 100"
+        );
+    }
+
+    #[test]
+    fn test_sst_command() {
+        let mut server = create_test_server(100);
+        let entity = spawn_gui_entity(&mut server);
+
+        handle_gui_command(
+            &mut server,
+            entity,
+            Request {
+                command: Command::Sst(200),
+            },
+        );
+
+        assert_eq!(server.world.freq, 200);
+        let network_data = server.world.get_component::<NetworkData>(entity).unwrap();
+        assert_eq!(network_data.pending_responses.len(), 1);
+        assert_eq!(
+            network_data.pending_responses[0].data.as_ref().unwrap(),
+            "sst 200"
+        );
+    }
+
+    #[test]
+    fn test_sst_then_sgt() {
+        let mut server = create_test_server(100);
+        let entity = spawn_gui_entity(&mut server);
+
+        handle_gui_command(
+            &mut server,
+            entity,
+            Request {
+                command: Command::Sst(50),
+            },
+        );
+        handle_gui_command(
+            &mut server,
+            entity,
+            Request {
+                command: Command::Sgt,
+            },
+        );
+
+        assert_eq!(server.world.freq, 50);
+        let network_data = server.world.get_component::<NetworkData>(entity).unwrap();
+        assert_eq!(network_data.pending_responses.len(), 2);
+        assert_eq!(
+            network_data.pending_responses[0].data.as_ref().unwrap(),
+            "sst 50"
+        );
+        assert_eq!(
+            network_data.pending_responses[1].data.as_ref().unwrap(),
+            "sgt 50"
+        );
+    }
+
+    #[test]
+    fn test_tna_command() {
+        let mut server = create_test_server(100);
+        let entity = spawn_gui_entity(&mut server);
 
         handle_gui_command(
             &mut server,

@@ -5,13 +5,14 @@ def parse_look(data):
     """
     content = data.strip("[]")
     tiles_raw = content.split(",")
-    
+
     tiles = []
     for tile_raw in tiles_raw:
         items = tile_raw.strip().split()
         tiles.append(items)
-    
+
     return tiles
+
 
 def parse_broadcast(data):
     """

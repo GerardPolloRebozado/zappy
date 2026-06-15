@@ -39,6 +39,74 @@ Test(CommandMiscTest, TimeUpdate) {
     }
 }
 
+Test(CommandMiscTest, TimeUpdateInvalidArgs) {
+    World world;
+    CommandTimeUpdate cmd;
+
+    cmd.execute("", world);
+
+    auto storage = world.get_storage<TimeUnit>();
+    if (storage) {
+        bool found = false;
+        for (auto const& [ent, tu] : *storage) {
+            found = true;
+        }
+        cr_assert_not(found, "No TimeUnit should be created for invalid args");
+    }
+}
+
+Test(CommandMiscTest, TimeUpdateNonNumericArgs) {
+    World world;
+    CommandTimeUpdate cmd;
+
+    cmd.execute("abc", world);
+
+    auto storage = world.get_storage<TimeUnit>();
+    if (storage) {
+        bool found = false;
+        for (auto const& [ent, tu] : *storage) {
+            found = true;
+        }
+        cr_assert_not(found, "No TimeUnit should be created for non-numeric args");
+    }
+}
+
+Test(CommandMiscTest, TimeUpdateZeroFrequency) {
+    World world;
+    CommandTimeUpdate cmd;
+
+    cmd.execute("0", world);
+
+    auto storage = world.get_storage<TimeUnit>();
+    cr_assert_not_null(storage);
+
+    bool found = false;
+    for (auto const& [ent, tu] : *storage) {
+        cr_assert_eq(tu->frequency, 0);
+        found = true;
+    }
+    cr_assert(found);
+}
+
+Test(CommandMiscTest, TimeUpdateMultipleOverwrites) {
+    World world;
+    CommandTimeUpdate cmd;
+
+    cmd.execute("100", world);
+    cmd.execute("200", world);
+    cmd.execute("50", world);
+
+    auto storage = world.get_storage<TimeUnit>();
+    cr_assert_not_null(storage);
+
+    int count = 0;
+    for (auto const& [ent, tu] : *storage) {
+        cr_assert_eq(tu->frequency, 50);
+        count++;
+    }
+    cr_assert_eq(count, 1, "Only one TimeUnit entity should exist after multiple updates");
+}
+
 Test(CommandMiscTest, PlayerBroadcast) {
     World world;
     CommandPlayerBroadcast cmd;

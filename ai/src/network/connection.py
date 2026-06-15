@@ -1,6 +1,7 @@
 import socket
 import selectors
 
+
 class Connection:
     def __init__(self, ip, port):
         """
@@ -28,7 +29,7 @@ class Connection:
         """
         msg = (message + "\n").encode()
         self.selector.register(self.socket, selectors.EVENT_WRITE)
-        
+
         try:
             total_sent = 0
             while total_sent < len(msg):
@@ -54,20 +55,20 @@ class Connection:
             self.selector.register(self.socket, selectors.EVENT_READ)
         except (FileExistsError, KeyError):
             pass
-        
+
         try:
             while "\n" not in self.buffer:
                 events = self.selector.select(timeout)
                 if not events:
                     return ""
-                
+
                 for key, mask in events:
                     if mask & selectors.EVENT_READ:
                         data = self.socket.recv(1024).decode()
                         if not data:
                             return None
                         self.buffer += data
-            
+
             line, self.buffer = self.buffer.split("\n", 1)
             return line.strip()
         finally:
