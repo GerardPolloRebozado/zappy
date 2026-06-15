@@ -39,27 +39,27 @@
 //! 4. [`broadcast_event`] pushes `ppo #n X Y O` to all GUI clients.
 
 use crate::{
-    ecs::components::inhabitant::Inhabitant,
     ecs::{
         components::{
+            inhabitant::Inhabitant,
             network::NetworkData,
             position::Position,
             task::{TASK_NOT_STARTED, TaskList, TaskType},
             team::Team,
         },
         storage::{Entity, World},
-        systems::task::take_set::take_task,
+        systems::task::{eject::eject, take_set::take_task},
     },
     protocol::{
         Response, ResponseCode,
         ServerEvent::{self},
         StatusCode::{self},
     },
-    utils::date::Date,
-    utils::orientation::RelativeOrientation,
+    utils::{date::Date, orientation::RelativeOrientation},
 };
 use log::{debug, info};
 
+pub mod eject;
 pub mod incantation;
 pub mod inventory;
 pub mod look;
@@ -262,7 +262,8 @@ fn execute_task(
         TaskType::Take(resource) => take_task(world, entity, resource),
         TaskType::Set(resource) => take_set::set_task(world, entity, resource),
         TaskType::Incantation => incantation::execute_incantation(world, entity),
-        _ => (ok, None),
+        TaskType::Fork => todo!(),
+        TaskType::Eject => eject(world, entity),
     }
 }
 
