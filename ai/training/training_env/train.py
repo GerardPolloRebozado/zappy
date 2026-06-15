@@ -21,7 +21,7 @@ def main():
 
     print("Training model")
     # Execute the learning loop for the specified number of timesteps
-    model.learn(total_timesteps=1000000)
+    model.learn(total_timesteps=50000)
 
     # Save the trained model weights to a zip file
     model.save("zappy_ai_model")
