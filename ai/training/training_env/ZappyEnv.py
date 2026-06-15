@@ -4,6 +4,7 @@ from gymnasium import spaces
 import numpy as np
 from training.training_env.server_manager import ServerManager
 from src.client.ai_client import ZappyAiClient
+from enum import IntEnum
 
 """
 ---------------------------------------
@@ -28,6 +29,35 @@ from src.client.ai_client import ZappyAiClient
 |    value_loss           | 1.04e+05  |
 ---------------------------------------
 """
+
+
+class ControllerAction(IntEnum):
+    FORWARD = 0
+    LEFT = 1
+    RIGHT = 2
+    LOOK = 3
+    INVENTORY = 4
+    BROADCAST = 5
+    CONNECT_NBR = 6
+    FORK = 7
+    EJECT = 8
+
+    TAKE_FOOD = 9
+    TAKE_LINEMATE = 10
+    TAKE_DERAUMERE = 11
+    TAKE_SIBUR = 12
+    TAKE_MENDIANE = 13
+    TAKE_PHIRAS = 14
+    TAKE_THYSTAME = 15
+
+    SET_FOOD = 16
+    SET_LINEMATE = 17
+    SET_DERAUMERE = 18
+    SET_SIBUR = 19
+    SET_MENDIANE = 20
+    SET_PHIRAS = 21
+    SET_THYSTAME = 22
+    INCANTATION = 23
 
 
 class ZappyAction(Enum):
@@ -96,7 +126,6 @@ class ZappyEnv(gym.Env):
         """
         Executes a single step mapping PPO integers (0-23) to dynamic Zappy commands.
         """
-        action = int(action)
         reward = -0.01
         terminated = False
         truncated = False
@@ -116,49 +145,60 @@ class ZappyEnv(gym.Env):
         ]
 
         try:
-            match action:
-                case 0:
+            bot_action = ControllerAction(int(action))
+        except ValueError:
+            bot_action = None
+        try:
+            match bot_action:
+                case ControllerAction.FORWARD:
                     response = self.client.forward()
                     zappy_action = ZappyAction.FORWARD
-                case 1:
+                case ControllerAction.LEFT:
                     response = self.client.left()
                     zappy_action = ZappyAction.LEFT
-                case 2:
+                case ControllerAction.RIGHT:
                     response = self.client.right()
                     zappy_action = ZappyAction.RIGHT
-                case 3:
+                case ControllerAction.LOOK:
                     response = self.client.look()
                     zappy_action = ZappyAction.LOOK
-                case 4:
+                case ControllerAction.INVENTORY:
                     response = self.client.inventory()
                     zappy_action = ZappyAction.INVENTORY
-                case 5:
+                case ControllerAction.BROADCAST:
                     response = self.client.broadcast("Hola")
                     zappy_action = ZappyAction.BROADCAST
-                case 6:
+                case ControllerAction.CONNECT_NBR:
                     response = self.client.connect_nbr()
                     zappy_action = ZappyAction.CONNECT_NBR
-                case 7:
+                case ControllerAction.FORK:
                     response = self.client.fork()
                     zappy_action = ZappyAction.FORK
-                case 8:
+                case ControllerAction.EJECT:
                     response = self.client.eject()
                     zappy_action = ZappyAction.EJECT
 
-                case _ if 9 <= action <= 15:
-                    item_target = ZAPPY_ITEMS[action - 9]
+                case _ if (
+                    ControllerAction.TAKE_FOOD
+                    <= bot_action
+                    <= ControllerAction.TAKE_THYSTAME
+                ):
+                    item_target = ZAPPY_ITEMS[bot_action - ControllerAction.TAKE_FOOD]
                     response = self.client.take(item_target)
                     zappy_action = ZappyAction.TAKE
 
-                case _ if 16 <= action <= 22:
-                    item_target = ZAPPY_ITEMS[action - 16]
+                case _ if (
+                    ControllerAction.SET_FOOD
+                    <= bot_action
+                    <= ControllerAction.SET_THYSTAME
+                ):
+                    item_target = ZAPPY_ITEMS[bot_action - ControllerAction.SET_FOOD]
                     response = self.client.set(item_target)
                     zappy_action = ZappyAction.SET
 
-                case 23:
+                case ControllerAction.INCANTATION:
                     response = self.client.incantation()
                     zappy_action = ZappyAction.INCANTATION
-
                 case _:
                     reward = -0.5
 
