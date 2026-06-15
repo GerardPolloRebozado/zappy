@@ -210,65 +210,54 @@ class ZappyEnv(NetworkZappyEnv, ObservationZappyEnv, gym.Env):
             bot_action = ControllerAction(int(action))
         except ValueError:
             bot_action = None
-        try:
-            match bot_action:
-                case ControllerAction.FORWARD:
-                    response = self.client.forward()
-                    zappy_action = ZappyAction.FORWARD
-                case ControllerAction.LEFT:
-                    response = self.client.left()
-                    zappy_action = ZappyAction.LEFT
-                case ControllerAction.RIGHT:
-                    response = self.client.right()
-                    zappy_action = ZappyAction.RIGHT
-                case ControllerAction.LOOK:
-                    response = self.client.look()
-                    zappy_action = ZappyAction.LOOK
-                case ControllerAction.INVENTORY:
-                    response = self.client.inventory()
-                    zappy_action = ZappyAction.INVENTORY
-                case ControllerAction.BROADCAST:
-                    response = self.client.broadcast("Hola")
-                    zappy_action = ZappyAction.BROADCAST
-                case ControllerAction.CONNECT_NBR:
-                    response = self.client.connect_nbr()
-                    zappy_action = ZappyAction.CONNECT_NBR
-                case ControllerAction.FORK:
-                    response = self.client.fork()
-                    zappy_action = ZappyAction.FORK
-                case ControllerAction.EJECT:
-                    response = self.client.eject()
-                    zappy_action = ZappyAction.EJECT
-                case _ if (
-                    ControllerAction.TAKE_FOOD
-                    <= bot_action
-                    <= ControllerAction.TAKE_THYSTAME
-                ):
-                    item_target = ZAPPY_ITEMS[bot_action - ControllerAction.TAKE_FOOD]
-                    response = self.client.take(item_target)
-                    zappy_action = ZappyAction.TAKE
-                case _ if (
-                    ControllerAction.SET_FOOD
-                    <= bot_action
-                    <= ControllerAction.SET_THYSTAME
-                ):
-                    item_target = ZAPPY_ITEMS[bot_action - ControllerAction.SET_FOOD]
-                    response = self.client.set(item_target)
-                    zappy_action = ZappyAction.SET
-                case ControllerAction.INCANTATION:
-                    response = self.client.incantation()
-                    zappy_action = ZappyAction.INCANTATION
-                case _:
-                    reward = -0.5
 
-        except BrokenPipeError:
-            print("[ENV] BrokenPipe: Dead Player")
-            response = "dead"
-            self.client.is_dead = True
-        except Exception as e:
-            print(f"[ENV] Network: {e}")
-            response = "dead"
-            self.client.is_dead = True
+        match bot_action:
+            case ControllerAction.FORWARD:
+                response = self.client.forward()
+                zappy_action = ZappyAction.FORWARD
+            case ControllerAction.LEFT:
+                response = self.client.left()
+                zappy_action = ZappyAction.LEFT
+            case ControllerAction.RIGHT:
+                response = self.client.right()
+                zappy_action = ZappyAction.RIGHT
+            case ControllerAction.LOOK:
+                response = self.client.look()
+                zappy_action = ZappyAction.LOOK
+            case ControllerAction.INVENTORY:
+                response = self.client.inventory()
+                zappy_action = ZappyAction.INVENTORY
+            case ControllerAction.BROADCAST:
+                response = self.client.broadcast("Hola")
+                zappy_action = ZappyAction.BROADCAST
+            case ControllerAction.CONNECT_NBR:
+                response = self.client.connect_nbr()
+                zappy_action = ZappyAction.CONNECT_NBR
+            case ControllerAction.FORK:
+                response = self.client.fork()
+                zappy_action = ZappyAction.FORK
+            case ControllerAction.EJECT:
+                response = self.client.eject()
+                zappy_action = ZappyAction.EJECT
+            case _ if (
+                ControllerAction.TAKE_FOOD
+                <= bot_action
+                <= ControllerAction.TAKE_THYSTAME
+            ):
+                item_target = ZAPPY_ITEMS[bot_action - ControllerAction.TAKE_FOOD]
+                response = self.client.take(item_target)
+                zappy_action = ZappyAction.TAKE
+            case _ if (
+                ControllerAction.SET_FOOD <= bot_action <= ControllerAction.SET_THYSTAME
+            ):
+                item_target = ZAPPY_ITEMS[bot_action - ControllerAction.SET_FOOD]
+                response = self.client.set(item_target)
+                zappy_action = ZappyAction.SET
+            case ControllerAction.INCANTATION:
+                response = self.client.incantation()
+                zappy_action = ZappyAction.INCANTATION
+            case _:
+                reward = -0.5
 
         if self.client.is_dead or response == "dead" or response is None:
             terminated = True
