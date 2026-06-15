@@ -24,16 +24,13 @@
 namespace zappy {
 
 Core::Core(int port, const std::string& host) : _port(port), _host(host) {
-    _window = std::make_unique<raylib::Window>(1920, 1080, "Zappy GUI");
+    _window = std::make_unique<raylib::Window>(1280, 720, "Zappy GUI", FLAG_WINDOW_RESIZABLE);
     _window->SetTargetFPS(60);
 
     // Prevent ESC from instantly closing the entire application
     _window->SetExitKey(0);
 
-    // Enable fullscreen by default
-    int monitor = GetCurrentMonitor();
-    _window->SetSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
-    _window->ToggleFullscreen();
+    _window->Maximize();
 
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
@@ -55,6 +52,25 @@ void Core::run() {
 void Core::_update() {
     float dt = _window->GetFrameTime();
     _uiManager.update(dt);
+
+    if (_window->IsResized()) {
+        if (_appState == AppState::MENU) {
+            switch (_menuState) {
+                case MenuState::MAIN:
+                    _setupMainMenu();
+                    break;
+                case MenuState::SETTINGS:
+                    _setupSettingsMenu();
+                    break;
+                case MenuState::CONNECTION:
+                    _showConnectionOverlay();
+                    break;
+            }
+        } else if (_appState == AppState::PLAYING) {
+            _clearMenuUI();
+            _setupGameUI();
+        }
+    }
 
     if (_appState == AppState::PLAYING) {
         if (raylib::Keyboard::IsKeyPressed(KEY_ESCAPE)) {
@@ -101,6 +117,7 @@ void Core::_render() {
 void Core::_clearMenuUI() { _uiManager.clear(); }
 
 void Core::_setupMainMenu() {
+    _menuState = MenuState::MAIN;
     _clearMenuUI();
 
     int cx = _window->GetWidth() / 2;
@@ -133,6 +150,7 @@ void Core::_setupMainMenu() {
 }
 
 void Core::_setupSettingsMenu() {
+    _menuState = MenuState::SETTINGS;
     _clearMenuUI();
 
     int cx = _window->GetWidth() / 2;
@@ -148,39 +166,62 @@ void Core::_setupSettingsMenu() {
         std::make_shared<UIText>(raylib::Rectangle{(float)cx - 150, (float)cy - 300, 300, 60},
                                  "SETTINGS", 60, raylib::Color::RayWhite(), 1, 4.0f));
 
-    // Resolution 1280x720 Button
-    _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 150, (float)cy - 150, 300, 50}, "1280x720",
-        [this]() {
-            if (this->_window->IsFullscreen()) {
-                this->_window->ToggleFullscreen();
-            }
-            this->_window->SetSize(1280, 720);
-            this->_setupSettingsMenu(); // Re-center UI
-        },
-        1));
+    auto setResolution = [this](int w, int h) {
+        int monitor = GetCurrentMonitor();
+        int mw = GetMonitorWidth(monitor);
+        int mh = GetMonitorHeight(monitor);
+        if (w > mw) {
+            w = mw;
+        }
+        if (h > mh) {
+            h = mh;
+        }
 
-    // Resolution 1920x1080 Button
+        if (this->_window->IsFullscreen()) {
+            this->_window->ToggleFullscreen();
+        }
+        if (this->_window->IsMaximized()) {
+            this->_window->Restore();
+        }
+        this->_window->SetSize(w, h);
+        this->_window->SetPosition((mw - w) / 2, (mh - h) / 2);
+        this->_setupSettingsMenu();
+    };
+
+    // 800x600 Button
     _uiManager.addComponent(std::make_shared<UIButton>(
-        raylib::Rectangle{(float)cx - 150, (float)cy - 80, 300, 50}, "1920x1080",
-        [this]() {
-            if (this->_window->IsFullscreen()) {
-                this->_window->ToggleFullscreen();
-            }
-            this->_window->SetSize(1920, 1080);
-            this->_setupSettingsMenu(); // Re-center UI
-        },
-        1));
+        raylib::Rectangle{(float)cx - 160, (float)cy - 150, 150, 50}, "800x600",
+        [setResolution]() { setResolution(800, 600); }, 1));
+
+    // 1280x720 Button
+    _uiManager.addComponent(std::make_shared<UIButton>(
+        raylib::Rectangle{(float)cx + 10, (float)cy - 150, 150, 50}, "1280x720",
+        [setResolution]() { setResolution(1280, 720); }, 1));
+
+    // 1600x900 Button
+    _uiManager.addComponent(std::make_shared<UIButton>(
+        raylib::Rectangle{(float)cx - 160, (float)cy - 80, 150, 50}, "1600x900",
+        [setResolution]() { setResolution(1600, 900); }, 1));
+
+    // 1920x1080 Button
+    _uiManager.addComponent(std::make_shared<UIButton>(
+        raylib::Rectangle{(float)cx + 10, (float)cy - 80, 150, 50}, "1920x1080",
+        [setResolution]() { setResolution(1920, 1080); }, 1));
 
     // Fullscreen Button
     _uiManager.addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 150, (float)cy - 10, 300, 50}, "Toggle Fullscreen",
         [this]() {
+            int monitor = GetCurrentMonitor();
             if (!this->_window->IsFullscreen()) {
-                int monitor = GetCurrentMonitor();
                 this->_window->SetSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+                this->_window->ToggleFullscreen();
+            } else {
+                this->_window->ToggleFullscreen();
+                this->_window->SetSize(1280, 720);
+                this->_window->SetPosition((GetMonitorWidth(monitor) - 1280) / 2,
+                                           (GetMonitorHeight(monitor) - 720) / 2);
             }
-            this->_window->ToggleFullscreen();
             this->_setupSettingsMenu(); // Re-center UI
         },
         1));
@@ -205,6 +246,7 @@ void Core::_setupSettingsMenu() {
 }
 
 void Core::_showConnectionOverlay() {
+    _menuState = MenuState::CONNECTION;
     _clearMenuUI();
 
     int cx = _window->GetWidth() / 2;
