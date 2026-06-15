@@ -63,7 +63,7 @@ class CommandTileContent : public ACommand {
         }
 
         log_info("Protocol: Tile (" + std::to_string(x) + ", " + std::to_string(y) +
-                    ") content updated");
+                 ") content updated");
     }
 };
 } // namespace zappy

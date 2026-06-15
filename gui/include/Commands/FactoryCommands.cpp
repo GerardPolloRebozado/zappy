@@ -5,7 +5,6 @@
 ** FactoryCommands.cpp
 */
 #include "FactoryCommands.hpp"
-#include "Commands/CommandsErrors.hpp"
 #include "Commands/CommandEggConnection.hpp"
 #include "Commands/CommandEggDeath.hpp"
 #include "Commands/CommandEggLayed.hpp"
@@ -29,6 +28,7 @@
 #include "Commands/CommandTileContent.hpp"
 #include "Commands/CommandTimeUpdate.hpp"
 #include "Commands/CommandUnknown.hpp"
+#include "Commands/CommandsErrors.hpp"
 
 namespace zappy {
 
