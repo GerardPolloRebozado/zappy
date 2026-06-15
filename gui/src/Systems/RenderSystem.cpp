@@ -344,7 +344,7 @@ void RenderSystem::_renderTerrain(World& w) {
             // Now calculate decals
             int currentPriority = textures.getPriority(type->current_type);
 
-            auto checkDecal = [&](int nx, int ny, int col) {
+            auto checkDecal = [&](int nx, int ny, DecalDirection col) {
                 uint64_t key = hashPos(nx, ny);
                 if (!mapGrid.count(key)) {
                     return;
@@ -353,20 +353,21 @@ void RenderSystem::_renderTerrain(World& w) {
                 int nPriority = textures.getPriority(nType);
                 if (nPriority > currentPriority) {
                     float du, dv, duw, dvh;
-                    textures.getTileUVs(nType, variation, col, du, dv, duw, dvh);
+                    textures.getTileUVs(nType, variation, static_cast<int>(col), du, dv, duw, dvh);
                     raylib::Vector3 decalPos = planePos;
                     decalBatches.push_back({decalPos, du, dv, duw, dvh});
                 }
             };
 
-            checkDecal(pos->x, pos->y - 1, 1);     // North -> col 1
-            checkDecal(pos->x, pos->y + 1, 2);     // South -> col 2
-            checkDecal(pos->x + 1, pos->y, 3);     // East -> col 3
-            checkDecal(pos->x - 1, pos->y, 4);     // West -> col 4
-            checkDecal(pos->x - 1, pos->y - 1, 5); // NW -> col 5
-            checkDecal(pos->x + 1, pos->y - 1, 6); // NE -> col 6
-            checkDecal(pos->x - 1, pos->y + 1, 7); // SW -> col 7
-            checkDecal(pos->x + 1, pos->y + 1, 8); // SE -> col 8
+            checkDecal(pos->x, pos->y - 1, DecalDirection::NORTH); // North
+            checkDecal(pos->x, pos->y + 1, DecalDirection::SOUTH); // South
+            checkDecal(pos->x + 1, pos->y, DecalDirection::EAST);  // East
+            checkDecal(pos->x - 1, pos->y, DecalDirection::WEST);  // West
+
+            checkDecal(pos->x - 1, pos->y - 1, DecalDirection::NORTH_WEST); // NW
+            checkDecal(pos->x + 1, pos->y - 1, DecalDirection::NORTH_EAST); // NE
+            checkDecal(pos->x - 1, pos->y + 1, DecalDirection::SOUTH_WEST); // SW
+            checkDecal(pos->x + 1, pos->y + 1, DecalDirection::SOUTH_EAST); // SE
 
             if (type->current_type == TerrainType::FOREST) {
                 raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");

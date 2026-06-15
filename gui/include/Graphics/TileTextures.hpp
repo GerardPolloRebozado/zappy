@@ -17,6 +17,18 @@
 
 namespace zappy {
 
+enum class DecalDirection : int {
+    SOLID = 0,
+    NORTH = 1,
+    SOUTH = 2,
+    EAST = 3,
+    WEST = 4,
+    NORTH_WEST = 5,
+    NORTH_EAST = 6,
+    SOUTH_WEST = 7,
+    SOUTH_EAST = 8
+};
+
 // Caches textures because generating them pixel by pixel every frame is too slow
 // The key includes all 8 neighbor types. This way, if a missing tile later arrives
 // from the network, the cache invalidates and the border automatically draws
@@ -109,82 +121,99 @@ class Tiletextures {
                             int noise_px = px;
                             int noise_py = py;
 
-                            if (col == 1) {
-                                noise_py += size; // North bleed (extends South edge)
-                            } else if (col == 2) {
-                                noise_py -= size; // South bleed (extends North edge)
-                            } else if (col == 3) {
-                                noise_px -= size; // East bleed (extends West edge)
-                            } else if (col == 4) {
-                                noise_px += size; // West bleed (extends East edge)
-                            } else if (col == 5) {
-                                noise_px += size;
-                                noise_py += size;
-                            } // NW bleed
-                            else if (col == 6) {
-                                noise_px -= size;
-                                noise_py += size;
-                            } // NE bleed
-                            else if (col == 7) {
-                                noise_px += size;
-                                noise_py -= size;
-                            } // SW bleed
-                            else if (col == 8) {
-                                noise_px -= size;
-                                noise_py -= size;
-                            } // SE bleed
+                            switch (static_cast<DecalDirection>(col)) {
+                                case DecalDirection::SOLID:
+                                    break;
+                                case DecalDirection::NORTH:
+                                    noise_py += size;
+                                    break; // North bleed (extends South edge)
+                                case DecalDirection::SOUTH:
+                                    noise_py -= size;
+                                    break; // South bleed (extends North edge)
+                                case DecalDirection::EAST:
+                                    noise_px -= size;
+                                    break; // East bleed (extends West edge)
+                                case DecalDirection::WEST:
+                                    noise_px += size;
+                                    break; // West bleed (extends East edge)
+                                case DecalDirection::NORTH_WEST:
+                                    noise_px += size;
+                                    noise_py += size;
+                                    break; // NW bleed
+                                case DecalDirection::NORTH_EAST:
+                                    noise_px -= size;
+                                    noise_py += size;
+                                    break; // NE bleed
+                                case DecalDirection::SOUTH_WEST:
+                                    noise_px += size;
+                                    noise_py -= size;
+                                    break; // SW bleed
+                                case DecalDirection::SOUTH_EAST:
+                                    noise_px -= size;
+                                    noise_py -= size;
+                                    break; // SE bleed
+                            }
 
                             int local_nx = noise_px + var * size;
                             int local_ny = noise_py + var * size;
 
                             bool drawPixel = false;
 
-                            if (col == 0) {
+                            if (static_cast<DecalDirection>(col) == DecalDirection::SOLID) {
                                 // Solid base
                                 drawPixel = true;
                             } else {
                                 // Bleed decal
                                 int dist = 999;
-                                if (col == 1) {
-                                    dist = py; // North (y - 1)
-                                }
-                                if (col == 2) {
-                                    dist = (size - 1) - py; // South (y + 1)
-                                }
-                                if (col == 3) {
-                                    dist = (size - 1) - px; // East (x + 1)
-                                }
-                                if (col == 4) {
-                                    dist = px; // West (x - 1)
-                                }
-                                if (col == 5) {
-                                    dist = std::max(px, py); // NW
-                                }
-                                if (col == 6) {
-                                    dist = std::max((size - 1) - px, py); // NE
-                                }
-                                if (col == 7) {
-                                    dist = std::max(px, (size - 1) - py); // SW
-                                }
-                                if (col == 8) {
-                                    dist = std::max((size - 1) - px, (size - 1) - py); // SE
+                                switch (static_cast<DecalDirection>(col)) {
+                                    case DecalDirection::SOLID:
+                                        break;
+                                    case DecalDirection::NORTH:
+                                        dist = py;
+                                        break; // North
+                                    case DecalDirection::SOUTH:
+                                        dist = (size - 1) - py;
+                                        break; // South
+                                    case DecalDirection::EAST:
+                                        dist = (size - 1) - px;
+                                        break; // East
+                                    case DecalDirection::WEST:
+                                        dist = px;
+                                        break; // West
+                                    case DecalDirection::NORTH_WEST:
+                                        dist = std::max(px, py);
+                                        break; // NW
+                                    case DecalDirection::NORTH_EAST:
+                                        dist = std::max((size - 1) - px, py);
+                                        break; // NE
+                                    case DecalDirection::SOUTH_WEST:
+                                        dist = std::max(px, (size - 1) - py);
+                                        break; // SW
+                                    case DecalDirection::SOUTH_EAST:
+                                        dist = std::max((size - 1) - px, (size - 1) - py);
+                                        break; // SE
                                 }
 
+                                constexpr int baseDistThreshold = 3;
+                                constexpr int randomDistVariance = 6;
                                 uint32_t noise = fast_hash(local_nx, local_ny);
-                                if (dist < 3 + (int)(noise % 6)) {
+                                if (dist < baseDistThreshold + (int)(noise % randomDistVariance)) {
                                     drawPixel = true;
                                 }
                             }
 
                             if (drawPixel) {
+                                constexpr int threshold1 = 55;
+                                constexpr int threshold2 = 80;
+                                constexpr int threshold3 = 93;
                                 const uint32_t randVal = fast_hash(local_nx, local_ny) % 100;
                                 raylib::Color pixelColor;
 
-                                if (randVal < 55) {
+                                if (randVal < threshold1) {
                                     pixelColor = palette[0];
-                                } else if (randVal < 80) {
+                                } else if (randVal < threshold2) {
                                     pixelColor = palette[1];
-                                } else if (randVal < 93) {
+                                } else if (randVal < threshold3) {
                                     pixelColor = palette[2];
                                 } else {
                                     pixelColor = palette[3];
