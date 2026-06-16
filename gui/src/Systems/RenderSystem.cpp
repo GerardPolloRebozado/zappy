@@ -482,9 +482,31 @@ void RenderSystem::_renderParticles(World& w) {
         return;
     }
 
-    ::rlBegin(RL_QUADS);
+    raylib::Vector3 forward =
+        ((raylib::Vector3)_camera.position - (raylib::Vector3)_camera.target).Normalize();
+    raylib::Vector3 right = ((raylib::Vector3)_camera.up).CrossProduct(forward).Normalize();
+    raylib::Vector3 up = forward.CrossProduct(right).Normalize();
+
+    ::rlDisableDepthMask();
 
     for (auto const& [entity, emitterPtr] : *emitterStorage) {
+        if (emitterPtr->particles.empty()) {
+            continue;
+        }
+
+        bool hasTexture = !emitterPtr->spriteName.empty();
+        unsigned int texID = 0;
+        if (hasTexture) {
+            auto& tex = AssetManager::getInstance().getTexture(emitterPtr->spriteName);
+            texID = tex.id;
+        }
+
+        if (hasTexture) {
+            ::rlSetTexture(texID);
+        }
+
+        ::rlBegin(RL_QUADS);
+
         for (const auto& p : emitterPtr->particles) {
             float lifePct = 1.0f - (p.lifeRemaining / p.lifetime);
             if (lifePct < 0.0f) {
@@ -510,45 +532,66 @@ void RenderSystem::_renderParticles(World& w) {
 
             ::rlColor4ub(r, g, b, a);
 
-            // Front
-            ::rlVertex3f(x - s, y - s, z + s);
-            ::rlVertex3f(x + s, y - s, z + s);
-            ::rlVertex3f(x + s, y + s, z + s);
-            ::rlVertex3f(x - s, y + s, z + s);
+            if (hasTexture) {
+                raylib::Vector3 p1 = p.position - right * s - up * s;
+                raylib::Vector3 p2 = p.position + right * s - up * s;
+                raylib::Vector3 p3 = p.position + right * s + up * s;
+                raylib::Vector3 p4 = p.position - right * s + up * s;
 
-            // Back
-            ::rlVertex3f(x - s, y - s, z - s);
-            ::rlVertex3f(x - s, y + s, z - s);
-            ::rlVertex3f(x + s, y + s, z - s);
-            ::rlVertex3f(x + s, y - s, z - s);
+                ::rlTexCoord2f(0.0f, 1.0f);
+                ::rlVertex3f(p1.x, p1.y, p1.z);
+                ::rlTexCoord2f(1.0f, 1.0f);
+                ::rlVertex3f(p2.x, p2.y, p2.z);
+                ::rlTexCoord2f(1.0f, 0.0f);
+                ::rlVertex3f(p3.x, p3.y, p3.z);
+                ::rlTexCoord2f(0.0f, 0.0f);
+                ::rlVertex3f(p4.x, p4.y, p4.z);
+            } else {
+                // Front
+                ::rlVertex3f(x - s, y - s, z + s);
+                ::rlVertex3f(x + s, y - s, z + s);
+                ::rlVertex3f(x + s, y + s, z + s);
+                ::rlVertex3f(x - s, y + s, z + s);
 
-            // Top
-            ::rlVertex3f(x - s, y + s, z - s);
-            ::rlVertex3f(x - s, y + s, z + s);
-            ::rlVertex3f(x + s, y + s, z + s);
-            ::rlVertex3f(x + s, y + s, z - s);
+                // Back
+                ::rlVertex3f(x - s, y - s, z - s);
+                ::rlVertex3f(x - s, y + s, z - s);
+                ::rlVertex3f(x + s, y + s, z - s);
+                ::rlVertex3f(x + s, y - s, z - s);
 
-            // Bottom
-            ::rlVertex3f(x - s, y - s, z - s);
-            ::rlVertex3f(x + s, y - s, z - s);
-            ::rlVertex3f(x + s, y - s, z + s);
-            ::rlVertex3f(x - s, y - s, z + s);
+                // Top
+                ::rlVertex3f(x - s, y + s, z - s);
+                ::rlVertex3f(x - s, y + s, z + s);
+                ::rlVertex3f(x + s, y + s, z + s);
+                ::rlVertex3f(x + s, y + s, z - s);
 
-            // Right
-            ::rlVertex3f(x + s, y - s, z - s);
-            ::rlVertex3f(x + s, y + s, z - s);
-            ::rlVertex3f(x + s, y + s, z + s);
-            ::rlVertex3f(x + s, y - s, z + s);
+                // Bottom
+                ::rlVertex3f(x - s, y - s, z - s);
+                ::rlVertex3f(x + s, y - s, z - s);
+                ::rlVertex3f(x + s, y - s, z + s);
+                ::rlVertex3f(x - s, y - s, z + s);
 
-            // Left
-            ::rlVertex3f(x - s, y - s, z - s);
-            ::rlVertex3f(x - s, y - s, z + s);
-            ::rlVertex3f(x - s, y + s, z + s);
-            ::rlVertex3f(x - s, y + s, z - s);
+                // Right
+                ::rlVertex3f(x + s, y - s, z - s);
+                ::rlVertex3f(x + s, y + s, z - s);
+                ::rlVertex3f(x + s, y + s, z + s);
+                ::rlVertex3f(x + s, y - s, z + s);
+
+                // Left
+                ::rlVertex3f(x - s, y - s, z - s);
+                ::rlVertex3f(x - s, y - s, z + s);
+                ::rlVertex3f(x - s, y + s, z + s);
+                ::rlVertex3f(x - s, y + s, z - s);
+            }
+        }
+        ::rlEnd();
+
+        if (hasTexture) {
+            ::rlSetTexture(0);
         }
     }
 
-    ::rlEnd();
+    ::rlEnableDepthMask();
 }
 
 void RenderSystem::_renderInhabitants(World& w) {

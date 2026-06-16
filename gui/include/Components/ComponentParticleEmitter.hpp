@@ -2,6 +2,7 @@
 #define ZAPPY_COMPONENTPARTICLEEMITTER_HPP
 
 #include "Graphics/Particle.hpp"
+#include <string>
 #include <vector>
 
 namespace zappy {
@@ -12,6 +13,7 @@ struct ComponentParticleEmitter {
     bool loop = false;     // True for constant effects, false for instant effects
     float duration = 1.0f; // How long the emitter spawns particles
     float timeElapsed = 0.0f;
+    std::string spriteName = ""; // If empty, renders default colored quads
 
     // --- Emission Settings ---
     float emitRate = 50.0f; // Particles per second
