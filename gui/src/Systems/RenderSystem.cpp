@@ -11,11 +11,13 @@
  */
 
 #include "Systems/RenderSystem.hpp"
+#include "Color.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
 #include "Components/FollowingEntity.hpp"
+#include "Core.hpp"
 #include "ECS/World.hpp"
 #include "Graphics/TileTextures.hpp"
 #include "Graphics/VoxelBatcher.hpp"
@@ -617,7 +619,7 @@ void RenderSystem::_renderInhabitants(World& w) {
     auto teamStorage = w.get_storage<TeamName>();
     if (teamStorage) {
         for (auto const& [e, t] : *teamStorage) {
-            teamNames.insert(t->team_name);
+            teamNames.insert(t->_team_name);
         }
     }
 
@@ -647,28 +649,20 @@ void RenderSystem::_renderInhabitants(World& w) {
             raylib::Vector3 vpos((float)pos->x - centerOffset.x, 2.01f - centerOffset.y,
                                  (float)pos->y - centerOffset.z);
 
-            addInstance("robot", vpos, {0, 1, 0}, rotation, {scale, scale, scale}, WHITE,
-                        robot.transform);
-
             auto team = w.get_component<TeamName>(entity);
             if (team) {
                 int colorIndex = 0;
                 for (const auto& tn : teamNames) {
-                    if (tn == team->team_name) {
+                    if (tn == team->_team_name) {
                         break;
                     }
                     colorIndex++;
                 }
 
-                std::vector<raylib::Color> teamColors = {
-                    raylib::Color(230, 60, 60, 255),  // Red
-                    raylib::Color(60, 230, 60, 255),  // Green
-                    raylib::Color(60, 100, 230, 255), // Blue
-                    raylib::Color(230, 230, 60, 255), // Yellow
-                    raylib::Color(230, 60, 230, 255), // Magenta
-                    raylib::Color(60, 230, 230, 255)  // Cyan
-                };
-                raylib::Color tColor = teamColors[colorIndex % teamColors.size()];
+                raylib::Color tColor = team->_color;
+
+                addInstance("robot", vpos, {0, 1, 0}, rotation, {scale, scale, scale}, tColor,
+                            robot.transform);
 
                 float wH = 0.12f; // Thicker height
                 float wT = 0.12f; // Thicker width

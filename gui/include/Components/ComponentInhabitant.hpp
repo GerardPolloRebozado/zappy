@@ -6,6 +6,8 @@
 */
 #ifndef ZAPPY_GUI_COMPONENTINHABITANT_HPP
 #define ZAPPY_GUI_COMPONENTINHABITANT_HPP
+#include "Color.hpp"
+#include "ECS/World.hpp"
 #include <string>
 namespace zappy {
 
@@ -22,8 +24,23 @@ struct VisionRange {
     int vision_range;
 };
 
-struct TeamName {
-    std::string team_name;
+class TeamName {
+  public:
+    TeamName(std::string name, raylib::Color color) : _team_name(name), _color(color) {};
+    raylib::Color _color;
+    std::string _team_name;
+
+    static raylib::Color findTeam(std::string name, World& w) {
+        auto team = w.get_storage<TeamName>();
+        if (team) {
+            for (auto const& [entity, t] : *team) {
+                if (t && t->_team_name == name) {
+                    return t->_color;
+                }
+            }
+        }
+        return raylib::Color::White();
+    }
 };
 
 struct Race {

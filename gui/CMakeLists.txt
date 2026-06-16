@@ -15,6 +15,11 @@ if (APPLE)
   set(GRAPHICS "GRAPHICS_API_OPENGL_ES2" CACHE STRING "Graphics API to use" FORCE)
 endif ()
 
+if (DEFINED ENV{IM_STUPID} AND "$ENV{IM_STUPID}" STREQUAL "ON")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g -fno-omit-frame-pointer")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+endif()
+
 #Raylib
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
