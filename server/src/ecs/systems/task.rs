@@ -75,6 +75,7 @@ pub mod turn;
 pub fn any_finished_task(world: &mut World) {
     let mut completed: Vec<(Entity, TaskType)> = Vec::new();
     let mut started_incantations: Vec<Entity> = Vec::new();
+    let mut started_forks: Vec<Entity> = Vec::new();
     let freq = world.freq;
 
     {
@@ -95,6 +96,8 @@ pub fn any_finished_task(world: &mut World) {
 
                 if matches!(first_task.task_type, TaskType::Incantation) {
                     started_incantations.push(*entity);
+                } else if matches!(first_task.task_type, TaskType::Fork) {
+                    started_forks.push(*entity);
                 }
                 continue;
             }
@@ -115,6 +118,15 @@ pub fn any_finished_task(world: &mut World) {
     }
 
     incantation::process_started_incantations(world, started_incantations);
+
+    for entity in started_forks {
+        broadcast_event(
+            world,
+            ServerEvent::EggLay {
+                player_id: entity.id(),
+            },
+        );
+    }
 
     for (entity, task_type) in completed {
         let (response, event) = execute_task(world, entity, &task_type);
@@ -202,7 +214,7 @@ fn execute_task(
         TaskType::Take(resource) => take_set::take_task(world, entity, resource),
         TaskType::Set(resource) => take_set::set_task(world, entity, resource),
         TaskType::Incantation => incantation::execute_incantation(world, entity),
-        TaskType::Fork => fork::execute_fork(),
+        TaskType::Fork => fork::execute_fork(world, entity),
         TaskType::Eject => eject::eject(world, entity),
     }
 }
