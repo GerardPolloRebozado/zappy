@@ -27,6 +27,7 @@ struct ComponentParticleEmitter {
     raylib::Vector3 maxVelocity = {1, 2, 1};
     raylib::Color startColor = raylib::Color::Orange();
     raylib::Color endColor = raylib::Color::Blank(); // Fade to transparent
+    std::vector<raylib::Color> colorPalette = {}; // Optional palette for random colored particles
 
     // --- Runtime Data ---
     std::vector<Particle> particles;
