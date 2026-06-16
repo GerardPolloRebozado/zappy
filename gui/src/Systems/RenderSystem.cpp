@@ -12,6 +12,7 @@
 
 #include "Systems/RenderSystem.hpp"
 #include "Components/ComponentInhabitant.hpp"
+#include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
 #include "ECS/World.hpp"
@@ -97,6 +98,7 @@ void RenderSystem::render(World& w) {
     _renderResources(w);
     _renderInhabitants(w);
     _renderEggs(w);
+    _renderParticles(w);
 
     // Hardware Instancing Rendering Phase
     // Iterate through batches of grouped models and pass their accumulated
@@ -472,6 +474,81 @@ void RenderSystem::_renderEggs(World& w) {
                         eggModel.transform);
         }
     }
+}
+
+void RenderSystem::_renderParticles(World& w) {
+    auto emitterStorage = w.get_storage<ComponentParticleEmitter>();
+    if (!emitterStorage) {
+        return;
+    }
+
+    ::rlBegin(RL_QUADS);
+
+    for (auto const& [entity, emitterPtr] : *emitterStorage) {
+        for (const auto& p : emitterPtr->particles) {
+            float lifePct = 1.0f - (p.lifeRemaining / p.lifetime);
+            if (lifePct < 0.0f) {
+                lifePct = 0.0f;
+            }
+            if (lifePct > 1.0f) {
+                lifePct = 1.0f;
+            }
+
+            unsigned char r =
+                (unsigned char)(p.startColor.r + (p.endColor.r - p.startColor.r) * lifePct);
+            unsigned char g =
+                (unsigned char)(p.startColor.g + (p.endColor.g - p.startColor.g) * lifePct);
+            unsigned char b =
+                (unsigned char)(p.startColor.b + (p.endColor.b - p.startColor.b) * lifePct);
+            unsigned char a =
+                (unsigned char)(p.startColor.a + (p.endColor.a - p.startColor.a) * lifePct);
+
+            float s = (p.startSize + (p.endSize - p.startSize) * lifePct) / 2.0f;
+            float x = p.position.x;
+            float y = p.position.y;
+            float z = p.position.z;
+
+            ::rlColor4ub(r, g, b, a);
+
+            // Front
+            ::rlVertex3f(x - s, y - s, z + s);
+            ::rlVertex3f(x + s, y - s, z + s);
+            ::rlVertex3f(x + s, y + s, z + s);
+            ::rlVertex3f(x - s, y + s, z + s);
+
+            // Back
+            ::rlVertex3f(x - s, y - s, z - s);
+            ::rlVertex3f(x - s, y + s, z - s);
+            ::rlVertex3f(x + s, y + s, z - s);
+            ::rlVertex3f(x + s, y - s, z - s);
+
+            // Top
+            ::rlVertex3f(x - s, y + s, z - s);
+            ::rlVertex3f(x - s, y + s, z + s);
+            ::rlVertex3f(x + s, y + s, z + s);
+            ::rlVertex3f(x + s, y + s, z - s);
+
+            // Bottom
+            ::rlVertex3f(x - s, y - s, z - s);
+            ::rlVertex3f(x + s, y - s, z - s);
+            ::rlVertex3f(x + s, y - s, z + s);
+            ::rlVertex3f(x - s, y - s, z + s);
+
+            // Right
+            ::rlVertex3f(x + s, y - s, z - s);
+            ::rlVertex3f(x + s, y + s, z - s);
+            ::rlVertex3f(x + s, y + s, z + s);
+            ::rlVertex3f(x + s, y - s, z + s);
+
+            // Left
+            ::rlVertex3f(x - s, y - s, z - s);
+            ::rlVertex3f(x - s, y - s, z + s);
+            ::rlVertex3f(x - s, y + s, z + s);
+            ::rlVertex3f(x - s, y + s, z - s);
+        }
+    }
+
+    ::rlEnd();
 }
 
 void RenderSystem::_renderInhabitants(World& w) {
