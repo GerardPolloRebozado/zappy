@@ -15,9 +15,11 @@
 #include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
+#include "Components/FollowingEntity.hpp"
 #include "ECS/World.hpp"
 #include "Graphics/TileTextures.hpp"
 #include "Graphics/VoxelBatcher.hpp"
+#include "raylib.h"
 
 #include <algorithm>
 #include <cmath>
@@ -98,6 +100,7 @@ void RenderSystem::render(World& w) {
     _renderResources(w);
     _renderInhabitants(w);
     _renderEggs(w);
+    _renderPOV(w);
     _renderParticles(w);
 
     // Hardware Instancing Rendering Phase
@@ -884,6 +887,45 @@ void RenderSystem::_renderDebugHud(World& w) {
 
     auto eggStorage = w.get_storage<Egg>();
     drawText("Eggs on Map: " + std::to_string(eggStorage ? eggStorage->size() : 0));
+}
+
+void RenderSystem::_renderPOV(World& w) {
+    auto followingEntity = w.get_storage<FollowingEntity>();
+    if (!followingEntity || followingEntity->size() == 0) {
+        return;
+    }
+
+    if (raylib::Keyboard::IsKeyDown(KEY_W) && raylib::Keyboard::IsKeyDown(KEY_A) &&
+        raylib::Keyboard::IsKeyDown(KEY_S) && raylib::Keyboard::IsKeyDown(KEY_D)) {
+        followingEntity->clear();
+    }
+    auto entity = followingEntity->begin()->first;
+    auto pos = w.get_component<Position>(entity);
+    auto orientation = w.get_component<Orientation>(entity);
+    if (!pos || !orientation) {
+        return;
+    }
+
+    Vector3 headPos = {static_cast<float>(pos->x), 3.0f, static_cast<float>(pos->y)};
+    Vector3 lookDir = {0.0f, 0.0f, 0.0f};
+
+    switch (orientation->current_direction) {
+        case Orientation::N:
+            lookDir = {0.0f, 0.0f, -1.0f};
+            break;
+        case Orientation::E:
+            lookDir = {1.0f, 0.0f, 0.0f};
+            break;
+        case Orientation::S:
+            lookDir = {0.0f, 0.0f, 1.0f};
+            break;
+        case Orientation::W:
+            lookDir = {-1.0f, 0.0f, 0.0f};
+            break;
+    }
+
+    _camera.position = headPos;
+    _camera.target = Vector3Add(headPos, lookDir);
 }
 
 } // namespace zappy

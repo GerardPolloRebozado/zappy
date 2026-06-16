@@ -12,7 +12,7 @@ namespace zappy {
 
 UIInput::UIInput(raylib::Rectangle bounds, const std::string& initialText,
                  const std::string& placeholder, size_t maxLength, int zIndex)
-    : AUIComponent(bounds, zIndex), _text(initialText), _placeholder(placeholder),
+    : AUIComponent(bounds, nullptr, zIndex), _text(initialText), _placeholder(placeholder),
       _maxLength(maxLength), _isFocused(false), _normalColor(raylib::Color(25, 30, 50, 255)),
       _focusedColor(raylib::Color(35, 45, 75, 255)), _textColor(raylib::Color::RayWhite()),
       _placeholderColor(raylib::Color::Gray()) {}

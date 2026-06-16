@@ -9,12 +9,13 @@
 #define ZAPPY_AUICOMPONENT_HPP
 
 #include "IUIComponent.hpp"
+#include <functional>
 
 namespace zappy {
 
 class AUIComponent : public IUIComponent {
   public:
-    AUIComponent(raylib::Rectangle bounds, int zIndex = 0);
+    AUIComponent(raylib::Rectangle bounds, std::function<void()> onClick = nullptr, int zIndex = 0);
     virtual ~AUIComponent() = default;
 
     virtual void update(float dt, raylib::Vector2 mousePos,
@@ -34,6 +35,9 @@ class AUIComponent : public IUIComponent {
     raylib::Rectangle _bounds;
     int _zIndex;
     bool _isVisible;
+    std::function<void()> _onClick;
+    bool _isHovered;
+    bool _isPressed;
 };
 
 } // namespace zappy
