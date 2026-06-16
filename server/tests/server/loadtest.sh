@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Arguments
 HOST=${1:-127.0.0.1}
 PORT=${2:-8080}
 TEAM=${3:-team1}
