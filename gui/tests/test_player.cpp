@@ -129,7 +129,6 @@ static void setupMap(World& world, int width, int height) {
     world.add_component<Size>(mapEntity, Size{width, height});
     world.add_component<MapTag>(mapEntity, MapTag{});
 }
-
 Test(CommandPlayerExpulsionTest, FactoryCreatesPex) {
     auto cmd = FactoryCommands::createCommand("pex");
     cr_assert_not_null(cmd.get());
@@ -151,7 +150,7 @@ Test(CommandPlayerExpulsionTest, EjectEast) {
     world.add_component<Orientation>(ejector, Orientation{Orientation::E});
 
     CommandPlayerExpulsion cmd;
-    cmd.execute("#1", world);
+    cmd.execute("2", world);
 
     auto pos = world.get_component<Position>(victim);
     cr_assert_not_null(pos.get());
@@ -175,7 +174,7 @@ Test(CommandPlayerExpulsionTest, EjectNorthWithWrap) {
     world.add_component<Orientation>(ejector, Orientation{Orientation::N});
 
     CommandPlayerExpulsion cmd;
-    cmd.execute("10", world);
+    cmd.execute("11", world);
 
     auto pos = world.get_component<Position>(victim);
     cr_assert_not_null(pos.get());
@@ -187,15 +186,16 @@ Test(CommandPlayerExpulsionTest, NoCoTileInhabitant) {
     World world;
     setupMap(world, 10, 10);
 
-    Entity victim = world.spawn();
-    world.add_component<ServerId>(victim, ServerId{20});
-    world.add_component<Position>(victim, Position{7, 7});
-    world.add_component<InhabitantTag>(victim, InhabitantTag{});
+    Entity alonePlayer = world.spawn();
+    world.add_component<ServerId>(alonePlayer, ServerId{20});
+    world.add_component<Position>(alonePlayer, Position{7, 7});
+    world.add_component<InhabitantTag>(alonePlayer, InhabitantTag{});
+    world.add_component<Orientation>(alonePlayer, Orientation{Orientation::S});
 
     CommandPlayerExpulsion cmd;
-    cmd.execute("#20", world);
+    cmd.execute("20", world);
 
-    auto pos = world.get_component<Position>(victim);
+    auto pos = world.get_component<Position>(alonePlayer);
     cr_assert_not_null(pos.get());
     cr_assert_eq(pos->x, 7);
     cr_assert_eq(pos->y, 7);
