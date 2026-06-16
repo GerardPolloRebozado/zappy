@@ -326,19 +326,19 @@ void Core::_setupGameUI() {
     _uiManager->addComponent(
         std::make_shared<UIScoreboardPanel>(raylib::Rectangle{10, 50, 240, 400}, _world, 10));
 
-        // Right Tile HUD
-    _uiManager.addComponent(std::make_shared<UIHudPanel>(
+    // Right Tile HUD
+    _uiManager->addComponent(std::make_shared<UIHudPanel>(
         raylib::Rectangle{(float)_window->GetWidth() - 220, 50, 200, 400}, _world, _renderSystem,
         nullptr, 10));
 
     // Time frequency slider
-    _uiManager.addComponent(
+    _uiManager->addComponent(
         std::make_shared<UISlider>(raylib::Rectangle{(float)_window->GetWidth() - 270,
                                                      (float)_window->GetHeight() - 60, 250, 40},
                                    _world, _network, 10));
 }
 
-void Core::_setupTestingData() {  
+void Core::_setupTestingData() {
     return;
     // Hardcoded testing data
     for (int x = 0; x < 10; ++x) {

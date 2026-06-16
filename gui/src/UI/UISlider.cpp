@@ -15,7 +15,7 @@
 namespace zappy {
 
 UISlider::UISlider(raylib::Rectangle bounds, World& world, NetworkManager& network, int zIndex)
-    : AUIComponent(bounds, zIndex), _world(world), _network(network), _isDragging(false),
+    : AUIComponent(bounds, nullptr, zIndex), _world(world), _network(network), _isDragging(false),
       _pendingUpdate(false), _sliderValue(100.0f) {}
 
 /**
@@ -112,7 +112,6 @@ void UISlider::render() {
     raylib::Rectangle fillRect{_bounds.x, _bounds.y, fillWidth, _bounds.height};
     fillRect.Draw(raylib::Color(0, 150, 255, 200));
 
-    // Border
     _bounds.DrawLines(raylib::Color(200, 200, 200, 150), 2.0f);
 
     // Centered label showing current frequency
