@@ -18,6 +18,7 @@
 #include "UI/UIInput.hpp"
 #include "UI/UIPanel.hpp"
 #include "UI/UIScoreboardPanel.hpp"
+#include "UI/UISlider.hpp"
 #include "UI/UIText.hpp"
 #include "errors/IError.hpp"
 
@@ -325,6 +326,12 @@ void Core::_setupGameUI() {
     _uiManager.addComponent(std::make_shared<UIHudPanel>(
         raylib::Rectangle{(float)_window->GetWidth() - 220, 50, 200, 400}, _world, _renderSystem,
         10));
+
+    // Time frequency slider
+    _uiManager.addComponent(
+        std::make_shared<UISlider>(raylib::Rectangle{(float)_window->GetWidth() - 270,
+                                                     (float)_window->GetHeight() - 60, 250, 40},
+                                   _world, _network, 10));
 }
 
 void Core::_setupTestingData() {
