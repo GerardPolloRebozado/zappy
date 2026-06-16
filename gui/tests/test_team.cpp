@@ -24,7 +24,7 @@ Test(CommandTeamNamesTest, AddNewTeam) {
 
     bool found = false;
     for (auto const& [ent, name] : *storage) {
-        if (name->team_name == "Team1") {
+        if (name->_team_name == "Team1") {
             found = true;
             cr_assert(world.get_component<TeamTag>(ent) != nullptr);
         }
@@ -42,7 +42,7 @@ Test(CommandTeamNamesTest, DoNotAddDuplicateTeam) {
     auto storage = world.get_storage<TeamName>();
     int count = 0;
     for (auto const& [ent, name] : *storage) {
-        if (name->team_name == "Team1") {
+        if (name->_team_name == "Team1") {
             count++;
         }
     }
@@ -58,7 +58,7 @@ Test(CommandTeamNamesTest, TrimWhitespace) {
     auto storage = world.get_storage<TeamName>();
     bool found = false;
     for (auto const& [ent, name] : *storage) {
-        if (name->team_name == "TeamWhitespace") {
+        if (name->_team_name == "TeamWhitespace") {
             found = true;
         }
     }

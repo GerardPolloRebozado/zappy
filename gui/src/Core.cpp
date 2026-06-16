@@ -6,6 +6,7 @@
 */
 
 #include "Core.hpp"
+#include "Color.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
@@ -346,13 +347,13 @@ void Core::_setupTestingData() {
     _world.add_component(p1, Position{2, 2});
     _world.add_component(p1, Orientation{Orientation::N});
     _world.add_component(p1, Level{1});
-    _world.add_component(p1, TeamName{"Team Alpha"});
+    _world.add_component(p1, TeamName{"Team Alpha", raylib::Color::Black()});
 
     auto p2 = _world.spawn();
     _world.add_component(p2, Position{5, 5});
     _world.add_component(p2, Orientation{Orientation::E});
     _world.add_component(p2, Level{4});
-    _world.add_component(p2, TeamName{"Team Beta"});
+    _world.add_component(p2, TeamName{"Team Beta", raylib::Color::Red()});
 }
 
 } // namespace zappy

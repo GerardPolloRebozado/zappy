@@ -152,7 +152,7 @@ void UIHudPanel::render() {
                     .Draw(_bounds.x + 20, (float)yOffset);
                 yOffset += 18;
                 if (team) {
-                    raylib::Text(team->team_name, 14, RAYWHITE,
+                    raylib::Text(team->_team_name, 14, RAYWHITE,
                                  AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
                         .Draw(_bounds.x + 35, (float)yOffset);
                     yOffset += 16;

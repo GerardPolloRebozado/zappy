@@ -11,6 +11,7 @@
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
 #include "Components/FollowingEntity.hpp"
+#include "Core.hpp"
 #include "ECS/Entity.hpp"
 #include "Graphics/AssetManager.hpp"
 #include "Text.hpp"
@@ -52,6 +53,7 @@ void UIScoreboardPanel::render() {
     struct TeamInfo {
         int maxLevel = 1;
         std::vector<std::pair<Entity, std::string>> players;
+        raylib::Color color;
     };
     std::map<std::string, TeamInfo> teamData;
 
@@ -66,12 +68,19 @@ void UIScoreboardPanel::render() {
             if (levelComp) {
                 lvl = levelComp->level;
             }
+            if (!teamData.contains(team->_team_name)) {
+                teamData[team->_team_name] = TeamInfo{
+                    .maxLevel = 0,
+                    .color = team->_color,
+                };
+            }
 
-            teamData[team->team_name].maxLevel = std::max(teamData[team->team_name].maxLevel, lvl);
+            teamData[team->_team_name].maxLevel =
+                std::max(teamData[team->_team_name].maxLevel, lvl);
             auto serverId = _world.get_component<ServerId>(entity);
             std::string idStr =
                 serverId ? std::to_string(serverId->id) : std::to_string(entity.id());
-            teamData[team->team_name].players.push_back(
+            teamData[team->_team_name].players.push_back(
                 std::make_pair(entity, "P" + idStr + "(Lvl " + std::to_string(lvl) + ")"));
         }
     }
@@ -112,15 +121,6 @@ void UIScoreboardPanel::render() {
         return a.second.players.size() > b.second.players.size();
     });
 
-    std::vector<raylib::Color> rowColors = {
-        raylib::Color(230, 60, 60, 60),  // Soft Red
-        raylib::Color(60, 230, 60, 60),  // Soft Green
-        raylib::Color(60, 100, 230, 60), // Soft Blue
-        raylib::Color(230, 230, 60, 60), // Soft Yellow
-        raylib::Color(230, 60, 230, 60), // Soft Magenta
-        raylib::Color(60, 230, 230, 60)  // Soft Cyan
-    };
-
     int colorIndex = 0;
     for (const auto& [teamName, info] : sortedTeams) {
         float blockHeight = 30 + (info.players.size() * 25);
@@ -132,10 +132,9 @@ void UIScoreboardPanel::render() {
             break;
         }
 
-        raylib::Color rowBg = rowColors[colorIndex % rowColors.size()];
         raylib::Rectangle rowRect = {panelBounds.x + 10, yOffset - 5, panelBounds.width - 20,
                                      blockHeight};
-        rowRect.Draw(rowBg);
+        rowRect.Draw(info.color);
 
         raylib::Text(teamName, 18, raylib::Color::RayWhite(),
                      AssetManager::getInstance().getFont("BoldPixels"), 1.5f)

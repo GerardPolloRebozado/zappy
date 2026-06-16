@@ -102,7 +102,7 @@ Test(CommandPlayerConnectionTest, ValidNewPlayer) {
             cr_assert_eq(pos->y, 20);
             cr_assert_not_null(world.get_component<InhabitantTag>(ent));
             cr_assert_eq(world.get_component<Level>(ent)->level, 1);
-            cr_assert_eq(world.get_component<TeamName>(ent)->team_name, "TeamTest");
+            cr_assert_eq(world.get_component<TeamName>(ent)->_team_name, "TeamTest");
             found = true;
             break;
         }
