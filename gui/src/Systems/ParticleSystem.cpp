@@ -43,8 +43,17 @@ void ParticleSystem::update(World& w, float dt) {
                         raylib::Vector3(randf(emitter.minVelocity.x, emitter.maxVelocity.x),
                                         randf(emitter.minVelocity.y, emitter.maxVelocity.y),
                                         randf(emitter.minVelocity.z, emitter.maxVelocity.z));
-                    p.startColor = emitter.startColor;
-                    p.endColor = emitter.endColor;
+
+                    if (!emitter.colorPalette.empty()) {
+                        int colorIdx = rand() % emitter.colorPalette.size();
+                        p.startColor = emitter.colorPalette[colorIdx];
+                        p.endColor = p.startColor;
+                        p.endColor.a = 0; // Fade to transparent
+                    } else {
+                        p.startColor = emitter.startColor;
+                        p.endColor = emitter.endColor;
+                    }
+
                     p.startSize = randf(emitter.minSize, emitter.maxSize);
                     p.endSize = p.startSize * randf(0.1f, 0.5f); // end smaller by default
                     p.lifetime = randf(emitter.minLifetime, emitter.maxLifetime);
