@@ -11,13 +11,17 @@
  */
 
 #include "Systems/RenderSystem.hpp"
+#include "Color.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
+#include "Components/FollowingEntity.hpp"
+#include "Core.hpp"
 #include "ECS/World.hpp"
 #include "Graphics/TileTextures.hpp"
 #include "Graphics/VoxelBatcher.hpp"
+#include "raylib.h"
 
 #include <algorithm>
 #include <cmath>
@@ -98,6 +102,7 @@ void RenderSystem::render(World& w) {
     _renderResources(w);
     _renderInhabitants(w);
     _renderEggs(w);
+    _renderPOV(w);
     _renderParticles(w);
 
     // Hardware Instancing Rendering Phase
@@ -614,7 +619,7 @@ void RenderSystem::_renderInhabitants(World& w) {
     auto teamStorage = w.get_storage<TeamName>();
     if (teamStorage) {
         for (auto const& [e, t] : *teamStorage) {
-            teamNames.insert(t->team_name);
+            teamNames.insert(t->_team_name);
         }
     }
 
@@ -644,28 +649,20 @@ void RenderSystem::_renderInhabitants(World& w) {
             raylib::Vector3 vpos((float)pos->x - centerOffset.x, 2.01f - centerOffset.y,
                                  (float)pos->y - centerOffset.z);
 
-            addInstance("robot", vpos, {0, 1, 0}, rotation, {scale, scale, scale}, WHITE,
-                        robot.transform);
-
             auto team = w.get_component<TeamName>(entity);
             if (team) {
                 int colorIndex = 0;
                 for (const auto& tn : teamNames) {
-                    if (tn == team->team_name) {
+                    if (tn == team->_team_name) {
                         break;
                     }
                     colorIndex++;
                 }
 
-                std::vector<raylib::Color> teamColors = {
-                    raylib::Color(230, 60, 60, 255),  // Red
-                    raylib::Color(60, 230, 60, 255),  // Green
-                    raylib::Color(60, 100, 230, 255), // Blue
-                    raylib::Color(230, 230, 60, 255), // Yellow
-                    raylib::Color(230, 60, 230, 255), // Magenta
-                    raylib::Color(60, 230, 230, 255)  // Cyan
-                };
-                raylib::Color tColor = teamColors[colorIndex % teamColors.size()];
+                raylib::Color tColor = team->_color;
+
+                addInstance("robot", vpos, {0, 1, 0}, rotation, {scale, scale, scale}, tColor,
+                            robot.transform);
 
                 float wH = 0.12f; // Thicker height
                 float wT = 0.12f; // Thicker width
@@ -884,6 +881,45 @@ void RenderSystem::_renderDebugHud(World& w) {
 
     auto eggStorage = w.get_storage<Egg>();
     drawText("Eggs on Map: " + std::to_string(eggStorage ? eggStorage->size() : 0));
+}
+
+void RenderSystem::_renderPOV(World& w) {
+    auto followingEntity = w.get_storage<FollowingEntity>();
+    if (!followingEntity || followingEntity->size() == 0) {
+        return;
+    }
+
+    if (raylib::Keyboard::IsKeyDown(KEY_W) && raylib::Keyboard::IsKeyDown(KEY_A) &&
+        raylib::Keyboard::IsKeyDown(KEY_S) && raylib::Keyboard::IsKeyDown(KEY_D)) {
+        followingEntity->clear();
+    }
+    auto entity = followingEntity->begin()->first;
+    auto pos = w.get_component<Position>(entity);
+    auto orientation = w.get_component<Orientation>(entity);
+    if (!pos || !orientation) {
+        return;
+    }
+
+    Vector3 headPos = {static_cast<float>(pos->x), 3.0f, static_cast<float>(pos->y)};
+    Vector3 lookDir = {0.0f, 0.0f, 0.0f};
+
+    switch (orientation->current_direction) {
+        case Orientation::N:
+            lookDir = {0.0f, 0.0f, -1.0f};
+            break;
+        case Orientation::E:
+            lookDir = {1.0f, 0.0f, 0.0f};
+            break;
+        case Orientation::S:
+            lookDir = {0.0f, 0.0f, 1.0f};
+            break;
+        case Orientation::W:
+            lookDir = {-1.0f, 0.0f, 0.0f};
+            break;
+    }
+
+    _camera.position = headPos;
+    _camera.target = Vector3Add(headPos, lookDir);
 }
 
 } // namespace zappy

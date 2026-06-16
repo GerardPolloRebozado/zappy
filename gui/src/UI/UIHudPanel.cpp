@@ -17,8 +17,8 @@
 namespace zappy {
 
 UIHudPanel::UIHudPanel(raylib::Rectangle bounds, World& world, const RenderSystem& renderSystem,
-                       int zIndex)
-    : AUIComponent(bounds, zIndex), _world(world), _renderSystem(renderSystem) {}
+                       std::function<void()> onClick, int zIndex)
+    : AUIComponent(bounds, onClick, zIndex), _world(world), _renderSystem(renderSystem) {}
 
 void UIHudPanel::render() {
     auto [selX, selZ] = _renderSystem.getSelectedTile();
@@ -152,7 +152,7 @@ void UIHudPanel::render() {
                     .Draw(_bounds.x + 20, (float)yOffset);
                 yOffset += 18;
                 if (team) {
-                    raylib::Text(team->team_name, 14, RAYWHITE,
+                    raylib::Text(team->_team_name, 14, RAYWHITE,
                                  AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
                         .Draw(_bounds.x + 35, (float)yOffset);
                     yOffset += 16;

@@ -6,18 +6,30 @@
 */
 
 #include "UI/UIScoreboardPanel.hpp"
+#include "Color.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
+#include "Components/ComponentTags.hpp"
+#include "Components/FollowingEntity.hpp"
+#include "Core.hpp"
+#include "ECS/Entity.hpp"
 #include "Graphics/AssetManager.hpp"
+#include "Text.hpp"
+#include "UI/UIManager.hpp"
+#include "UI/UIText.hpp"
+#include "raylib.h"
 #include <algorithm>
+#include <iostream>
 #include <map>
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace zappy {
 
 UIScoreboardPanel::UIScoreboardPanel(raylib::Rectangle bounds, World& world, int zIndex)
-    : AUIComponent(bounds, zIndex), _world(world) {}
+    : AUIComponent(bounds, nullptr, zIndex), _world(world) {}
 
 void UIScoreboardPanel::render() {
     if (!raylib::Keyboard::IsKeyDown(KEY_TAB)) {
@@ -40,25 +52,36 @@ void UIScoreboardPanel::render() {
 
     struct TeamInfo {
         int maxLevel = 1;
-        std::vector<std::string> players;
+        std::vector<std::pair<Entity, std::string>> players;
+        raylib::Color color;
     };
     std::map<std::string, TeamInfo> teamData;
 
     auto teamStorage = _world.get_storage<TeamName>();
     if (teamStorage) {
         for (auto const& [entity, team] : *teamStorage) {
+            if (!_world.get_component<InhabitantTag>(entity)) {
+                continue;
+            }
             int lvl = 1;
             auto levelComp = _world.get_component<Level>(entity);
             if (levelComp) {
                 lvl = levelComp->level;
             }
+            if (!teamData.contains(team->_team_name)) {
+                teamData[team->_team_name] = TeamInfo{
+                    .maxLevel = 0,
+                    .color = team->_color,
+                };
+            }
 
-            teamData[team->team_name].maxLevel = std::max(teamData[team->team_name].maxLevel, lvl);
+            teamData[team->_team_name].maxLevel =
+                std::max(teamData[team->_team_name].maxLevel, lvl);
             auto serverId = _world.get_component<ServerId>(entity);
             std::string idStr =
                 serverId ? std::to_string(serverId->id) : std::to_string(entity.id());
-            teamData[team->team_name].players.push_back("P" + idStr + "(Lvl " +
-                                                        std::to_string(lvl) + ")");
+            teamData[team->_team_name].players.push_back(
+                std::make_pair(entity, "P" + idStr + "(Lvl " + std::to_string(lvl) + ")"));
         }
     }
 
@@ -98,15 +121,6 @@ void UIScoreboardPanel::render() {
         return a.second.players.size() > b.second.players.size();
     });
 
-    std::vector<raylib::Color> rowColors = {
-        raylib::Color(230, 60, 60, 60),  // Soft Red
-        raylib::Color(60, 230, 60, 60),  // Soft Green
-        raylib::Color(60, 100, 230, 60), // Soft Blue
-        raylib::Color(230, 230, 60, 60), // Soft Yellow
-        raylib::Color(230, 60, 230, 60), // Soft Magenta
-        raylib::Color(60, 230, 230, 60)  // Soft Cyan
-    };
-
     int colorIndex = 0;
     for (const auto& [teamName, info] : sortedTeams) {
         float blockHeight = 30 + (info.players.size() * 25);
@@ -118,14 +132,14 @@ void UIScoreboardPanel::render() {
             break;
         }
 
-        raylib::Color rowBg = rowColors[colorIndex % rowColors.size()];
         raylib::Rectangle rowRect = {panelBounds.x + 10, yOffset - 5, panelBounds.width - 20,
                                      blockHeight};
-        rowRect.Draw(rowBg);
+        rowRect.Draw(info.color);
 
         raylib::Text(teamName, 18, raylib::Color::RayWhite(),
                      AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
             .Draw(col1, yOffset);
+
         raylib::Text(std::to_string(info.players.size()), 18, raylib::Color::RayWhite(),
                      AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
             .Draw(col2, yOffset);
@@ -135,7 +149,9 @@ void UIScoreboardPanel::render() {
 
         yOffset += 30;
 
-        for (const auto& p : info.players) {
+        raylib::Vector2 mousePos = raylib::Mouse::GetPosition();
+
+        for (const auto& [entity, p] : info.players) {
             if (yOffset > panelBounds.y + panelBounds.height - 40) {
                 raylib::Text("  ... (more players)", 16, GRAY,
                              AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
@@ -143,9 +159,22 @@ void UIScoreboardPanel::render() {
                 yOffset += 25;
                 break;
             }
-            raylib::Text("  - " + p, 16, raylib::Color::LightGray(),
-                         AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
-                .Draw(col1 + 30, yOffset);
+            raylib::Text player("  - " + p, 16, raylib::Color::LightGray(),
+                                AssetManager::getInstance().getFont("BoldPixels"), 1.5f);
+            player.Draw(col1 + 30, yOffset);
+            Rectangle rec(col1, yOffset, width - 30, 20);
+            if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT) && mousePos.CheckCollision(rec)) {
+                FollowingEntity followingEntity = {
+                    .entity = entity,
+                };
+
+                auto storage = _world.get_storage<FollowingEntity>();
+                if (storage) {
+                    storage->clear();
+                }
+
+                _world.add_component<FollowingEntity>(entity, followingEntity);
+            }
             yOffset += 25;
         }
 

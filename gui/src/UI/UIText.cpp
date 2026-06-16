@@ -11,8 +11,8 @@
 namespace zappy {
 
 UIText::UIText(raylib::Rectangle bounds, const std::string& text, int fontSize, raylib::Color color,
-               int zIndex, float spacing)
-    : AUIComponent(bounds, zIndex), _text(text), _fontSize(fontSize), _color(color),
+               int zIndex, float spacing, std::function<void()> onClick)
+    : AUIComponent(bounds, onClick, zIndex), _text(text), _fontSize(fontSize), _color(color),
       _spacing(spacing) {}
 
 void UIText::render() {

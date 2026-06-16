@@ -1,4 +1,6 @@
 import unittest
+import os
+from training.training_env import ZappyEnv
 from training.training_env.ZappyEnv import ZappyEnv
 
 
