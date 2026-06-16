@@ -20,9 +20,12 @@ class CommandTimeUpdate : public ACommand {
     ~CommandTimeUpdate() override = default;
 
     /**
-     * @brief Handles the "sgt" and "sst" commands.
-     * @param args The arguments for the command: "T"
-     * @param world The ECS World containing the application state
+     * @brief Handles server responses for "sgt" (get time unit) and "sst" (set time unit).
+     *
+     * Both commands share the same response format: a single integer T representing
+     * the server frequency. Updates or creates the TimeUnit component in the ECS world.
+     * @param args The arguments for the command: "T" where T is the frequency value.
+     * @param world The ECS World containing the application state.
      */
     void execute(const std::string& args, World& world) override {
         std::istringstream iss(args);

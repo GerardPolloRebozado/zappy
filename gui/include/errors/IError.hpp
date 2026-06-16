@@ -19,12 +19,7 @@ namespace zappy {
  * @enum error_severity_e
  * @brief Severity level attached to a GUI error.
  */
-enum class error_severity_e {
-    LOW,
-    MODERATE,
-    CRITICAL,
-    FATAL
-};
+enum class error_severity_e { LOW, MODERATE, CRITICAL, FATAL };
 
 /**
  * @class IError

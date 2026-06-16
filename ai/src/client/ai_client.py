@@ -90,7 +90,7 @@ class ZappyAiClient:
                         logger.info(f"Event: {s}")
                     except (ValueError, IndexError):
                         logger.warning(f"Failed to parse level up message: {s}")
-                    continue
+                    return s
                 case _:
                     return line
 
@@ -193,11 +193,15 @@ class ZappyAiClient:
 
     def incantation(self):
         """
-        Calls command incantation, if the incantation starts updates the level of the player
-        :return: When the incantation is underway -> Elevation underway / ko
+        Calls command incantation, waits for completion if it starts.
+        :return: Current level: X / ko
         """
         commands.incantation(self)
-        return self.wait_for_response()
+        first_resp = self.wait_for_response()
+        if first_resp == "Elevation underway":
+            final_resp = self.wait_for_response()
+            return final_resp
+        return first_resp
 
     def close(self):
         self.connection.close()

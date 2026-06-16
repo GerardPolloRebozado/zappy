@@ -3,9 +3,10 @@ import sys
 import os
 
 # Add the project root to the python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.utils import parse_broadcast
+
 
 class TestBroadcastParsing(unittest.TestCase):
     def test_parse_broadcast_success(self):
@@ -22,5 +23,6 @@ class TestBroadcastParsing(unittest.TestCase):
         self.assertIsNone(parse_broadcast("invalid message"))
         self.assertIsNone(parse_broadcast("message K, text"))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

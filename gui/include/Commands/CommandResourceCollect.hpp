@@ -33,7 +33,7 @@ class CommandResourceCollect : public AResourceCommand {
         updateTileInventory(playerPos, resourceId, -1, world);
 
         log_info("Protocol: Player #" + std::to_string(playerId) + " collected resource " +
-                    std::to_string(resourceId));
+                 std::to_string(resourceId));
     }
 };
 } // namespace zappy
