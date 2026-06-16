@@ -103,6 +103,7 @@ class RenderSystem {
      */
     void _renderTerrain(World& w);
     void _renderEggs(World& w);
+    void _renderParticles(World& w);
 
     /**
      * @brief Renders the inhabitants in the world.

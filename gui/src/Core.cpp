@@ -85,6 +85,7 @@ void Core::_update() {
         _network.update(_world);
         if (_network.isConnected()) {
             _renderSystem.update(_world, dt);
+            _particleSystem.update(_world, dt);
         } else {
             // Server disconnected, go back to menu
             _appState = AppState::MENU;
