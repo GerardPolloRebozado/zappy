@@ -26,7 +26,6 @@ class TestIncantation(unittest.TestCase):
         self.mock_connection.receive_line.side_effect = [
             "Elevation underway",
             "Current level: 2",
-            "ok",
         ]
 
         result = self.client.incantation()
@@ -34,13 +33,8 @@ class TestIncantation(unittest.TestCase):
         # Verify the command sent
         self.mock_connection.send_line.assert_called_with("Incantation")
 
-        # New behavior: returns "Elevation underway" immediately
-        self.assertEqual(result, "Elevation underway")
-        self.assertEqual(self.client.level, 1)  # Not updated yet
-
-        # Next wait_for_response (e.g. from another command) handles the level up
-        result2 = self.client.wait_for_response()
-        self.assertEqual(result2, "ok")
+        # Updated behavior: returns the final result immediately and updates the level
+        self.assertEqual(result, "Current level: 2")
         self.assertEqual(self.client.level, 2)
 
     def test_incantation_failure(self):
@@ -62,12 +56,8 @@ class TestIncantation(unittest.TestCase):
 
         result = self.client.incantation()
 
-        # Returns immediately after "Elevation underway"
-        self.assertEqual(result, "Elevation underway")
-
-        # The subsequent "ko" will be returned by the next wait_for_response
-        result2 = self.client.wait_for_response()
-        self.assertEqual(result2, "ko")
+        # Updated behavior: waits for the final "ko" and returns it
+        self.assertEqual(result, "ko")
         self.assertEqual(self.client.level, 1)
 
 

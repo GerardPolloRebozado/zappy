@@ -1,9 +1,17 @@
 use env_logger::Builder;
 use log::LevelFilter;
 use std::io;
-use zappy_server::server::Server;
-use zappy_server::utils::constants::ERROR_EXIT_CODE;
-use zappy_server::utils::parse_server_args;
+
+use crate::{
+    server::Server,
+    utils::{constants::ERROR_EXIT_CODE, parse_server_args},
+};
+
+pub mod commands;
+pub mod ecs;
+pub mod protocol;
+pub mod server;
+pub mod utils;
 
 fn main() -> io::Result<()> {
     Builder::from_default_env()

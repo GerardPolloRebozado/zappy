@@ -17,8 +17,8 @@
 namespace zappy {
 
 UIHudPanel::UIHudPanel(raylib::Rectangle bounds, World& world, const RenderSystem& renderSystem,
-                       int zIndex)
-    : AUIComponent(bounds, zIndex), _world(world), _renderSystem(renderSystem) {}
+                       std::function<void()> onClick, int zIndex)
+    : AUIComponent(bounds, onClick, zIndex), _world(world), _renderSystem(renderSystem) {}
 
 void UIHudPanel::render() {
     auto [selX, selZ] = _renderSystem.getSelectedTile();

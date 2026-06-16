@@ -34,7 +34,7 @@ class CommandIncantationEnd : public ACommand {
         }
 
         log_info("Protocol: Incantation at (" + std::to_string(x) + ", " + std::to_string(y) +
-                    ") ended with result: " + (result ? "Success" : "Failure"));
+                 ") ended with result: " + (result ? "Success" : "Failure"));
     }
 };
 } // namespace zappy

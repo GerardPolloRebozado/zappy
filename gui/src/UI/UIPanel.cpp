@@ -10,7 +10,7 @@
 namespace zappy {
 
 UIPanel::UIPanel(raylib::Rectangle bounds, raylib::Color color, int zIndex)
-    : AUIComponent(bounds, zIndex), _color(color) {}
+    : AUIComponent(bounds, nullptr, zIndex), _color(color) {}
 
 void UIPanel::render() { _bounds.Draw(_color); }
 

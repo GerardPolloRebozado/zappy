@@ -13,6 +13,13 @@ add_custom_target(zappy_ai ALL
     COMMENT "Creating zappy_ai executable and symlink"
 )
 
+add_custom_target(train
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${Python3_EXECUTABLE} training/training_env/train.py
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Starting Zappy AI Training (PPO)..."
+    USES_TERMINAL
+)
+
 # Testing configuration
 option(BUILD_TESTING "Enable tests" ON)
 

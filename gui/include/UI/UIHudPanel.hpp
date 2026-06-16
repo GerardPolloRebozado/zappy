@@ -17,7 +17,7 @@ namespace zappy {
 class UIHudPanel : public AUIComponent {
   public:
     UIHudPanel(raylib::Rectangle bounds, World& world, const RenderSystem& renderSystem,
-               int zIndex = 0);
+               std::function<void()> onClick = nullptr, int zIndex = 0);
     ~UIHudPanel() override = default;
 
     void render() override;

@@ -6,46 +6,20 @@
 */
 
 #include "UI/UIButton.hpp"
+#include "UI/AUIComponent.hpp"
 
 namespace zappy {
 
 UIButton::UIButton(raylib::Rectangle bounds, const std::string& text, std::function<void()> onClick,
                    int zIndex)
-    : AUIComponent(bounds, zIndex), _onClick(onClick), _isHovered(false), _isPressed(false),
-      _normalColor(raylib::Color(0, 80, 200, 255)), _hoverColor(raylib::Color(0, 100, 255, 255)),
-      _pressedColor(raylib::Color(0, 50, 150, 255)) {
+    : AUIComponent(bounds, onClick, zIndex), _normalColor(raylib::Color(0, 80, 200, 255)),
+      _hoverColor(raylib::Color(0, 100, 255, 255)), _pressedColor(raylib::Color(0, 50, 150, 255)) {
     _label = std::make_unique<UIText>(bounds, text, 20, raylib::Color::RayWhite(), zIndex, 1.5f);
 }
 
 void UIButton::update(float dt, raylib::Vector2 mousePos,
                       std::shared_ptr<std::vector<UIEvent>> events) {
-    (void)dt;
-    _isHovered = _bounds.CheckCollision(mousePos);
-
-    for (auto it = events->begin(); it != events->end();) {
-        bool consumed = false;
-
-        if (it->type == UIEventType::MOUSE_PRESSED_LEFT && _isHovered) {
-            _isPressed = true;
-            consumed = true;
-        }
-
-        if (it->type == UIEventType::MOUSE_RELEASED_LEFT) {
-            if (_isPressed) {
-                if (_isHovered && _onClick) {
-                    _onClick();
-                }
-                _isPressed = false;
-                consumed = true;
-            }
-        }
-
-        if (consumed) {
-            it = events->erase(it);
-        } else {
-            ++it;
-        }
-    }
+    AUIComponent::update(dt, mousePos, events);
 }
 
 void UIButton::render() {

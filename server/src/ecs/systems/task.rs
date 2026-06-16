@@ -1,7 +1,7 @@
 //! Timed execution of queued AI player commands.
 //!
-//! Commands accepted by [`crate::server::commands`] are not applied immediately.
-//! [`crate::server::commands::queue_task`] appends a [`Task`] to the inhabitant's
+//! Commands accepted by [`crate::commands`] are not applied immediately.
+//! [`crate::commands::queue_task`] appends a [`crate::ecs::components::task::Task`] to the inhabitant's
 //! [`TaskList`] (FIFO, max 10). Each server tick, [`crate::ecs::systems::run::run_systems`]
 //! calls [`any_finished_task`] to advance those queues.
 //!
@@ -9,8 +9,8 @@
 //!
 //! Only the head of each [`TaskList`] runs at a time. A newly queued task has
 //! [`TASK_NOT_STARTED`]; the next pass sets `finish_on` from [`TaskType::duration`]
-//! and world frequency. When the timer elapses, the task is popped, [`execute_task`]
-//! applies its effect, and the next queued task (if any) starts its timer.
+//! and world frequency. When the timer elapses, the task is popped, its handler runs,
+//! and the next queued task (if any) starts its timer.
 //!
 //! # Responses and side effects
 //!
@@ -19,22 +19,24 @@
 //! emit a [`ServerEvent`] for other clients (`BroadcastText`). [`TaskType::Death`] is
 //! special: it writes `dead` straight to the socket and despawns the entity.
 //!
-//! Per-command logic lives in [`execute_task`]. Data-heavy commands delegate to the
-//! [`inventory`] and [`look`] submodules.
+//! Per-command logic lives in task-specific submodules: [`forward`], [`turn`],
+//! [`look`], [`inventory`], [`broadcast`], [`death`], [`fork`], [`eject`], [`take_set`], and [`incantation`].
 //!
 //! # Broadcast flow
 //!
-//! 1. [`crate::server::commands`] queues [`TaskType::BroadcastText`] with the message text.
-//! 2. When the timer elapses, [`execute_task`] returns `ok` plus a [`ServerEvent::Message`].
+//! 1. [`crate::commands`] queues [`TaskType::BroadcastText`] with the message text.
+//! 2. When the timer elapses, [`broadcast::execute_broadcast`] returns `ok` plus a [`ServerEvent::Message`].
 //! 3. [`any_finished_task`] pushes `ok` to the acting client, then calls
 //!    [`broadcast_event`] so every AI receives `message k, text`
 //!    and the GUI receives `pbc #n text` (see [`ServerEvent::to_ai_string`]).
 //!
 //! # Movement broadcast flow
 //!
-//! 1. [`crate::server::commands`] queues [`TaskType::Forward`], [`TaskType::TurnRight`],
+//! 1. [`crate::commands`] queues [`TaskType::Forward`], [`TaskType::TurnRight`],
 //!    or [`TaskType::TurnLeft`].
-//! 2. When the timer elapses, [`execute_task`] mutates [`Position`] / [`RelativeOrientation`].
+//! 2. When the timer elapses, [`forward::execute_forward`] / [`turn::execute_turn_right`] /
+//!    [`turn::execute_turn_left`] mutate [`crate::ecs::components::position::Position`] /
+//!    [`crate::utils::orientation::RelativeOrientation`].
 //! 3. Returns `ok` plus a [`ServerEvent::PlayerPosition`].
 //! 4. [`broadcast_event`] pushes `ppo #n X Y O` to all GUI clients.
 
@@ -43,33 +45,37 @@ use crate::{
         components::{
             inhabitant::Inhabitant,
             network::NetworkData,
-            position::Position,
             task::{TASK_NOT_STARTED, TaskList, TaskType},
             team::Team,
         },
         storage::{Entity, World},
-        systems::task::{eject::eject, take_set::take_task},
     },
     protocol::{
         Response, ResponseCode,
         ServerEvent::{self},
         StatusCode::{self},
     },
-    utils::{date::Date, orientation::RelativeOrientation},
+    utils::date::Date,
 };
-use log::{debug, info};
+use log::debug;
 
+pub mod broadcast;
+pub mod death;
 pub mod eject;
+pub mod fork;
+pub mod forward;
 pub mod incantation;
 pub mod inventory;
 pub mod look;
 pub mod take_set;
+pub mod turn;
 
 /// Advances queued tasks, applies effects when a timer elapses, starts the next
 /// task's timer, and handles command replies and broadcast events.
 pub fn any_finished_task(world: &mut World) {
     let mut completed: Vec<(Entity, TaskType)> = Vec::new();
     let mut started_incantations: Vec<Entity> = Vec::new();
+    let mut started_forks: Vec<Entity> = Vec::new();
     let freq = world.freq;
 
     {
@@ -90,6 +96,8 @@ pub fn any_finished_task(world: &mut World) {
 
                 if matches!(first_task.task_type, TaskType::Incantation) {
                     started_incantations.push(*entity);
+                } else if matches!(first_task.task_type, TaskType::Fork) {
+                    started_forks.push(*entity);
                 }
                 continue;
             }
@@ -110,6 +118,15 @@ pub fn any_finished_task(world: &mut World) {
     }
 
     incantation::process_started_incantations(world, started_incantations);
+
+    for entity in started_forks {
+        broadcast_event(
+            world,
+            ServerEvent::EggLay {
+                player_id: entity.id(),
+            },
+        );
+    }
 
     for (entity, task_type) in completed {
         let (response, event) = execute_task(world, entity, &task_type);
@@ -179,284 +196,35 @@ pub fn broadcast_event(world: &mut World, event: ServerEvent) {
     }
 }
 
-/// Applies the game effect of a completed task on `entity`.
-///
-/// `Forward` updates [`Position`] from [`RelativeOrientation`] on the same entity.
-/// `TurnRight` / `TurnLeft` rotate that orientation.
-/// `Look` reads the surrounding tiles from the entity's [`Position`], [`RelativeOrientation`],
-/// and [`Level`], and returns a bracket-formatted vision string (data-only response).
-/// `Inventory` reads the entity's [`Inventory`] and returns a bracket-formatted resource count
-/// string (data-only response).
-/// `Death` returns `"dead"` as the response data.
-/// `BroadcastText` produces a [`ServerEvent::Message`] for fan-out.
-/// `Forward` / `TurnRight` / `TurnLeft` produce a [`ServerEvent::PlayerPosition`] for fan-out.
-///
-/// Returns the response for the acting client plus an optional broadcast event.
+/// Dispatches a completed [`TaskType`] to its handler and returns the acting client's
+/// response plus an optional broadcast event.
 fn execute_task(
     world: &mut World,
     entity: Entity,
     task_type: &TaskType,
 ) -> (Response, Option<ServerEvent>) {
-    let ok = Response::new(ResponseCode::Status(StatusCode::Ok), None);
-
     match task_type {
-        TaskType::Forward => {
-            info!("Moving forward entity: {}", entity.id());
-            let map_width = world.map_size.width;
-            let map_height = world.map_size.height;
-            let orientation = world.get_component::<RelativeOrientation>(entity).copied();
-            if let Some(pos) = world.get_component_mut::<Position>(entity)
-                && let Some(ori) = orientation
-            {
-                pos.move_forward(ori, map_width, map_height);
-            }
-            let event =
-                Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
-            (ok, event)
-        }
-        TaskType::TurnRight => {
-            if let Some(ori) = world.get_component_mut::<RelativeOrientation>(entity) {
-                *ori = ori.turn_right();
-            }
-            let event =
-                Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
-            (ok, event)
-        }
-        TaskType::TurnLeft => {
-            if let Some(ori) = world.get_component_mut::<RelativeOrientation>(entity) {
-                *ori = ori.turn_left();
-            }
-            let event =
-                Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
-            (ok, event)
-        }
-        TaskType::Look => (
-            Response::new(
-                ResponseCode::Status(StatusCode::Ok),
-                Some(look::execute_look(world, entity)),
-            ),
-            None,
-        ),
-        TaskType::Inventory => (
-            Response::new(
-                ResponseCode::Status(StatusCode::Ok),
-                Some(inventory::execute_inventory(world, entity)),
-            ),
-            None,
-        ),
-        TaskType::Death => (
-            Response::new(
-                ResponseCode::Status(StatusCode::Ok),
-                Some("dead".to_string()),
-            ),
-            None,
-        ),
-        TaskType::BroadcastText(text) => {
-            // No ECS mutation: only snapshot position for ServerEvent + later calc_k per receiver.
-            let mut event = None;
-            if let Some(broadcaster) = Inhabitant::get(entity, world) {
-                event = Some(ServerEvent::message(&broadcaster, text.as_str()));
-            }
-            (ok, event)
-        }
-        TaskType::Take(resource) => take_task(world, entity, resource),
+        TaskType::Forward => forward::execute_forward(world, entity),
+        TaskType::TurnRight => turn::execute_turn_right(world, entity),
+        TaskType::TurnLeft => turn::execute_turn_left(world, entity),
+        TaskType::Look => look::execute_look(world, entity),
+        TaskType::Inventory => inventory::execute_inventory(world, entity),
+        TaskType::Death => death::execute_death(),
+        TaskType::BroadcastText(text) => broadcast::execute_broadcast(world, entity, text),
+        TaskType::Take(resource) => take_set::take_task(world, entity, resource),
         TaskType::Set(resource) => take_set::set_task(world, entity, resource),
         TaskType::Incantation => incantation::execute_incantation(world, entity),
-        TaskType::Fork => todo!(),
-        TaskType::Eject => eject(world, entity),
+        TaskType::Fork => fork::execute_fork(world, entity),
+        TaskType::Eject => eject::eject(world, entity),
     }
 }
 
 #[cfg(test)]
 mod tests {
-
-    use crate::ecs::builders::inhabitants::build_inhabitant_with_entity;
-    use crate::ecs::components::inventory::Inventory;
-    use crate::ecs::components::network::MockSocket;
-    use crate::ecs::components::resource::Resource;
     use crate::ecs::components::task::{Task, TaskType};
     use crate::ecs::storage::World;
 
     use super::*;
-
-    fn setup_inhabitant(
-        x: u32,
-        y: u32,
-        orientation: RelativeOrientation,
-        map_w: u32,
-        map_h: u32,
-    ) -> (World, Entity) {
-        let mut world = World::default();
-        world.map_size.width = map_w;
-        world.map_size.height = map_h;
-
-        let (mock_socket, _) = MockSocket::new(Vec::from(""));
-        let network_data = NetworkData::new(mock_socket);
-        let entity = world.spawn();
-        build_inhabitant_with_entity(entity, x, y, orientation, &mut world);
-        world.add_component(entity, network_data);
-        (world, entity)
-    }
-
-    fn assert_ok(response: Response) {
-        assert_eq!(response.code, ResponseCode::Status(StatusCode::Ok));
-        assert!(response.data.is_none());
-    }
-    #[test]
-    fn execute_task_forward_moves_north() {
-        let (mut world, entity) = setup_inhabitant(5, 5, RelativeOrientation::Forward, 10, 10);
-        let (response, _) = execute_task(&mut world, entity, &TaskType::Forward);
-        assert_ok(response);
-        let pos = world.get_component::<Position>(entity).unwrap();
-        assert_eq!((pos.x, pos.y), (5, 4));
-    }
-
-    #[test]
-    fn execute_task_forward_returns_player_position_event() {
-        let (mut world, entity) = setup_inhabitant(5, 5, RelativeOrientation::Forward, 10, 10);
-        let (response, event) = execute_task(&mut world, entity, &TaskType::Forward);
-        assert_ok(response);
-        assert!(matches!(
-            event,
-            Some(ServerEvent::PlayerPosition {
-                player_id,
-                x: 5,
-                y: 4,
-                orientation: RelativeOrientation::Forward,
-            }) if player_id == entity.id()
-        ));
-    }
-
-    #[test]
-    fn execute_task_forward_moves_east() {
-        let (mut world, entity) = setup_inhabitant(5, 5, RelativeOrientation::ForwardLeft, 10, 10);
-        execute_task(&mut world, entity, &TaskType::Forward);
-        let pos = world.get_component::<Position>(entity).unwrap();
-        assert_eq!((pos.x, pos.y), (6, 5));
-    }
-
-    #[test]
-    fn execute_task_forward_wraps() {
-        let (mut world, entity) = setup_inhabitant(3, 0, RelativeOrientation::Forward, 10, 10);
-        execute_task(&mut world, entity, &TaskType::Forward);
-        let pos = world.get_component::<Position>(entity).unwrap();
-        assert_eq!((pos.x, pos.y), (3, 9));
-    }
-
-    #[test]
-    fn execute_task_forward_without_orientation() {
-        let mut world = World::default();
-        world.map_size.width = 10;
-        world.map_size.height = 10;
-        let entity = world.spawn();
-        world.add_component(entity, Position { x: 5, y: 5 });
-
-        execute_task(&mut world, entity, &TaskType::Forward);
-
-        let pos = world.get_component::<Position>(entity).unwrap();
-        assert_eq!((pos.x, pos.y), (5, 5));
-    }
-
-    #[test]
-    fn execute_task_turn_right() {
-        let (mut world, entity) = setup_inhabitant(0, 0, RelativeOrientation::Forward, 10, 10);
-        execute_task(&mut world, entity, &TaskType::TurnRight);
-        let ori = world.get_component::<RelativeOrientation>(entity).unwrap();
-        assert_eq!(*ori, RelativeOrientation::ForwardLeft);
-    }
-
-    #[test]
-    fn execute_task_turn_right_returns_player_position_event() {
-        let (mut world, entity) = setup_inhabitant(2, 3, RelativeOrientation::Forward, 10, 10);
-        let (response, event) = execute_task(&mut world, entity, &TaskType::TurnRight);
-        assert_ok(response);
-        assert!(matches!(
-            event,
-            Some(ServerEvent::PlayerPosition {
-                player_id,
-                x: 2,
-                y: 3,
-                orientation: RelativeOrientation::ForwardLeft,
-            }) if player_id == entity.id()
-        ));
-    }
-
-    #[test]
-    fn execute_task_turn_left() {
-        let (mut world, entity) = setup_inhabitant(0, 0, RelativeOrientation::Forward, 10, 10);
-        execute_task(&mut world, entity, &TaskType::TurnLeft);
-        let ori = world.get_component::<RelativeOrientation>(entity).unwrap();
-        assert_eq!(*ori, RelativeOrientation::BackLeft);
-    }
-
-    #[test]
-    fn execute_task_turn_without_orientation() {
-        let mut world = World::default();
-        let entity = world.spawn();
-        world.add_component(entity, Position { x: 1, y: 1 });
-
-        let (response, _) = execute_task(&mut world, entity, &TaskType::TurnRight);
-        assert_ok(response);
-    }
-
-    #[test]
-    fn execute_task_broadcast_returns_message_event() {
-        let (mut world, entity) = setup_inhabitant(2, 3, RelativeOrientation::Forward, 10, 10);
-        let (response, event) =
-            execute_task(&mut world, entity, &TaskType::BroadcastText("hi".into()));
-        assert_ok(response);
-        assert!(matches!(
-            event,
-            Some(ServerEvent::Message {
-                message,
-                x: 2,
-                y: 3,
-                ..
-            }) if message == "hi"
-        ));
-    }
-
-    #[test]
-    fn execute_task_inventory_returns_formatted_data() {
-        let (mut world, entity) = setup_inhabitant(2, 3, RelativeOrientation::Forward, 10, 10);
-
-        {
-            let inv = world.get_component_mut::<Inventory>(entity).unwrap();
-            inv.add_item(Resource::Food, 10);
-            inv.add_item(Resource::Linemate, 5);
-            inv.add_item(Resource::Sibur, 1);
-            inv.add_item(Resource::Mendiane, 2);
-            inv.add_item(Resource::Phiras, 3);
-            inv.add_item(Resource::Thystame, 4);
-        }
-
-        let (response, event) = execute_task(&mut world, entity, &TaskType::Inventory);
-        assert_eq!(response.code, ResponseCode::Status(StatusCode::Ok));
-        assert_eq!(
-            response.data.as_deref(),
-            Some("[food 20, linemate 5, deraumere 0, sibur 1, mendiane 2, phiras 3, thystame 4]")
-        );
-        assert!(event.is_none());
-    }
-
-    #[test]
-    fn execute_task_inventory_does_not_change_position_or_orientation() {
-        let (mut world, entity) = setup_inhabitant(2, 3, RelativeOrientation::Forward, 10, 10);
-        let before = (
-            world.get_component::<Position>(entity).unwrap().x,
-            world.get_component::<Position>(entity).unwrap().y,
-            *world.get_component::<RelativeOrientation>(entity).unwrap(),
-        );
-
-        execute_task(&mut world, entity, &TaskType::Inventory);
-
-        let after = (
-            world.get_component::<Position>(entity).unwrap().x,
-            world.get_component::<Position>(entity).unwrap().y,
-            *world.get_component::<RelativeOrientation>(entity).unwrap(),
-        );
-        assert_eq!(before, after);
-    }
 
     #[test]
     fn add_task() {

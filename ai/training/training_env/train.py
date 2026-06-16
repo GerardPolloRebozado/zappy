@@ -1,4 +1,4 @@
-from src.env.ZappyEnv import ZappyEnv
+from training.training_env.ZappyEnv import ZappyEnv
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
 
@@ -21,7 +21,7 @@ def main():
 
     print("Training model")
     # Execute the learning loop for the specified number of timesteps
-    model.learn(total_timesteps=10000)
+    model.learn(total_timesteps=50000)
 
     # Save the trained model weights to a zip file
     model.save("zappy_ai_model")

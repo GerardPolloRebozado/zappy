@@ -3,10 +3,25 @@ use crate::{
         components::{inventory::Inventory, level::Level, position::Position, tile::Tile},
         storage::{Entity, World},
     },
+    protocol::{Response, ResponseCode, ServerEvent, StatusCode},
     utils::orientation::RelativeOrientation,
 };
 
-pub fn execute_look(world: &World, entity: Entity) -> String {
+/// Runs the AI `Look` task for `entity`.
+///
+/// Reads the surrounding tiles from the entity's [`Position`], [`RelativeOrientation`],
+/// and [`Level`], and returns `ok` with a bracket-formatted vision string. Does not mutate the world.
+pub fn execute_look(world: &World, entity: Entity) -> (Response, Option<ServerEvent>) {
+    (
+        Response::new(
+            ResponseCode::Status(StatusCode::Ok),
+            Some(format_look_response(world, entity)),
+        ),
+        None,
+    )
+}
+
+fn format_look_response(world: &World, entity: Entity) -> String {
     let pos = match world.get_component::<Position>(entity) {
         Some(p) => p,
         None => return "[]".to_string(),
@@ -143,13 +158,14 @@ mod tests {
         inv.items.insert(Resource::Food, 1);
         world.add_component(tile, inv);
 
-        let data = execute_look(&world, entity);
+        let (response, event) = execute_look(&world, entity);
         // Level 1 vision: 4 tiles.
         // Tile 0: (5,5) -> "player"
         // Tile 1: (4,4) -> ""
         // Tile 2: (5,4) -> "food"
         // Tile 3: (6,4) -> ""
         // Note: players on the same tile are also listed. Our player is at (5,5).
-        assert_eq!(data, "[player,,food,]");
+        assert_eq!(response.data.as_deref(), Some("[player,,food,]"));
+        assert!(event.is_none());
     }
 }

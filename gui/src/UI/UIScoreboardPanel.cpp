@@ -6,18 +6,29 @@
 */
 
 #include "UI/UIScoreboardPanel.hpp"
+#include "Color.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
+#include "Components/ComponentTags.hpp"
+#include "Components/FollowingEntity.hpp"
+#include "ECS/Entity.hpp"
 #include "Graphics/AssetManager.hpp"
+#include "Text.hpp"
+#include "UI/UIManager.hpp"
+#include "UI/UIText.hpp"
+#include "raylib.h"
 #include <algorithm>
+#include <iostream>
 #include <map>
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace zappy {
 
 UIScoreboardPanel::UIScoreboardPanel(raylib::Rectangle bounds, World& world, int zIndex)
-    : AUIComponent(bounds, zIndex), _world(world) {}
+    : AUIComponent(bounds, nullptr, zIndex), _world(world) {}
 
 void UIScoreboardPanel::render() {
     if (!raylib::Keyboard::IsKeyDown(KEY_TAB)) {
@@ -40,13 +51,16 @@ void UIScoreboardPanel::render() {
 
     struct TeamInfo {
         int maxLevel = 1;
-        std::vector<std::string> players;
+        std::vector<std::pair<Entity, std::string>> players;
     };
     std::map<std::string, TeamInfo> teamData;
 
     auto teamStorage = _world.get_storage<TeamName>();
     if (teamStorage) {
         for (auto const& [entity, team] : *teamStorage) {
+            if (!_world.get_component<InhabitantTag>(entity)) {
+                continue;
+            }
             int lvl = 1;
             auto levelComp = _world.get_component<Level>(entity);
             if (levelComp) {
@@ -57,8 +71,8 @@ void UIScoreboardPanel::render() {
             auto serverId = _world.get_component<ServerId>(entity);
             std::string idStr =
                 serverId ? std::to_string(serverId->id) : std::to_string(entity.id());
-            teamData[team->team_name].players.push_back("P" + idStr + "(Lvl " +
-                                                        std::to_string(lvl) + ")");
+            teamData[team->team_name].players.push_back(
+                std::make_pair(entity, "P" + idStr + "(Lvl " + std::to_string(lvl) + ")"));
         }
     }
 
@@ -126,6 +140,7 @@ void UIScoreboardPanel::render() {
         raylib::Text(teamName, 18, raylib::Color::RayWhite(),
                      AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
             .Draw(col1, yOffset);
+
         raylib::Text(std::to_string(info.players.size()), 18, raylib::Color::RayWhite(),
                      AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
             .Draw(col2, yOffset);
@@ -135,7 +150,9 @@ void UIScoreboardPanel::render() {
 
         yOffset += 30;
 
-        for (const auto& p : info.players) {
+        raylib::Vector2 mousePos = raylib::Mouse::GetPosition();
+
+        for (const auto& [entity, p] : info.players) {
             if (yOffset > panelBounds.y + panelBounds.height - 40) {
                 raylib::Text("  ... (more players)", 16, GRAY,
                              AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
@@ -143,9 +160,22 @@ void UIScoreboardPanel::render() {
                 yOffset += 25;
                 break;
             }
-            raylib::Text("  - " + p, 16, raylib::Color::LightGray(),
-                         AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
-                .Draw(col1 + 30, yOffset);
+            raylib::Text player("  - " + p, 16, raylib::Color::LightGray(),
+                                AssetManager::getInstance().getFont("BoldPixels"), 1.5f);
+            player.Draw(col1 + 30, yOffset);
+            Rectangle rec(col1, yOffset, width - 30, 20);
+            if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT) && mousePos.CheckCollision(rec)) {
+                FollowingEntity followingEntity = {
+                    .entity = entity,
+                };
+
+                auto storage = _world.get_storage<FollowingEntity>();
+                if (storage) {
+                    storage->clear();
+                }
+
+                _world.add_component<FollowingEntity>(entity, followingEntity);
+            }
             yOffset += 25;
         }
 

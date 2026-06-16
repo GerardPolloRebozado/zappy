@@ -10,6 +10,7 @@
 
 #include "ECS/World.hpp"
 #include "NetworkManager.hpp"
+#include "Systems/ParticleSystem.hpp"
 #include "Systems/RenderSystem.hpp"
 #include "UI/UIManager.hpp"
 #include <memory>
@@ -105,7 +106,8 @@ class Core {
     World _world;                            ///< The ECS world instance.
     NetworkManager _network;                 ///< Handles server communication.
     RenderSystem _renderSystem;              ///< Handles world and UI rendering.
-    UIManager _uiManager;                    ///< Handles OOP UI.
+    std::shared_ptr<UIManager> _uiManager;   ///< Handles OOP UI.
+    ParticleSystem _particleSystem;          ///< Handles particle system updates.
     int _port;                               ///< Server port.
     std::string _host;                       ///< Server host.
     AppState _appState = AppState::MENU;     ///< Current application state.

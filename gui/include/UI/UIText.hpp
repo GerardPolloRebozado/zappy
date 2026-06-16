@@ -16,7 +16,7 @@ namespace zappy {
 class UIText : public AUIComponent {
   public:
     UIText(raylib::Rectangle bounds, const std::string& text, int fontSize, raylib::Color color,
-           int zIndex = 0, float spacing = 1.5f);
+           int zIndex = 0, float spacing = 1.5f, std::function<void()> onClick = nullptr);
     ~UIText() override = default;
 
     void render() override;

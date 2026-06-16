@@ -31,9 +31,6 @@ class UIButton : public AUIComponent {
 
   private:
     std::unique_ptr<UIText> _label;
-    std::function<void()> _onClick;
-    bool _isHovered;
-    bool _isPressed;
 
     raylib::Color _normalColor;
     raylib::Color _hoverColor;
