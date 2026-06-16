@@ -4,26 +4,23 @@ HOST=${1:-127.0.0.1}
 PORT=${2:-8080}
 TEAM=${3:-team1}
 
-computeTotalTime() {
-  text=$1
-  result=0
-  text | while read -r line; do
-    result=$result + 1
-  done
-  echo $result
-}
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
 totaltime=0
 
-
+SECONDS=0
 echo "Starting load test for zappy..."
-echo "Host: $HOST"
-echo "Port: $PORT"
-echo "Team: $TEAM"
-echo "Be sure that the current server have a nbClients parameter at 10_000 or more"
+echo -e "Host: ${GREEN}$HOST${NC}"
+echo -e "Port: ${GREEN}$PORT${NC}"
+echo -e "Team: ${GREEN}$TEAM${NC}"
+echo -e "Be sure that the current server have a ${GREEN}nbClients${NC} parameter of ${RED}11_000${NC} or more"
 
-echo =========================================
-echo "First Test : 1_000 clients"
-echo -----------------------------------------
+echo -e ${BLUE}=========================================
+echo -e "First Test : 1_000 clients"
+echo -e ----------------------------------------- ${NC}
 while read -r line; do
   totaltime=$((totaltime+line))
 done < <(
@@ -49,18 +46,21 @@ done < <(
   wait
 )
 averagetime=$totaltime/1000
-echo "Addition of time of all process: $((totaltime))"
-echo "Average time is: $((averagetime / 60)) minutes and $((averagetime % 60)) seconds elapsed."
-echo "========================================="
+testduration=$SECONDS
+echo -e "Duration of the test :  ${GREEN}$((testduration / 60)) minutes and $((testduration % 60)) elapsed.${NC}"
+echo -e "Addition of time of all process: ${GREEN}$((totaltime))${NC}"
+echo -e "Average time is: ${GREEN}$((averagetime / 60)) minutes and $((averagetime % 60)) seconds.${NC}"
+echo -e "${BLUE}========================================="
 
 echo ""
 echo ""
 
 totaltime=0
+SECONDS=0
 
-echo =========================================
-echo "First Test : 10_000 clients"
-echo -----------------------------------------
+echo -e =========================================
+echo -e "First Test : 10_000 clients"
+echo -e -----------------------------------------${NC}
 while read -r line; do
   totaltime=$((totaltime+line))
 done < <(
@@ -86,6 +86,8 @@ done < <(
   wait
 )
 averagetime=$totaltime/1000
-echo "Addition of time of all process: $((totaltime))"
-echo "Average time is: $((averagetime / 60)) minutes and $((averagetime % 60)) seconds elapsed."
-echo "========================================="
+testduration=$SECONDS
+echo -e "Duration of the test :  ${GREEN}$((testduration / 60)) minutes and $((testduration % 60)) seconds elapsed.${NC}"
+echo -e "Addition of time of all process: ${GREEN}$((totaltime))${NC}"
+echo -e "Average time is: ${GREEN}$((averagetime / 60)) minutes and $((averagetime % 60)) seconds.${NC}"
+echo -e "${BLUE}=========================================${NC}"
