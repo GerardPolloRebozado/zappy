@@ -10,9 +10,10 @@
 
 #include "ECS/World.hpp"
 #include "UI/AUIComponent.hpp"
+#include "UI/UIManager.hpp"
+#include <memory>
 
 namespace zappy {
-
 class UIScoreboardPanel : public AUIComponent {
   public:
     UIScoreboardPanel(raylib::Rectangle bounds, World& world, int zIndex = 0);

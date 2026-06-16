@@ -105,7 +105,7 @@ class Core {
     World _world;                            ///< The ECS world instance.
     NetworkManager _network;                 ///< Handles server communication.
     RenderSystem _renderSystem;              ///< Handles world and UI rendering.
-    UIManager _uiManager;                    ///< Handles OOP UI.
+    std::shared_ptr<UIManager> _uiManager;   ///< Handles OOP UI.
     int _port;                               ///< Server port.
     std::string _host;                       ///< Server host.
     AppState _appState = AppState::MENU;     ///< Current application state.
