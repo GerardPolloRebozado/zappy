@@ -8,11 +8,14 @@
 #ifndef ZAPPY_GUI_RENDERSYSTEM_HPP
 #define ZAPPY_GUI_RENDERSYSTEM_HPP
 
+#include "ECS/Entity.hpp"
 #include "ECS/World.hpp"
 #include "Graphics/AssetManager.hpp"
 #include <cstdint>
 #include <limits>
 #include <map>
+#include <memory>
+#include <optional>
 #include <raylib-cpp.hpp>
 #include <raymath.h>
 #include <string>
@@ -103,6 +106,7 @@ class RenderSystem {
      */
     void _renderTerrain(World& w);
     void _renderEggs(World& w);
+    void _renderParticles(World& w);
 
     /**
      * @brief Renders the inhabitants in the world.
@@ -134,6 +138,12 @@ class RenderSystem {
      * Uses raycasting from the screen to the world ground plane.
      */
     void _updateHoverState();
+
+    /**
+     * @brief Update camera position with the current following entity.
+     * Only executed if its currently following one
+     */
+    void _renderPOV(World& w);
 
     raylib::Camera3D _camera; ///< The 3D camera used for world rendering.
 
