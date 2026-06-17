@@ -97,6 +97,17 @@ void AssetManager::_loadModels() {
 
         _models["rock1"] = std::make_unique<raylib::Model>("assets/models/rock1.obj");
         _models["rock2"] = std::make_unique<raylib::Model>("assets/models/rock2.obj");
+
+        for (int i = 1; i <= 9; ++i) {
+            std::string key = "resource_" + std::to_string(i);
+            _models[key] = std::make_unique<raylib::Model>("assets/models/" + key + ".obj");
+        }
+        const std::vector<std::string> foodModels = {
+            "food_ham",    "food_ham_cooked", "food_cheese",  "food_steak",
+            "food_carrot", "food_ham_trash",  "food_lettuce", "food_tomato"};
+        for (const auto& name : foodModels) {
+            _models[name] = std::make_unique<raylib::Model>("assets/models/" + name + ".obj");
+        }
         _models["egg"] = std::make_unique<raylib::Model>("assets/models/egg.obj");
 
         const std::vector<std::string> animals = {

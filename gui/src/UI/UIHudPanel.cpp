@@ -112,13 +112,14 @@ void UIHudPanel::render() {
             }
         };
 
-        drawResource("Food", inv->food, ORANGE);
-        drawResource("Linemate", inv->linemate, GREEN);
-        drawResource("Deraumere", inv->deraumere, BLUE);
-        drawResource("Sibur", inv->sibur, PURPLE);
-        drawResource("Mendiane", inv->mendiane, YELLOW);
-        drawResource("Phiras", inv->phiras, RED);
-        drawResource("Thystame", inv->thystame, WHITE);
+        drawResource("Food", inv->food, raylib::Color(245, 160, 100, 255));         // Peach Orange
+        drawResource("Linemate", inv->linemate, raylib::Color(110, 210, 120, 255)); // Mint Green
+        drawResource("Deraumere", inv->deraumere,
+                     raylib::Color(100, 180, 240, 255));                      // Soft Sky Blue
+        drawResource("Sibur", inv->sibur, raylib::Color(190, 130, 230, 255)); // Lavender Purple
+        drawResource("Mendiane", inv->mendiane, raylib::Color(240, 220, 110, 255)); // Warm Yellow
+        drawResource("Phiras", inv->phiras, raylib::Color(235, 120, 120, 255));     // Coral Red
+        drawResource("Thystame", inv->thystame, raylib::Color(245, 245, 245, 255)); // Bright White
     }
 
     yOffset += 10;
