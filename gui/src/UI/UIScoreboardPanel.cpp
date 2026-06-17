@@ -42,11 +42,23 @@ void UIScoreboardPanel::render() {
     float height = 600;
     raylib::Rectangle panelBounds = {(sw - width) / 2.0f, (sh - height) / 2.0f, width, height};
 
-    panelBounds.Draw(raylib::Color(15, 20, 40, 210));
-    panelBounds.DrawLines(raylib::Color(0, 100, 255, 255), 3.0f);
+    auto& tex = AssetManager::getInstance().getTexture("menu_bg");
+    if (tex.id != 0) {
+        ::NPatchInfo npatchInfo = {
+            (raylib::Rectangle){0.0f, 0.0f, (float)tex.width, (float)tex.height},
+            20,
+            20,
+            20,
+            20,
+            NPATCH_NINE_PATCH};
+        tex.Draw(npatchInfo, panelBounds, raylib::Vector2(0, 0), 0.0f, raylib::Color::White());
+    } else {
+        panelBounds.Draw(raylib::Color(15, 20, 40, 210));
+        panelBounds.DrawLines(raylib::Color(0, 100, 255, 255), 3.0f);
+    }
 
-    raylib::Text title("SCOREBOARD", 30, raylib::Color(0, 150, 255, 255),
-                       AssetManager::getInstance().getFont("BoldPixels"), 1.5f);
+    raylib::Text title("SCOREBOARD", 30, raylib::Color(80, 50, 40, 255),
+                       AssetManager::getInstance().getFont("TextFont"), 1.5f);
     float titleWidth = title.MeasureEx().x;
     title.Draw(panelBounds.x + (panelBounds.width - titleWidth) / 2.0f, panelBounds.y + 20);
 
@@ -92,27 +104,29 @@ void UIScoreboardPanel::render() {
     float col4 = panelBounds.x + 450;
 
     if (teamData.empty()) {
-        raylib::Text("No players connected.", 20, GRAY,
-                     AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+        raylib::Text("No players connected.", 20, raylib::Color(100, 80, 80, 255),
+                     AssetManager::getInstance().getFont("TextFont"), 1.5f)
             .Draw(panelBounds.x + 30, yOffset);
         return;
     }
 
-    // Headers
-    raylib::Text("Team Name", 20, raylib::Color(0, 150, 255, 255),
-                 AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+    raylib::Text("Team Name", 20, raylib::Color(150, 60, 30, 255),
+                 AssetManager::getInstance().getFont("TextFont"), 1.5f)
         .Draw(col1, yOffset);
-    raylib::Text("Count", 20, raylib::Color(0, 150, 255, 255),
-                 AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+    raylib::Text("Players", 20, raylib::Color(150, 60, 30, 255),
+                 AssetManager::getInstance().getFont("TextFont"), 1.5f)
         .Draw(col2, yOffset);
-    raylib::Text("Max Lvl", 20, raylib::Color(0, 150, 255, 255),
-                 AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+    raylib::Text("Max Lvl", 20, raylib::Color(150, 60, 30, 255),
+                 AssetManager::getInstance().getFont("TextFont"), 1.5f)
         .Draw(col3, yOffset);
+    raylib::Text("Lead Player", 20, raylib::Color(150, 60, 30, 255),
+                 AssetManager::getInstance().getFont("TextFont"), 1.5f)
+        .Draw(col4, yOffset);
 
     yOffset += 30;
     ::DrawLineEx(raylib::Vector2{panelBounds.x + 20, yOffset},
                  raylib::Vector2{panelBounds.x + panelBounds.width - 20, yOffset}, 2.0f,
-                 raylib::Color(0, 100, 255, 255));
+                 raylib::Color(120, 80, 60, 255));
     yOffset += 15;
 
     // Sort teams by size
@@ -126,8 +140,8 @@ void UIScoreboardPanel::render() {
         float blockHeight = 30 + (info.players.size() * 25);
 
         if (yOffset > panelBounds.y + panelBounds.height - 40) {
-            raylib::Text("... (more teams)", 16, GRAY,
-                         AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+            raylib::Text("... (more teams)", 16, raylib::Color(100, 80, 80, 255),
+                         AssetManager::getInstance().getFont("TextFont"), 1.5f)
                 .Draw(col1, yOffset);
             break;
         }
@@ -137,14 +151,14 @@ void UIScoreboardPanel::render() {
         rowRect.Draw(info.color);
 
         raylib::Text(teamName, 18, raylib::Color::RayWhite(),
-                     AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+                     AssetManager::getInstance().getFont("TextFont"), 1.5f)
             .Draw(col1, yOffset);
 
         raylib::Text(std::to_string(info.players.size()), 18, raylib::Color::RayWhite(),
-                     AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+                     AssetManager::getInstance().getFont("TextFont"), 1.5f)
             .Draw(col2, yOffset);
         raylib::Text(std::to_string(info.maxLevel), 18, raylib::Color::RayWhite(),
-                     AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+                     AssetManager::getInstance().getFont("TextFont"), 1.5f)
             .Draw(col3, yOffset);
 
         yOffset += 30;
@@ -153,14 +167,14 @@ void UIScoreboardPanel::render() {
 
         for (const auto& [entity, p] : info.players) {
             if (yOffset > panelBounds.y + panelBounds.height - 40) {
-                raylib::Text("  ... (more players)", 16, GRAY,
-                             AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+                raylib::Text("  ... (more players)", 16, raylib::Color::LightGray(),
+                             AssetManager::getInstance().getFont("TextFont"), 1.5f)
                     .Draw(col1 + 30, yOffset);
                 yOffset += 25;
                 break;
             }
             raylib::Text player("  - " + p, 16, raylib::Color::LightGray(),
-                                AssetManager::getInstance().getFont("BoldPixels"), 1.5f);
+                                AssetManager::getInstance().getFont("TextFont"), 1.5f);
             player.Draw(col1 + 30, yOffset);
             Rectangle rec(col1, yOffset, width - 30, 20);
             if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT) && mousePos.CheckCollision(rec)) {
