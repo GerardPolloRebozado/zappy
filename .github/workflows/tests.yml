@@ -126,7 +126,7 @@ jobs:
         run: |
           cd server
           cargo build
-          cp target/debug/zappy_server zappy_server
+          cp target/debug/zappy_server_rust zappy_server
       - name: Install dependencies
         run: |
           cd ai
