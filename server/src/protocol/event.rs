@@ -181,7 +181,7 @@ impl ServerEvent {
                 team,
             } => Some(format!(
                 "pnw #{player_id} {x} {y} {} {level} {team}",
-                orientation.as_protocol_k()
+                orientation.as_gui_orientation()
             )),
             ServerEvent::PlayerPosition {
                 player_id,
@@ -190,7 +190,7 @@ impl ServerEvent {
                 orientation,
             } => Some(format!(
                 "ppo #{player_id} {x} {y} {}",
-                orientation.as_protocol_k()
+                orientation.as_gui_orientation()
             )),
             ServerEvent::StartIncantation {
                 x,
@@ -343,7 +343,7 @@ mod tests {
         let facing_east = Inhabitant::default()
             .with_id(1)
             .with_pos(5, 5)
-            .with_orientation(RelativeOrientation::ForwardLeft);
+            .with_orientation(RelativeOrientation::Right);
         assert_eq!(
             event.to_ai_string(Some(&facing_east), 10, 10),
             Some("eject: 3".to_string())
@@ -366,7 +366,7 @@ mod tests {
                 player_id: 3,
                 x: 7,
                 y: 9,
-                orientation: RelativeOrientation::ForwardLeft,
+                orientation: RelativeOrientation::Right,
             }
             .to_gui_string(),
             Some("ppo #3 7 9 2".to_string())
@@ -410,7 +410,7 @@ mod tests {
                 player_id: 1,
                 x: 3,
                 y: 4,
-                orientation: RelativeOrientation::ForwardLeft,
+                orientation: RelativeOrientation::Right,
                 level: 5,
                 team: "TeamA".to_string()
             }
