@@ -79,6 +79,8 @@ pub enum ServerEvent {
     EndOfGame { team: String },
     /// Server info message: GUI `smg M`.
     ServerMessage { message: String },
+    /// A team with more than 6 players at max lvl
+    WinGame { team_name: String },
 }
 
 impl ServerEvent {
@@ -155,6 +157,10 @@ impl ServerEvent {
         }
     }
 
+    pub fn win_game(team_name: String) -> Self {
+        Self::WinGame { team_name }
+    }
+
     /// Formats this event for GUI clients.
     ///
     /// Returns `None` only when the variant has no GUI representation
@@ -219,6 +225,7 @@ impl ServerEvent {
             ServerEvent::EggDeath { egg_id } => Some(format!("edi #{egg_id}")),
             ServerEvent::EndOfGame { team } => Some(format!("seg {team}")),
             ServerEvent::ServerMessage { message } => Some(format!("smg {message}")),
+            ServerEvent::WinGame { team_name: team_id } => Some(format!("seg {team_id}")),
         }
     }
 
@@ -280,6 +287,7 @@ impl ServerEvent {
             | ServerEvent::EggDeath { .. }
             | ServerEvent::EndOfGame { .. }
             | ServerEvent::ServerMessage { .. } => None,
+            ServerEvent::WinGame { .. } => None,
         }
     }
 }
