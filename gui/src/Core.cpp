@@ -9,6 +9,7 @@
 #include "Color.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
+#include "Components/ComponentMusic.hpp"
 #include "Components/ComponentTile.hpp"
 #include "CoreErrors.hpp"
 #include "Graphics/AssetManager.hpp"
@@ -36,6 +37,12 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
     _window->SetExitKey(0);
 
     _window->Maximize();
+
+    // Initialize the speakers and add the background.
+    InitAudioDevice();
+    auto backgroundMusic = _world.spawn();
+    _world.add_component(backgroundMusic, std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
+
 
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
@@ -91,6 +98,7 @@ void Core::_update() {
         if (_network.isConnected()) {
             _renderSystem.update(_world, dt);
             _particleSystem.update(_world, dt);
+            _musicSystem.update(_world, dt);
         } else {
             // Server disconnected, go back to menu
             _appState = AppState::MENU;
@@ -242,11 +250,11 @@ void Core::_setupSettingsMenu() {
 
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 150, (float)cy + 110, 140, 50}, "-",
-        []() { log_debug("Volume Down"); }, 1));
+        [this]() { _musicSystem.volumeDown(); /*log_debug("Volume Down");*/ }, 1));
 
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx + 10, (float)cy + 110, 140, 50}, "+",
-        []() { log_debug("Volume Up"); }, 1));
+        [this]() { _musicSystem.volumeUp(); /*log_debug("Volume Up"); */}, 1));
 
     // Back Button
     _uiManager->addComponent(std::make_shared<UIButton>(
