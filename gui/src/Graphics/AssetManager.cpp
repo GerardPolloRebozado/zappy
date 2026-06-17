@@ -117,6 +117,19 @@ void AssetManager::_loadTextures() {
         _textures["mouse"] = std::make_unique<raylib::Texture2D>("assets/mouse.png");
         _textures["mouse_pressed"] =
             std::make_unique<raylib::Texture2D>("assets/mouse_pressed.png");
+
+        // UI Textures
+        _textures["menu_bg"] = std::make_unique<raylib::Texture2D>("assets/ui/menu_background.png");
+        _textures["btn_normal"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/button_normal.png");
+        _textures["btn_hover"] = std::make_unique<raylib::Texture2D>("assets/ui/button_active.png");
+        _textures["btn_pressed"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/button_active.png");
+        _textures["panel_bg"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/panel_background.png");
+        _textures["input_bg"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/input_background.png");
+
     } catch (const raylib::RaylibException& e) {
         log_error(ErrorAsset("Failed to load textures: " + std::string(e.what())).what());
     }
@@ -222,7 +235,8 @@ void main()
 
 void AssetManager::_loadFonts() {
     try {
-        _fonts["BoldPixels"] = std::make_unique<raylib::Font>("assets/fonts/BoldPixels.ttf");
+        _fonts["TextFont"] = std::make_unique<raylib::Font>("assets/fonts/BoldPixels.ttf");
+        _fonts["HeaderFont"] = std::make_unique<raylib::Font>("assets/fonts/DungeonFont.ttf");
     } catch (const raylib::RaylibException& e) {
         log_error(ErrorAsset("Failed to load fonts: " + std::string(e.what())).what());
     }

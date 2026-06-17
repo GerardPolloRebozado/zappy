@@ -11,13 +11,14 @@
 namespace zappy {
 
 UIText::UIText(raylib::Rectangle bounds, const std::string& text, int fontSize, raylib::Color color,
-               int zIndex, float spacing, std::function<void()> onClick)
+               int zIndex, float spacing, const std::string& fontName,
+               std::function<void()> onClick)
     : AUIComponent(bounds, onClick, zIndex), _text(text), _fontSize(fontSize), _color(color),
-      _spacing(spacing) {}
+      _spacing(spacing), _fontName(fontName) {}
 
 void UIText::render() {
     raylib::Text label(_text, (float)_fontSize, _color,
-                       AssetManager::getInstance().getFont("BoldPixels"), _spacing);
+                       AssetManager::getInstance().getFont(_fontName), _spacing);
     raylib::Vector2 textSize = label.MeasureEx();
 
     int textX = (int)(_bounds.x) + ((int)_bounds.width - (int)textSize.x) / 2;
