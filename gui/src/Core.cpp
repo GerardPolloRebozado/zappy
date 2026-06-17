@@ -27,16 +27,14 @@
 namespace zappy {
 
 Core::Core(int port, const std::string& host) : _port(port), _host(host) {
-    SetConfigFlags(FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
     _window = std::make_unique<raylib::Window>(1280, 720, "Zappy");
     _window->SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));
 
-    // Prevent ESC from instantly closing the entire application
     _window->SetExitKey(0);
 
     _window->Maximize();
 
-    // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
     raylib::Window::HideCursor();
 
@@ -108,7 +106,7 @@ void Core::_render() {
 
     _uiManager->render();
 
-    // Draw custom cursor on top of everything
+    // Draw custom cursor
     auto& am = AssetManager::getInstance();
     raylib::Texture2D& tex = raylib::Mouse::IsButtonDown(MOUSE_BUTTON_LEFT)
                                  ? am.getTexture("mouse_pressed")
@@ -127,8 +125,8 @@ void Core::_setupMainMenu() {
     _menuState = MenuState::MAIN;
     _clearMenuUI();
 
-    int sw = GetScreenWidth();
-    int sh = GetScreenHeight();
+    int sw = GetRenderWidth();
+    int sh = GetRenderHeight();
     int cx = sw / 2;
     int cy = sh / 2;
 
@@ -161,12 +159,12 @@ void Core::_setupSettingsMenu() {
     _menuState = MenuState::SETTINGS;
     _clearMenuUI();
 
-    int cx = _window->GetWidth() / 2;
-    int cy = _window->GetHeight() / 2;
+    int cx = GetRenderWidth() / 2;
+    int cy = GetRenderHeight() / 2;
 
     // Background panel
     _uiManager->addComponent(std::make_shared<UIPanel>(
-        raylib::Rectangle{0, 0, (float)_window->GetWidth(), (float)_window->GetHeight()},
+        raylib::Rectangle{0, 0, (float)GetRenderWidth(), (float)GetRenderHeight()},
         raylib::Color(15, 20, 40, 255), 0));
 
     // Title
@@ -257,12 +255,12 @@ void Core::_showConnectionOverlay() {
     _menuState = MenuState::CONNECTION;
     _clearMenuUI();
 
-    int cx = _window->GetWidth() / 2;
-    int cy = _window->GetHeight() / 2;
+    int cx = GetRenderWidth() / 2;
+    int cy = GetRenderHeight() / 2;
 
     // Background panel
     _uiManager->addComponent(std::make_shared<UIPanel>(
-        raylib::Rectangle{0, 0, (float)_window->GetWidth(), (float)_window->GetHeight()},
+        raylib::Rectangle{0, 0, (float)GetRenderWidth(), (float)GetRenderHeight()},
         raylib::Color(15, 20, 40, 255), 0));
 
     // Title
@@ -326,9 +324,9 @@ void Core::_setupGameUI() {
         std::make_shared<UIScoreboardPanel>(raylib::Rectangle{10, 50, 240, 400}, _world, 10));
 
     // Right Tile HUD
-    _uiManager->addComponent(std::make_shared<UIHudPanel>(
-        raylib::Rectangle{(float)_window->GetWidth() - 220, 50, 200, 400}, _world, _renderSystem,
-        nullptr, 10));
+    _uiManager->addComponent(
+        std::make_shared<UIHudPanel>(raylib::Rectangle{(float)GetRenderWidth() - 220, 50, 200, 400},
+                                     _world, _renderSystem, nullptr, 10));
 }
 
 void Core::_setupTestingData() {

@@ -33,15 +33,25 @@ class CommandTileContent : public ACommand {
             return;
         }
 
+        static std::unordered_map<uint64_t, Entity> tileCache;
+        uint64_t key =
+            (static_cast<uint64_t>(static_cast<uint32_t>(x)) << 32) | static_cast<uint32_t>(y);
+
         Entity tileEntity(0, 0);
         bool found = false;
-        auto posStorage = world.get_storage<Position>();
-        if (posStorage) {
-            for (auto const& [ent, pos] : *posStorage) {
-                if (pos->x == x && pos->y == y) {
-                    if (world.get_component<TileTag>(ent)) {
+
+        auto it = tileCache.find(key);
+        if (it != tileCache.end() && world.is_alive(it->second)) {
+            tileEntity = it->second;
+            found = true;
+        } else {
+            auto posStorage = world.get_storage<Position>();
+            if (posStorage) {
+                for (auto const& [ent, pos] : *posStorage) {
+                    if (pos->x == x && pos->y == y && world.get_component<TileTag>(ent)) {
                         tileEntity = ent;
                         found = true;
+                        tileCache[key] = ent;
                         break;
                     }
                 }
@@ -52,6 +62,7 @@ class CommandTileContent : public ACommand {
             tileEntity = world.spawn();
             world.add_component<Position>(tileEntity, {x, y});
             world.add_component<TileTag>(tileEntity, TileTag{});
+            tileCache[key] = tileEntity;
         }
 
         world.add_component<Inventory>(tileEntity, {q0, q1, q2, q3, q4, q5, q6});

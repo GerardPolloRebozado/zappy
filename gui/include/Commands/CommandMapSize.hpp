@@ -31,15 +31,23 @@ class CommandMapSize : public ACommand {
             return;
         }
 
+        static std::optional<Entity> mapEntityCache;
         Entity mapEntity(0, 0);
         bool found = false;
-        auto storage = world.get_storage<Size>();
-        if (storage) {
-            for (auto const& [ent, size] : *storage) {
-                if (size->width == width && size->height == height) {
-                    mapEntity = ent;
-                    found = true;
-                    break;
+
+        if (mapEntityCache && world.is_alive(*mapEntityCache)) {
+            mapEntity = *mapEntityCache;
+            found = true;
+        } else {
+            auto storage = world.get_storage<Size>();
+            if (storage) {
+                for (auto const& [ent, size] : *storage) {
+                    if (size->width == width && size->height == height) {
+                        mapEntity = ent;
+                        found = true;
+                        mapEntityCache = ent;
+                        break;
+                    }
                 }
             }
         }
@@ -48,6 +56,7 @@ class CommandMapSize : public ACommand {
             mapEntity = world.spawn();
             world.add_component<Size>(mapEntity, {width, height});
             world.add_component<MapTag>(mapEntity, MapTag{});
+            mapEntityCache = mapEntity;
         }
         log_info("Protocol: Map size update [" + args + "]");
     }

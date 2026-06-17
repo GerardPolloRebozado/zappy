@@ -42,24 +42,41 @@ class CommandPlayerPosition : public ACommand {
             log_error("Protocol: failed to parse player position args: " + args);
             return;
         }
-        auto positionsStorage = world.get_storage<Position>();
-        if (!positionsStorage) {
-            return;
-        }
-        for (auto& [entity, position] : *positionsStorage) {
 
-            auto serverId = world.get_component<ServerId>(entity);
-            if (serverId && serverId->id == playerId) {
+        static std::unordered_map<int, Entity> playerCache;
+        Entity playerEntity(0, 0);
+        bool found = false;
 
-                position->x = x;
-                position->y = y;
-
-                auto orientationComp = world.get_component<Orientation>(entity);
-                if (orientationComp) {
-                    orientationComp->current_direction =
-                        static_cast<Orientation::Direction>(orientation);
+        auto it = playerCache.find(playerId);
+        if (it != playerCache.end() && world.is_alive(it->second)) {
+            playerEntity = it->second;
+            found = true;
+        } else {
+            auto positionsStorage = world.get_storage<Position>();
+            if (positionsStorage) {
+                for (auto& [entity, position] : *positionsStorage) {
+                    auto serverId = world.get_component<ServerId>(entity);
+                    if (serverId && serverId->id == playerId) {
+                        playerEntity = entity;
+                        found = true;
+                        playerCache[playerId] = entity;
+                        break;
+                    }
                 }
-                break;
+            }
+        }
+
+        if (found) {
+            auto pos = world.get_component<Position>(playerEntity);
+            if (pos) {
+                pos->x = x;
+                pos->y = y;
+            }
+
+            auto orientationComp = world.get_component<Orientation>(playerEntity);
+            if (orientationComp) {
+                orientationComp->current_direction =
+                    static_cast<Orientation::Direction>(orientation);
             }
         }
     }

@@ -12,21 +12,27 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 
 if (APPLE)
-  set(GRAPHICS "GRAPHICS_API_OPENGL_ES2" CACHE STRING "Graphics API to use" FORCE)
+  set(PLATFORM "SDL" CACHE STRING "Platform target" FORCE)
+  set(OPENGL_VERSION "3.3" CACHE STRING "OpenGL version to use" FORCE)
 endif ()
 
 if (DEFINED ENV{IM_STUPID} AND "$ENV{IM_STUPID}" STREQUAL "ON")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g -fno-omit-frame-pointer")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
 endif()
-
-#Raylib
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
-set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
-set(BUILD_GAMES    OFF CACHE BOOL "" FORCE) # don't build the supplied example games
-set(GLFW_BUILD_WAYLAND ON CACHE BOOL "" FORCE) # enable wayland on linux
-set(GLFW_BUILD_X11 ON CACHE BOOL "" FORCE) # disable x11 on linux (switch these settings around as you please)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+    SDL3
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG main
+)
+set(SDL_SHARED ON CACHE BOOL "" FORCE)
+set(SDL_STATIC OFF CACHE BOOL "" FORCE)
+set(SDL_TEST   OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
         raylib
@@ -41,7 +47,7 @@ FetchContent_Declare(
         GIT_TAG v6.0.0
 )
 
-FetchContent_MakeAvailable(raylib raylib-cpp)
+FetchContent_MakeAvailable(SDL3 raylib raylib-cpp)
 
 set(CORE_SOURCES
         src/NetworkManager.cpp
@@ -91,23 +97,23 @@ set(CORE_SOURCES
         include/ECS/World.hpp
 )
 
-# Create a core library to avoid redundant compilation
 add_library(zappy_gui_core STATIC ${CORE_SOURCES})
 
 target_include_directories(zappy_gui_core PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/angle/include
         ${raylib-cpp_SOURCE_DIR}/include
+        ${SDL3_SOURCE_DIR}/include
 )
 
-target_link_libraries(zappy_gui_core PUBLIC raylib)
-
+target_link_libraries(zappy_gui_core PUBLIC raylib SDL3::SDL3)
 target_compile_definitions(zappy_gui_core PRIVATE ZAPPY_LOG_LEVEL=${ZAPPY_LOG_LEVEL})
 
+if(APPLE)
+  target_compile_definitions(zappy_gui_core PUBLIC GRAPHICS_API_OPENGL_33)
+endif()
+
 add_executable(${PROJECT_NAME} src/main.cpp)
-
 target_link_libraries(${PROJECT_NAME} PRIVATE zappy_gui_core)
-
 target_compile_definitions(${PROJECT_NAME} PRIVATE ZAPPY_LOG_LEVEL=${ZAPPY_LOG_LEVEL})
 
 if (APPLE)
@@ -116,18 +122,9 @@ if (APPLE)
             "-framework Cocoa"
             "-framework CoreFoundation"
             "-framework CoreVideo"
-            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/angle/libEGL.dylib"
-            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/angle/libGLESv2.dylib"
+            "-framework QuartzCore"
+            "-framework Metal"
     )
-
-  # Copy dylibs to build folder and fix paths for runtime loading
-  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/vendor/angle/libEGL.dylib" $<TARGET_FILE_DIR:${PROJECT_NAME}>/
-    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/vendor/angle/libGLESv2.dylib" $<TARGET_FILE_DIR:${PROJECT_NAME}>/
-    COMMAND install_name_tool -change "./libEGL.dylib" "@executable_path/libEGL.dylib" $<TARGET_FILE:${PROJECT_NAME}>
-    COMMAND install_name_tool -change "./libGLESv2.dylib" "@executable_path/libGLESv2.dylib" $<TARGET_FILE:${PROJECT_NAME}>
-    COMMENT "Copying ANGLE libraries and fixing runtime paths..."
-  )
 endif()
 
 include(CheckIPOSupported)
@@ -151,7 +148,6 @@ add_custom_target(fclean
         "${CMAKE_BINARY_DIR}/${PROJECT_NAME}"
         "${CMAKE_BINARY_DIR}/tests/unit_tests"
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMENT "Wiping CMake cache, build files, and main executable..."
 )
 
 enable_testing()

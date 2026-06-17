@@ -39,19 +39,35 @@ class CommandPlayerConnection : public ACommand {
             return;
         }
 
-        // TODO: create player util fn?
-        Entity player = world.spawn();
-        world.add_component<ServerId>(player, {playerId});
+        // Check if player already exists
+        Entity player(0, 0);
+        bool found = false;
+        auto idStorage = world.get_storage<ServerId>();
+        if (idStorage) {
+            for (auto const& [ent, id] : *idStorage) {
+                if (id->id == playerId) {
+                    player = ent;
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        if (!found) {
+            player = world.spawn();
+            world.add_component<ServerId>(player, {playerId});
+            world.add_component<InhabitantTag>(player, InhabitantTag{});
+        }
+
         world.add_component<Position>(player, {x, y});
         world.add_component<Orientation>(player,
                                          {static_cast<Orientation::Direction>(orientation)});
         world.add_component<Level>(player, {level});
         world.add_component<TeamName>(player, {teamName, TeamName::findTeam(teamName, world)});
         world.add_component<Inventory>(player, {0, 0, 0, 0, 0, 0, 0});
-        world.add_component<InhabitantTag>(player, InhabitantTag{});
 
-        log_info("Protocol: New player #" + std::to_string(playerId) +
-                 " connected (Team: " + teamName + ")");
+        log_info("Protocol: Player #" + std::to_string(playerId) +
+                 (found ? " updated" : " connected") + " (Team: " + teamName + ")");
     }
 };
 } // namespace zappy

@@ -26,9 +26,13 @@ class Entity {
   public:
     /**
      * NEVER CREATE AND ENTITY DIRECTLY, USE World::spawn() INSTEAD.
+     * Default constructor for map usage only.
+     */
+    Entity() : _id(0), _generation(0) {}
+
+    /**
+     * NEVER CREATE AND ENTITY DIRECTLY, USE World::spawn() INSTEAD.
      * @param id unique identifier for the entity
-     * @param generation generation number for the entity, used to track validity. Should be set to
-     * 0 for new entities and incremented each time an entity is despawned
      */
     Entity(const uint32_t id, const uint32_t generation) : _id(id), _generation(generation) {}
     ~Entity() = default;
