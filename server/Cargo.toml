@@ -3,6 +3,11 @@ name = "zappy_server_rust"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "zappy_engine"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
 [[bin]]
 name = "zappy_server_rust"
 path = "src/main.rs"
