@@ -46,7 +46,7 @@ class CommandPlayerConnection : public ACommand {
         world.add_component<Orientation>(player,
                                          {static_cast<Orientation::Direction>(orientation)});
         world.add_component<Level>(player, {level});
-        world.add_component<TeamName>(player, {teamName});
+        world.add_component<TeamName>(player, {teamName, TeamName::findTeam(teamName, world)});
         world.add_component<Inventory>(player, {0, 0, 0, 0, 0, 0, 0});
         world.add_component<InhabitantTag>(player, InhabitantTag{});
 

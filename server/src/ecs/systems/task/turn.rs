@@ -66,7 +66,7 @@ mod tests {
         let (mut world, entity) = setup_inhabitant(0, 0, RelativeOrientation::Forward, 10, 10);
         super::execute_turn_right(&mut world, entity);
         let ori = world.get_component::<RelativeOrientation>(entity).unwrap();
-        assert_eq!(*ori, RelativeOrientation::ForwardLeft);
+        assert_eq!(*ori, RelativeOrientation::Right);
     }
 
     #[test]
@@ -80,7 +80,7 @@ mod tests {
                 player_id,
                 x: 2,
                 y: 3,
-                orientation: RelativeOrientation::ForwardLeft,
+                orientation: RelativeOrientation::Right,
             }) if player_id == entity.id()
         ));
     }
@@ -90,7 +90,7 @@ mod tests {
         let (mut world, entity) = setup_inhabitant(0, 0, RelativeOrientation::Forward, 10, 10);
         super::execute_turn_left(&mut world, entity);
         let ori = world.get_component::<RelativeOrientation>(entity).unwrap();
-        assert_eq!(*ori, RelativeOrientation::BackLeft);
+        assert_eq!(*ori, RelativeOrientation::Left);
     }
 
     #[test]

@@ -6,6 +6,7 @@
 */
 
 #include "Core.hpp"
+#include "Color.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentMusic.hpp"
@@ -20,6 +21,7 @@
 #include "UI/UIManager.hpp"
 #include "UI/UIPanel.hpp"
 #include "UI/UIScoreboardPanel.hpp"
+#include "UI/UISlider.hpp"
 #include "UI/UIText.hpp"
 #include "errors/IError.hpp"
 #include <memory>
@@ -336,6 +338,12 @@ void Core::_setupGameUI() {
     _uiManager->addComponent(std::make_shared<UIHudPanel>(
         raylib::Rectangle{(float)_window->GetWidth() - 220, 50, 200, 400}, _world, _renderSystem,
         nullptr, 10));
+
+    // Time frequency slider
+    _uiManager->addComponent(
+        std::make_shared<UISlider>(raylib::Rectangle{(float)_window->GetWidth() - 270,
+                                                     (float)_window->GetHeight() - 60, 250, 40},
+                                   _world, _network, 10));
 }
 
 void Core::_setupTestingData() {
@@ -354,13 +362,13 @@ void Core::_setupTestingData() {
     _world.add_component(p1, Position{2, 2});
     _world.add_component(p1, Orientation{Orientation::N});
     _world.add_component(p1, Level{1});
-    _world.add_component(p1, TeamName{"Team Alpha"});
+    _world.add_component(p1, TeamName{"Team Alpha", raylib::Color::Black()});
 
     auto p2 = _world.spawn();
     _world.add_component(p2, Position{5, 5});
     _world.add_component(p2, Orientation{Orientation::E});
     _world.add_component(p2, Level{4});
-    _world.add_component(p2, TeamName{"Team Beta"});
+    _world.add_component(p2, TeamName{"Team Beta", raylib::Color::Red()});
 }
 
 } // namespace zappy

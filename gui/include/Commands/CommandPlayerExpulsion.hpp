@@ -18,8 +18,10 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace zappy {
+
 class CommandPlayerExpulsion : public ACommand {
   public:
     CommandPlayerExpulsion() = default;
@@ -32,14 +34,8 @@ class CommandPlayerExpulsion : public ACommand {
      * @param world The ECS World containing the application state
      */
     void execute(const std::string& args, World& world) override {
-        std::string cleanArgs = args;
-        cleanArgs.erase(std::remove(cleanArgs.begin(), cleanArgs.end(), '#'), cleanArgs.end());
-
-        std::istringstream iss(cleanArgs);
-        int playerId;
-
-        if (!(iss >> playerId)) {
-            log_error("Protocol: failed to parse player expulsion args: " + args);
+        int executorId = parseArgs(args);
+        if (executorId < 0) {
             return;
         }
 
@@ -48,81 +44,85 @@ class CommandPlayerExpulsion : public ACommand {
             return;
         }
 
-        auto victim = findVictim(world, posStorage, playerId);
-        if (!victim) {
+        auto executorData = findExecutor(world, posStorage, executorId);
+        if (!executorData) {
             return;
         }
 
-        auto ejectDirection = findEjectDirection(world, posStorage, victim->position, playerId);
-        if (!ejectDirection) {
+        auto [executorEntity, executorPos, executorOri] = *executorData;
+
+        auto victims = findVictims(world, posStorage, executorEntity, executorPos);
+        if (victims.empty()) {
             return;
         }
 
-        auto sizeStorage = world.get_storage<Size>();
-        if (!sizeStorage) {
+        auto sizeIt = world.get_storage<Size>();
+        if (!sizeIt || sizeIt->begin() == sizeIt->end()) {
             return;
         }
-        auto sizeIt = sizeStorage->begin();
-        if (sizeIt == sizeStorage->end()) {
-            return;
+        int mapWidth = sizeIt->begin()->second->width;
+        int mapHeight = sizeIt->begin()->second->height;
+
+        for (auto& victimPos : victims) {
+            move_forward(victimPos, executorOri->current_direction, mapWidth, mapHeight);
         }
-
-        int mapWidth = sizeIt->second->width;
-        int mapHeight = sizeIt->second->height;
-
-        move_forward(victim->position, *ejectDirection, mapWidth, mapHeight);
-        log_info("Protocol: Player #" + std::to_string(playerId) + " expelled");
+        log_info("Protocol: Player #" + std::to_string(executorId) +
+                 " expelled everyone on their tile");
     }
 
   private:
-    struct Victim {
+    struct ExecutorData {
         Entity entity;
-        std::shared_ptr<Position> position;
+        std::shared_ptr<Position> pos;
+        std::shared_ptr<Orientation> ori;
     };
 
-    static std::optional<Victim>
-    findVictim(World& world, const std::shared_ptr<ComponentMap<Position>>& posStorage,
-               int playerId) {
+    static int parseArgs(const std::string& args) {
+        std::string cleanArgs = args;
+        cleanArgs.erase(std::remove(cleanArgs.begin(), cleanArgs.end(), '#'), cleanArgs.end());
+
+        std::istringstream iss(cleanArgs);
+        int playerId;
+        if (!(iss >> playerId)) {
+            log_error("Protocol: failed to parse player expulsion args: " + args);
+            return -1;
+        }
+        return playerId;
+    }
+
+    static std::optional<ExecutorData>
+    findExecutor(World& world, const std::shared_ptr<ComponentMap<Position>>& posStorage,
+                 int executorId) {
         for (auto const& [entity, pos] : *posStorage) {
             auto serverId = world.get_component<ServerId>(entity);
-            if (!serverId || serverId->id != playerId) {
-                continue;
+            if (serverId && serverId->id == executorId) {
+                auto ori = world.get_component<Orientation>(entity);
+                if (pos && ori) {
+                    return ExecutorData{entity, pos, ori};
+                }
             }
-            if (!world.get_component<InhabitantTag>(entity) ||
-                world.get_component<TileTag>(entity)) {
-                continue;
-            }
-            auto position = world.get_component<Position>(entity);
-            if (!position) {
-                return std::nullopt;
-            }
-            return Victim{entity, position};
         }
         return std::nullopt;
     }
 
-    static std::optional<Orientation::Direction>
-    findEjectDirection(World& world, const std::shared_ptr<ComponentMap<Position>>& posStorage,
-                       const std::shared_ptr<Position>& victimPos, int victimId) {
+    static std::vector<std::shared_ptr<Position>>
+    findVictims(World& world, const std::shared_ptr<ComponentMap<Position>>& posStorage,
+                Entity executorEntity, const std::shared_ptr<Position>& executorPos) {
+        std::vector<std::shared_ptr<Position>> victims;
+
         for (auto const& [entity, pos] : *posStorage) {
-            auto serverId = world.get_component<ServerId>(entity);
-            if (serverId && serverId->id == victimId) {
+            if (entity == executorEntity) {
                 continue;
             }
             if (!world.get_component<InhabitantTag>(entity) ||
                 world.get_component<TileTag>(entity)) {
                 continue;
             }
-            if (pos->x != victimPos->x || pos->y != victimPos->y) {
-                continue;
+            if (pos->x == executorPos->x && pos->y == executorPos->y) {
+                victims.push_back(pos);
             }
-            auto orientation = world.get_component<Orientation>(entity);
-            if (!orientation) {
-                continue;
-            }
-            return orientation->current_direction;
         }
-        return std::nullopt;
+        return victims;
     }
 
     static void move_forward(const std::shared_ptr<Position>& pos, Orientation::Direction direction,
@@ -143,5 +143,6 @@ class CommandPlayerExpulsion : public ACommand {
         }
     }
 };
+
 } // namespace zappy
 #endif
