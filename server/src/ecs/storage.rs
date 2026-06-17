@@ -42,6 +42,7 @@
 use log::info;
 
 use crate::ecs::components::inventory::Inventory;
+use crate::ecs::map_events::MapEvent;
 use crate::ecs::map_size::MapSize;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
@@ -164,6 +165,7 @@ pub struct World {
     /// used to know when to spawn new resources
     pub last_resource_spawn: u64,
     pub resources_amount: Inventory,
+    pub map_event: MapEvent,
 }
 
 impl Default for World {
@@ -189,6 +191,7 @@ impl World {
             freq,
             last_resource_spawn: 1,
             resources_amount: Inventory::new(),
+            map_event: MapEvent::None,
         }
     }
 
