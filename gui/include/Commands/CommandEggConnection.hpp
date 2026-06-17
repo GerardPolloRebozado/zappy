@@ -11,6 +11,7 @@
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
+#include "Components/ComponentMusic.hpp"
 #include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
@@ -66,6 +67,7 @@ class CommandEggConnection : public ACommand {
                                                 raylib::Color::Orange()};
 
                         world.add_component(confettiEntity, emitter);
+                        world.add_component(confettiEntity, std::make_shared<ComponentMusic>(std::string("assets/sounds/effect/egg_layed.mp3")));
                     }
                     world.despawn(entity);
                     log_info("Protocol: Player connected to egg #" + std::to_string(eggId) +

@@ -43,6 +43,7 @@ set(CORE_SOURCES
         src/Network/TcpSocket.cpp
         src/Systems/RenderSystem.cpp
         src/Systems/ParticleSystem.cpp
+        src/Systems/MusicSystem.cpp
         src/Graphics/AssetManager.cpp
         src/Graphics/VoxelBatcher.cpp
         src/UI/AUIComponent.cpp
@@ -57,6 +58,7 @@ set(CORE_SOURCES
         include/Components/ComponentShared.hpp
         include/Components/ComponentInhabitant.hpp
         include/Components/ComponentTile.hpp
+        include/Components/ComponentMusic.hpp
         include/UI/IUIComponent.hpp
         include/UI/AUIComponent.hpp
         include/UI/UIEvent.hpp
