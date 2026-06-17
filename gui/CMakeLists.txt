@@ -58,6 +58,7 @@ set(CORE_SOURCES
         src/UI/UIText.cpp
         src/UI/UIHudPanel.cpp
         src/UI/UIScoreboardPanel.cpp
+        src/UI/UISlider.cpp
         src/Core.cpp
         include/Components/ComponentShared.hpp
         include/Components/ComponentInhabitant.hpp
@@ -72,6 +73,7 @@ set(CORE_SOURCES
         include/UI/UIText.hpp
         include/UI/UIHudPanel.hpp
         include/UI/UIScoreboardPanel.hpp
+        include/UI/UISlider.hpp
         include/Systems/RenderSystem.hpp
         include/Graphics/AssetManager.hpp
         include/Core.hpp
