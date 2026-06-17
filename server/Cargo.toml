@@ -3,10 +3,6 @@ name = "zappy_server_rust"
 version = "0.1.0"
 edition = "2024"
 
-[lib]
-name = "zappy_engine"
-crate-type = ["cdylib", "rlib"] # cdylib for Python, rlib for the binary
-
 [[bin]]
 name = "zappy_server_rust"
 path = "src/main.rs"
@@ -17,4 +13,3 @@ log = "0.4.32"
 nix = { version = "0.29", features = ["poll", "net"] }
 noise = "0.9.0"
 rand = "0.10.1"
-pyo3 = { version = "0.21", features = ["extension-module"] }
