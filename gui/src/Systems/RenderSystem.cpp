@@ -387,9 +387,16 @@ void RenderSystem::_renderTerrain(World& w) {
             checkDecal(pos->x + 1, pos->y + 1, DecalDirection::SOUTH_EAST); // SE
 
             if (type->current_type == TerrainType::FOREST) {
-                raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
+                std::string treeNames[] = {"tree_1", "tree_2", "tree_group_1", "tree_group_2"};
+                int treeIdx = (pos->x * 12345 + pos->y * 67890) % 4;
+                if (treeIdx < 0) {
+                    treeIdx += 4;
+                }
+                std::string treeKey = treeNames[treeIdx];
+
+                raylib::Model& treeModel = AssetManager::getInstance().getModel(treeKey);
                 auto& am = AssetManager::getInstance();
-                std::shared_ptr<BoundingBox> box = am.getBoundingBox("tree2", treeModel);
+                std::shared_ptr<BoundingBox> box = am.getBoundingBox(treeKey, treeModel);
 
                 float sizeX = box->max.x - box->min.x;
                 float sizeZ = box->max.z - box->min.z;
@@ -398,25 +405,23 @@ void RenderSystem::_renderTerrain(World& w) {
                     bool playerOnTile = inhabitantPositions.count(hashPos(pos->x, pos->y)) > 0;
 
                     if (!playerOnTile) {
-                        float scale = 0.4f / std::max(sizeX, sizeZ);
+                        float scale =
+                            0.85f; // Constant scale keeps all trees proportional to each other
 
                         raylib::Vector3 centerOffset((box->max.x + box->min.x) / 2.0f * scale,
                                                      box->min.y * scale,
                                                      (box->max.z + box->min.z) / 2.0f * scale);
 
-                        // Sink the tree by 0.1f to hide its built-in grass base
-                        raylib::Vector3 drawPos(vpos.x - centerOffset.x,
-                                                2.0f - centerOffset.y - 0.1f,
+                        raylib::Vector3 drawPos(vpos.x - centerOffset.x, 2.0f - centerOffset.y,
                                                 vpos.z - centerOffset.z);
 
                         // Deterministic random offset within the tile
-                        float rX = ((std::abs(pos->x * 137 + pos->y * 31)) % 61) / 100.0f - 0.3f;
-                        float rZ = ((std::abs(pos->x * 19 + pos->y * 101)) % 61) / 100.0f - 0.3f;
+                        float rX = ((std::abs(pos->x * 137 + pos->y * 31)) % 41) / 100.0f - 0.2f;
+                        float rZ = ((std::abs(pos->x * 19 + pos->y * 101)) % 41) / 100.0f - 0.2f;
                         drawPos.x += rX;
                         drawPos.z += rZ;
 
-                        raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
-                        addInstance("tree2", drawPos, {0, 1, 0}, 0.0f, {scale, scale, scale}, WHITE,
+                        addInstance(treeKey, drawPos, {0, 1, 0}, 0.0f, {scale, scale, scale}, WHITE,
                                     treeModel.transform);
                     }
                 }

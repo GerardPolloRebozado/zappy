@@ -90,8 +90,11 @@ void AssetManager::_loadModels() {
     try {
         _models["chicken"] = std::make_unique<raylib::Model>("assets/models/Chicken.obj");
         _models["robot"] = std::make_unique<raylib::Model>("assets/models/Robot1.obj");
-        _models["tree2"] =
-            std::make_unique<raylib::Model>("assets/models/trees/tree2/tree2.vox.obj");
+        _models["tree_1"] = std::make_unique<raylib::Model>("assets/models/tree_1.obj");
+        _models["tree_2"] = std::make_unique<raylib::Model>("assets/models/tree_2.obj");
+        _models["tree_group_1"] = std::make_unique<raylib::Model>("assets/models/tree_group_1.obj");
+        _models["tree_group_2"] = std::make_unique<raylib::Model>("assets/models/tree_group_2.obj");
+
         _models["rock1"] = std::make_unique<raylib::Model>("assets/models/rock1.obj");
         _models["rock2"] = std::make_unique<raylib::Model>("assets/models/rock2.obj");
         _models["egg"] = std::make_unique<raylib::Model>("assets/models/egg.obj");
