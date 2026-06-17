@@ -79,7 +79,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn eject_player() {
+    fn eject_player_facing_north() {
         let mut world = World::default();
         let entity = world.spawn();
         build_inhabitant_with_entity(entity, 1, 1, RelativeOrientation::Forward, &mut world);
@@ -91,5 +91,44 @@ mod tests {
         let inhabitant2_pos = world.get_component::<Position>(inhabitant2).unwrap();
         assert_eq!(*inhabitant2_pos, Position { x: 1, y: 0 });
         assert!(event.is_some());
+    }
+
+    #[test]
+    fn eject_player_facing_east() {
+        let mut world = World::default();
+        let ejector = world.spawn();
+        build_inhabitant_with_entity(ejector, 3, 3, RelativeOrientation::Right, &mut world);
+        let victim = world.spawn();
+        build_inhabitant_with_entity(victim, 3, 3, RelativeOrientation::Forward, &mut world);
+
+        eject(&mut world, ejector);
+        let pos = world.get_component::<Position>(victim).unwrap();
+        assert_eq!(*pos, Position { x: 4, y: 3 });
+    }
+
+    #[test]
+    fn eject_player_facing_south() {
+        let mut world = World::default();
+        let ejector = world.spawn();
+        build_inhabitant_with_entity(ejector, 3, 3, RelativeOrientation::Back, &mut world);
+        let victim = world.spawn();
+        build_inhabitant_with_entity(victim, 3, 3, RelativeOrientation::Forward, &mut world);
+
+        eject(&mut world, ejector);
+        let pos = world.get_component::<Position>(victim).unwrap();
+        assert_eq!(*pos, Position { x: 3, y: 4 });
+    }
+
+    #[test]
+    fn eject_player_facing_west() {
+        let mut world = World::default();
+        let ejector = world.spawn();
+        build_inhabitant_with_entity(ejector, 3, 3, RelativeOrientation::Left, &mut world);
+        let victim = world.spawn();
+        build_inhabitant_with_entity(victim, 3, 3, RelativeOrientation::Forward, &mut world);
+
+        eject(&mut world, ejector);
+        let pos = world.get_component::<Position>(victim).unwrap();
+        assert_eq!(*pos, Position { x: 2, y: 3 });
     }
 }
