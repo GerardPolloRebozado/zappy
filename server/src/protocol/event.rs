@@ -230,8 +230,8 @@ impl ServerEvent {
     /// # Examples
     ///
     /// ```
-    /// use zappy_server::Inhabitant; use zappy_server::protocol::ServerEvent;
-    /// use zappy_server::utils::orientation::RelativeOrientation;
+    /// use zappy_engine::Inhabitant; use zappy_engine::protocol::ServerEvent;
+    /// use zappy_engine::utils::orientation::RelativeOrientation;
     ///
     /// let player = Inhabitant::default().with_id(5);
     /// let event = ServerEvent::Dead { player_id: 5 };

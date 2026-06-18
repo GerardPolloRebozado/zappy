@@ -174,7 +174,7 @@ mod tests {
     #[test]
     fn test_inexisting_team() {
         let mut server = Server {
-            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
+            listener: Some(std::net::TcpListener::bind("127.0.0.1:0").unwrap()),
             _users: std::collections::HashMap::new(),
             _freq: 100,
             game_start: 0,
@@ -184,6 +184,7 @@ mod tests {
                     height: 10,
                 },
                 100,
+                0,
             ),
             clients_nb: 1,
             team_names: vec!["existing_team".to_string()],
@@ -226,7 +227,7 @@ mod tests {
     #[test]
     fn test_graphic_auth() {
         let mut server = Server {
-            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
+            listener: Some(std::net::TcpListener::bind("127.0.0.1:0").unwrap()),
             _users: std::collections::HashMap::new(),
             _freq: 100,
             game_start: 0,
@@ -331,7 +332,7 @@ mod tests {
     #[test]
     fn test_ai_auth_consumes_egg() {
         let mut server = Server {
-            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
+            listener: Some(std::net::TcpListener::bind("127.0.0.1:0").unwrap()),
             _users: std::collections::HashMap::new(),
             _freq: 100,
             game_start: 0,
@@ -341,6 +342,7 @@ mod tests {
                     height: 10,
                 },
                 100,
+                0,
             ),
             clients_nb: 10,
             team_names: vec!["existing_team".to_string()],

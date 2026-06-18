@@ -5,7 +5,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use zappy_server::ecs::storage::World;
+//! use zappy_engine::ecs::storage::World;
 //!
 //! // Define your components
 //! struct Position { x: f32, y: f32 }
@@ -69,6 +69,17 @@ impl Entity {
     }
     pub fn generation(&self) -> u32 {
         self.generation
+    }
+
+    pub fn from_id(id: u32, world: &World) -> Option<Entity> {
+        if (id as usize) < world.entity_generations.len() {
+            let generation = world.entity_generations[id as usize];
+            let entity = Entity { id, generation };
+            if world.is_alive(entity) {
+                return Some(entity);
+            }
+        }
+        None
     }
 }
 
@@ -161,6 +172,8 @@ pub struct World {
     storages: HashMap<TypeId, Box<dyn ComponentStorage>>,
     /// curent frequency used to calculate time for instance, if f=1, ”forward” takes 7 / 1 = 7 seconds.
     pub freq: u64,
+    /// current time in milliseconds
+    pub current_time: u64,
     /// used to know when to spawn new resources
     pub last_resource_spawn: u64,
     pub resources_amount: Inventory,
@@ -174,20 +187,22 @@ impl Default for World {
                 height: 100,
             },
             100,
+            0,
         )
     }
 }
 
 impl World {
     /// Creates a new, empty ECS world
-    pub fn new(map_size: MapSize, freq: u64) -> Self {
+    pub fn new(map_size: MapSize, freq: u64, current_time: u64) -> Self {
         Self {
             map_size,
             entity_generations: Vec::new(),
             free_ids: Vec::new(),
             storages: HashMap::new(),
             freq,
-            last_resource_spawn: 1,
+            current_time,
+            last_resource_spawn: current_time,
             resources_amount: Inventory::new(),
         }
     }

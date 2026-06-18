@@ -130,8 +130,8 @@ fn shortest_delta(from: u32, to: u32, size: i32) -> i32 {
 /// # Examples
 ///
 /// ```
-/// use zappy_server::Inhabitant; use zappy_server::utils::orientation::calc_k;
-/// use zappy_server::utils::orientation::RelativeOrientation;
+/// use zappy_engine::Inhabitant; use zappy_engine::utils::orientation::calc_k;
+/// use zappy_engine::utils::orientation::RelativeOrientation;
 ///
 /// let player = Inhabitant::default().with_id(1).with_pos(5, 5);
 /// assert_eq!(calc_k(5, 4, &player, 10, 10), 1);
