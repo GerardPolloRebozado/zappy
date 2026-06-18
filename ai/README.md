@@ -102,6 +102,8 @@ You can also customize the training session using command-line arguments:
 ```
 *(Use `./ai/training/run_training.sh --help` to see all available options).*
 
+> **Note on Timesteps:** The Proximal Policy Optimization (PPO) algorithm processes data in batches called "rollouts". By default, Stable-Baselines3 uses a rollout buffer size of **2048 timesteps**. This means even if you request a training session of `-t 10`, the AI will *always* complete at least one full buffer of 2048 steps before performing its first mathematical update and exiting. For a proper training cycle, it is recommended to run at least `-t 2500`.
+
 ### Run AI Model  
 
 ```bash
