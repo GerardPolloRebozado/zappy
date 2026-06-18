@@ -166,6 +166,10 @@ pub struct World {
     pub last_resource_spawn: u64,
     pub resources_amount: Inventory,
     pub map_event: MapEvent,
+    /// Timestamp of the last event tick (for duration countdown)
+    pub last_event_check: u64,
+    /// Timestamp of the last random event trigger roll
+    pub last_event_trigger_check: u64,
 }
 
 impl Default for World {
@@ -192,6 +196,8 @@ impl World {
             last_resource_spawn: 1,
             resources_amount: Inventory::new(),
             map_event: MapEvent::None,
+            last_event_check: 1,
+            last_event_trigger_check: 1,
         }
     }
 
