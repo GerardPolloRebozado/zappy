@@ -21,12 +21,17 @@ pub fn check_dead_inhabitants(world: &mut World) {
 
     for entity in inhabitants {
         let freq = world.freq;
-        let inv = world.get_component_mut::<Inventory>(entity).unwrap();
-        let food_count = inv.get_item_count(Food);
-        if food_count == 0 {
+        let now = world.current_time;
+
+        let inv = match world.get_component_mut::<Inventory>(entity) {
+            Some(inv) => inv,
+            None => continue,
+        };
+
+        inv.consume_food(freq, now);
+
+        if inv.get_item_count(Food) == 0 {
             dead_entities.push(entity);
-        } else {
-            inv.consume_food(freq);
         }
     }
 

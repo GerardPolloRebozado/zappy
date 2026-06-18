@@ -5,11 +5,21 @@ use crate::server::Server;
 pub fn network_system(server: &mut Server) {
     let fds = server.get_server_events();
 
-    let listener_ready = fds[0]
-        .revents()
-        .is_some_and(|f| f.contains(PollFlags::POLLIN));
+    if fds.is_empty() {
+        return;
+    }
 
-    let client_revents: Vec<PollFlags> = fds[1..]
+    let listener_ready = if server.listener.is_some() {
+        fds[0]
+            .revents()
+            .is_some_and(|f| f.contains(PollFlags::POLLIN))
+    } else {
+        false
+    };
+
+    let client_revents_start = if server.listener.is_some() { 1 } else { 0 };
+
+    let client_revents: Vec<PollFlags> = fds[client_revents_start..]
         .iter()
         .map(|fd| fd.revents().unwrap_or(PollFlags::empty()))
         .collect();

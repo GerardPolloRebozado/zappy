@@ -168,7 +168,7 @@ mod tests {
 
     fn create_test_server(freq: u32) -> Server {
         Server {
-            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
+            listener: Some(std::net::TcpListener::bind("127.0.0.1:0").unwrap()),
             _users: std::collections::HashMap::new(),
             _freq: freq,
             game_start: 0,
@@ -178,6 +178,7 @@ mod tests {
                     height: 10,
                 },
                 freq as u64,
+                0,
             ),
             clients_nb: 1,
             team_names: vec!["TeamA".to_string(), "TeamB".to_string()],

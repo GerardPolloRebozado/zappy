@@ -2,16 +2,10 @@ use env_logger::Builder;
 use log::LevelFilter;
 use std::io;
 
-use crate::{
+use zappy_engine::{
     server::Server,
     utils::{constants::ERROR_EXIT_CODE, parse_server_args},
 };
-
-pub mod commands;
-pub mod ecs;
-pub mod protocol;
-pub mod server;
-pub mod utils;
 
 fn main() -> io::Result<()> {
     Builder::from_default_env()
@@ -32,7 +26,13 @@ fn main() -> io::Result<()> {
 
     let mut server = Server::new(config);
     server.load();
+    let mut last_tick = std::time::Instant::now();
     loop {
+        let now = std::time::Instant::now();
+        let delta = now.duration_since(last_tick).as_millis() as u64;
+        last_tick = now;
+
+        server.world.current_time += delta;
         server.run();
     }
 }
