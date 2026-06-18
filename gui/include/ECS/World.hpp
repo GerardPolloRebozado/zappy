@@ -184,7 +184,7 @@ class World {
     }
 
     /**
-     *
+     * Allows to remove all created entities, used when going back to the menu from the game
      */
     void despawn_all_entities() {
         for (auto& [_, storage] : storages) {
