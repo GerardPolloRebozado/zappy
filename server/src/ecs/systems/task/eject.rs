@@ -86,15 +86,17 @@ mod tests {
     #[test]
     fn eject_player_facing_north() {
         let mut world = World::default();
-        let entity = world.spawn();
-        build_inhabitant_with_entity(entity, 1, 1, RelativeOrientation::Forward, &mut world);
+        let inhabitant1 = world.spawn();
+        build_inhabitant_with_entity(inhabitant1, 1, 1, RelativeOrientation::Forward, &mut world);
         let inhabitant2 = world.spawn();
         build_inhabitant_with_entity(inhabitant2, 1, 1, RelativeOrientation::Forward, &mut world);
 
         let (response, event) = eject(&mut world, inhabitant2);
         assert_eq!(response.code, ResponseCode::Status(Ok));
         let inhabitant2_pos = world.get_component::<Position>(inhabitant2).unwrap();
-        assert_eq!(*inhabitant2_pos, Position { x: 1, y: 0 });
+        assert_eq!(*inhabitant2_pos, Position { x: 1, y: 1 });
+        let inhabitant1_pos = world.get_component::<Position>(inhabitant1).unwrap();
+        assert_eq!(*inhabitant1_pos, Position { x: 1, y: 0 });
         assert!(event.is_some());
     }
 
