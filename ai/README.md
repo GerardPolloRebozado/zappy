@@ -75,7 +75,10 @@ The AI does not interact with the game via strings or visuals; it interacts thro
   - Indices `0-6`: The player's current inventory (food, linemate, deraumere, etc.).
   - Indices `7-654`: The parsed "vision" grid (the result of the `Look` command mapped to integer counters per tile).
   - Index `655`: The player's current level.
-- **Action Space (What the AI does):** 19 actions, mapped to Zappy commands via an `IntEnum`. 
+- **Action Space (What the AI does):** 24 actions, mapped to Zappy commands via an `IntEnum`. 
+
+### The Headless FFI Library Mode
+We significantly improved training speeds by converting the Rust `zappy_server` into a shared library (`zappy_engine`). Instead of running a background server process and communicating via TCP sockets, the Python `LibZappyEnv` uses `ctypes` to invoke engine ticks and functions directly in memory. This eliminates network overhead and allows training to process hundreds of times faster.
 
 ### The Rewards System
 The Reinforcement Learning agent starts blind and learns optimal behavior by trying to maximize its cumulative score based on the following ruleset:
@@ -86,13 +89,18 @@ The Reinforcement Learning agent starts blind and learns optimal behavior by try
 - **`-100.0` (Death/Termination):** The ultimate punishment. If the player runs out of life units (1260 ticks without eating) and the server sends a `dead` signal (Broken Pipe), the episode terminates with a massive penalty. This forces the AI to prioritize food collection and survival above all else.
 
 ### Run AI Training
-To launch the autonomous training loop (which automatically spins up a background Zappy Server instance and manages the lifecycle), you first need to configure the build directory:
+To launch the autonomous training loop using the high-speed library implementation, you can use the provided bash script. This script automatically builds the Rust engine in release mode and starts the python process with the correct parameters.
 
 ```bash
-cd build
-cmake ..
-make train
+chmod +x ai/training/run_training.sh
+./ai/training/run_training.sh
 ```
+
+You can also customize the training session using command-line arguments:
+```bash
+./ai/training/run_training.sh -t 100000 -x 20 -y 20 -f 1000 -n TeamAI -m custom_model_name
+```
+*(Use `./ai/training/run_training.sh --help` to see all available options).*
 
 ### Run AI Model  
 

@@ -52,6 +52,14 @@ We decided to start a massive training session lasting over 36 real minutes of C
 #### **Technical Diagnosis:**
 Such a low entropy value (`-0.0003`) coupled with a reward of over a million points confirms that the AI has discovered a **Closed Local Optimum**. Because there is a very juicy reward for collecting stones (`TAKE = +10.0`) and a negligible penalty for dropping them (`SET = +0.0` or less), the AI has learned a dirty trick: it stands on a tile with resources, drops an item on the ground, and picks it up again in an infinite compulsive loop. It only stops when its food level drops dangerously close to 15, at which point it grabs a piece of food and in starts another time its stone loop.
 
+### Phase 5: The Need for Speed (FFI Headless Library Integration)
+As training episodes stretched into millions of timesteps, the overhead of Python communicating with the Rust server via local TCP sockets became the primary bottleneck. The back-and-forth serialization, network stack latency, and synchronization delays limited how fast the PPO algorithm could ingest data.
+
+#### **Technical Diagnosis & Solution:**
+We fundamentally changed the architecture by converting the Rust engine into a shared library (`zappy_engine` cdylib). We wrote a Foreign Function Interface (FFI) bridge in Python using `ctypes` (`ZappyLib`). 
+
+Now, the `LibZappyEnv` loads the game engine directly into Python's memory space. We bypass the network entirely, directly advancing the simulation clock (`zappy_tick`) and instantly reading strings out of memory. This "headless" mode catapulted the training frames-per-second, drastically reducing the real-world time required to train the AI. To manage this new workflow, we introduced a highly configurable bash script (`run_training.sh`) that automates compiling the Rust code in release mode, configuring the PYTHONPATH, and parsing command-line hyperparameters (like map size and frequency).
+
 ---
 
 ## 3. Changelog and Code Architecture Implementation
