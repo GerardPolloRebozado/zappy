@@ -28,6 +28,11 @@ class UIChatPanel : public AUIComponent {
     std::shared_ptr<ChatLogs> _chatLogs;
     int _fontSize;
     float _spacing;
+    std::map<std::string, raylib::Color> _typeColors = {
+        {"ERROR", raylib::Color::Red()},        {"DEATH", raylib::Color::Red()},
+        {"JOIN", raylib::Color::Green()},       {"CHAT", raylib::Color::Yellow()},
+        {"BROADCAST", raylib::Color::Yellow()},
+    };
 };
 
 } // namespace zappy

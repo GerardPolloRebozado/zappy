@@ -45,16 +45,13 @@ void UIChatPanel::render() {
         const auto& msg = messages[i];
 
         raylib::Color textColor = raylib::Color::RayWhite();
-        if (msg.Type == "ERROR" || msg.Type == "DEATH") {
-            textColor = raylib::Color::Red();
-        } else if (msg.Type == "JOIN") {
-            textColor = raylib::Color::Green();
-        } else if (msg.Type == "CHAT" || msg.Type == "BROADCAST") {
-            textColor = raylib::Color::Yellow();
+
+        auto it = _typeColors.find(msg.Type);
+        if (it != _typeColors.end()) {
+            textColor = it->second;
         }
 
         std::string displayText = "[" + msg.Type + "] " + msg.Log;
-
         raylib::Vector2 pos{_bounds.x + 10, currentY};
         font.DrawText(displayText, pos, _fontSize, _spacing, textColor);
 
