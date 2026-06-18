@@ -9,11 +9,12 @@
 #define ZAPPY_CORE_HPP
 
 #include "ECS/World.hpp"
+#include "Logging/ChatLogs.hpp"
 #include "NetworkManager.hpp"
 #include "Systems/AnimationSystem.hpp"
+#include "Systems/MusicSystem.hpp"
 #include "Systems/ParticleSystem.hpp"
 #include "Systems/RenderSystem.hpp"
-#include "Systems/MusicSystem.hpp"
 #include "UI/UIManager.hpp"
 #include <memory>
 #include <raylib-cpp.hpp>
@@ -117,6 +118,7 @@ class Core {
     AppState _appState = AppState::MENU;     ///< Current application state.
     MenuState _menuState = MenuState::MAIN;  ///< Current menu state.
     bool _shouldClose = false;               ///< Flag to request application shutdown.
+    std::shared_ptr<ChatLogs> _chatLogs;     ///< Handle the logs of the chat
 };
 
 } // namespace zappy

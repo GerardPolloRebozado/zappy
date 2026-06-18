@@ -41,10 +41,6 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
 
     // Initialize the speakers
     InitAudioDevice();
-    auto backgroundMusic = _world.spawn();
-    _world.add_component(
-        backgroundMusic,
-        std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
 
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
@@ -55,7 +51,7 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
     _world.add_component(backgroundMusic,
                          std::make_shared<ComponentMusic>(
                              AssetManager::getInstance().getMusicPath("country"), true));
-
+    _chatLogs = std::make_shared<ChatLogs>();
     _uiManager = std::make_shared<UIManager>();
     _appState = AppState::MENU;
     _setupMainMenu();
@@ -374,8 +370,12 @@ void Core::_setupGameUI() {
         backgroundMusic,
         std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
 
+    // Logs Panel
     _uiManager->addComponent(std::make_shared<UIPanel>(raylib::Rectangle{10, 720, 480, 240},
                                                        raylib::Color{0, 0, 255, 100}, 10));
+    _uiManager->addComponent(std::make_shared<UIText>(raylib::Rectangle{10, 740, 460, 20},
+                                                      "World Chat", 80, raylib::Color::RayWhite(),
+                                                      15, 1.5f));
 }
 
 void Core::_setupTestingData() {
