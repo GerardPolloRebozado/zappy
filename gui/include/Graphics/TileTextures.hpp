@@ -74,8 +74,8 @@ class Tiletextures {
          {raylib::Color(220, 180, 90), raylib::Color(240, 200, 115), raylib::Color(195, 155, 70),
           raylib::Color(170, 130, 55)}},
         {TerrainType::FOREST,
-         {raylib::Color(35, 115, 50), raylib::Color(55, 140, 70), raylib::Color(25, 90, 35),
-          raylib::Color(15, 65, 20)}},
+         {raylib::Color(70, 55, 35), raylib::Color(85, 70, 45), raylib::Color(55, 45, 25),
+          raylib::Color(45, 35, 20)}},
         {TerrainType::OBSIDIAN_BARRENS,
          {raylib::Color(25, 25, 30), raylib::Color(45, 40, 50), raylib::Color(15, 15, 18),
           raylib::Color(75, 30, 35)}},
@@ -158,66 +158,70 @@ class Tiletextures {
                             int local_ny = noise_py + var * size;
 
                             bool drawPixel = false;
+                            int dist = 999;
+                            int parallel = 0;
 
                             if (static_cast<DecalDirection>(col) == DecalDirection::SOLID) {
-                                // Solid base
                                 drawPixel = true;
                             } else {
-                                // Bleed decal
-                                int dist = 999;
                                 switch (static_cast<DecalDirection>(col)) {
                                     case DecalDirection::SOLID:
                                         break;
                                     case DecalDirection::NORTH:
                                         dist = py;
-                                        break; // North
+                                        parallel = px;
+                                        break;
                                     case DecalDirection::SOUTH:
                                         dist = (size - 1) - py;
-                                        break; // South
+                                        parallel = px;
+                                        break;
                                     case DecalDirection::EAST:
                                         dist = (size - 1) - px;
-                                        break; // East
+                                        parallel = py;
+                                        break;
                                     case DecalDirection::WEST:
                                         dist = px;
-                                        break; // West
+                                        parallel = py;
+                                        break;
                                     case DecalDirection::NORTH_WEST:
                                         dist = std::max(px, py);
-                                        break; // NW
+                                        parallel = px - py;
+                                        break;
                                     case DecalDirection::NORTH_EAST:
                                         dist = std::max((size - 1) - px, py);
-                                        break; // NE
+                                        parallel = px + py;
+                                        break;
                                     case DecalDirection::SOUTH_WEST:
                                         dist = std::max(px, (size - 1) - py);
-                                        break; // SW
+                                        parallel = px + py;
+                                        break;
                                     case DecalDirection::SOUTH_EAST:
                                         dist = std::max((size - 1) - px, (size - 1) - py);
-                                        break; // SE
+                                        parallel = px - py;
+                                        break;
                                 }
 
-                                constexpr int baseDistThreshold = 3;
-                                constexpr int randomDistVariance = 6;
-                                uint32_t noise = fast_hash(local_nx, local_ny);
-                                if (dist < baseDistThreshold + (int)(noise % randomDistVariance)) {
+                                // Cute zipper effect
+                                constexpr int toothSize = 4;
+                                int threshold = ((std::abs(parallel) / toothSize) % 2 == 0) ? 6 : 2;
+
+                                if (dist < threshold) {
                                     drawPixel = true;
                                 }
                             }
 
                             if (drawPixel) {
-                                constexpr int threshold1 = 55;
-                                constexpr int threshold2 = 80;
-                                constexpr int threshold3 = 93;
-                                const uint32_t randVal = fast_hash(local_nx, local_ny) % 100;
-                                raylib::Color pixelColor;
+                                raylib::Color pixelColor = palette[0];
 
-                                if (randVal < threshold1) {
-                                    pixelColor = palette[0];
-                                } else if (randVal < threshold2) {
-                                    pixelColor = palette[1];
-                                } else if (randVal < threshold3) {
-                                    pixelColor = palette[2];
-                                } else {
-                                    pixelColor = palette[3];
+                                if (static_cast<DecalDirection>(col) == DecalDirection::SOLID) {
+                                    // 1-pixel border on Top and Left ONLY prevents "double borders"
+                                    // when tiled!
+                                    if (px == 0 || py == 0) {
+                                        pixelColor = palette[2];
+                                    }
                                 }
+                                // No outline on the decals to prevent criss-crossing oddities in
+                                // corners (they happen anyway, but I gave up)
 
                                 atlasImage.DrawPixel(col * size + px, row * size + py, pixelColor);
                             }

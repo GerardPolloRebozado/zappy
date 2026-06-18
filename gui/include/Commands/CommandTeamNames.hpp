@@ -17,13 +17,9 @@
 #include <string>
 
 const std::vector<raylib::Color> TEAM_COLORS = {
-    raylib::Color(230, 60, 60, 255),  // Red
-    raylib::Color(60, 230, 60, 255),  // Green
-    raylib::Color(60, 100, 230, 255), // Blue
-    raylib::Color(230, 230, 60, 255), // Yellow
-    raylib::Color(230, 60, 230, 255), // Magenta
-    raylib::Color(60, 230, 230, 255)  // Cyan
-};
+    raylib::Color(180, 80, 80, 255),  raylib::Color(80, 160, 100, 255),
+    raylib::Color(80, 110, 180, 255), raylib::Color(200, 160, 70, 255),
+    raylib::Color(160, 90, 160, 255), raylib::Color(70, 160, 180, 255)};
 
 namespace zappy {
 class CommandTeamNames : public ACommand {

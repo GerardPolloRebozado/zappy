@@ -122,6 +122,12 @@ void RenderSystem::render(World& w) {
                                    (unsigned char)((oldColor.g * tint.g) / 255),
                                    (unsigned char)((oldColor.b * tint.b) / 255),
                                    (unsigned char)((oldColor.a * tint.a) / 255)};
+
+            // Skip tinting the head mesh (index 3) of the mannequin so it stays white
+            if (key.modelName == "robot" && i == 3) {
+                combinedColor = oldColor;
+            }
+
             model.materials[model.meshMaterial[i]].maps[MATERIAL_MAP_DIFFUSE].color = combinedColor;
 
             DrawMeshInstanced(model.meshes[i], model.materials[model.meshMaterial[i]],
@@ -387,9 +393,16 @@ void RenderSystem::_renderTerrain(World& w) {
             checkDecal(pos->x + 1, pos->y + 1, DecalDirection::SOUTH_EAST); // SE
 
             if (type->current_type == TerrainType::FOREST) {
-                raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
+                std::string treeNames[] = {"tree_1", "tree_2", "tree_group_1", "tree_group_2"};
+                int treeIdx = (pos->x * 12345 + pos->y * 67890) % 4;
+                if (treeIdx < 0) {
+                    treeIdx += 4;
+                }
+                std::string treeKey = treeNames[treeIdx];
+
+                raylib::Model& treeModel = AssetManager::getInstance().getModel(treeKey);
                 auto& am = AssetManager::getInstance();
-                std::shared_ptr<BoundingBox> box = am.getBoundingBox("tree2", treeModel);
+                std::shared_ptr<BoundingBox> box = am.getBoundingBox(treeKey, treeModel);
 
                 float sizeX = box->max.x - box->min.x;
                 float sizeZ = box->max.z - box->min.z;
@@ -398,25 +411,23 @@ void RenderSystem::_renderTerrain(World& w) {
                     bool playerOnTile = inhabitantPositions.count(hashPos(pos->x, pos->y)) > 0;
 
                     if (!playerOnTile) {
-                        float scale = 0.4f / std::max(sizeX, sizeZ);
+                        float scale =
+                            0.85f; // Constant scale keeps all trees proportional to each other
 
                         raylib::Vector3 centerOffset((box->max.x + box->min.x) / 2.0f * scale,
                                                      box->min.y * scale,
                                                      (box->max.z + box->min.z) / 2.0f * scale);
 
-                        // Sink the tree by 0.1f to hide its built-in grass base
-                        raylib::Vector3 drawPos(vpos.x - centerOffset.x,
-                                                2.0f - centerOffset.y - 0.1f,
+                        raylib::Vector3 drawPos(vpos.x - centerOffset.x, 2.0f - centerOffset.y,
                                                 vpos.z - centerOffset.z);
 
                         // Deterministic random offset within the tile
-                        float rX = ((std::abs(pos->x * 137 + pos->y * 31)) % 61) / 100.0f - 0.3f;
-                        float rZ = ((std::abs(pos->x * 19 + pos->y * 101)) % 61) / 100.0f - 0.3f;
+                        float rX = ((std::abs(pos->x * 137 + pos->y * 31)) % 41) / 100.0f - 0.2f;
+                        float rZ = ((std::abs(pos->x * 19 + pos->y * 101)) % 41) / 100.0f - 0.2f;
                         drawPos.x += rX;
                         drawPos.z += rZ;
 
-                        raylib::Model& treeModel = AssetManager::getInstance().getModel("tree2");
-                        addInstance("tree2", drawPos, {0, 1, 0}, 0.0f, {scale, scale, scale}, WHITE,
+                        addInstance(treeKey, drawPos, {0, 1, 0}, 0.0f, {scale, scale, scale}, WHITE,
                                     treeModel.transform);
                     }
                 }
@@ -606,8 +617,18 @@ void RenderSystem::_renderInhabitants(World& w) {
     }
 
     auto& am = AssetManager::getInstance();
-    const raylib::Model& robot = am.getModel("robot");
-    constexpr float scale = 0.1f;
+    raylib::Model& robot = const_cast<raylib::Model&>(am.getModel("robot"));
+    constexpr float scale = 0.8f;
+
+    // Get server frequency
+    float freq = 100.0f;
+    auto timeStorage = w.get_storage<TimeUnit>();
+    if (timeStorage && timeStorage->begin() != timeStorage->end()) {
+        freq = static_cast<float>(timeStorage->begin()->second->frequency);
+    }
+    if (freq <= 0.0f) {
+        freq = 1.0f;
+    }
 
     // Get bounding box to center the model
     BoundingBox box = robot.GetBoundingBox();
@@ -625,56 +646,72 @@ void RenderSystem::_renderInhabitants(World& w) {
 
     for (auto const& [entity, orientationPtr] : *orientationStorage) {
         auto pos = w.get_component<Position>(entity);
-        if (pos) {
+        auto move = w.get_component<MovementInterpolation>(entity);
+        auto anim = w.get_component<Animation>(entity);
+        if (pos && move) {
+            if (anim) {
+                try {
+                    auto& modelAnim = am.getAnimation(anim->currentAnim);
+                    UpdateModelAnimation(robot, modelAnim, static_cast<int>(anim->currentFrame));
+                } catch (...) {
+                }
+            }
             float rotation = 0.0f;
             switch (orientationPtr->current_direction) {
                 case Orientation::N:
-                    rotation = 270.0f;
+                    rotation = 270.0f - 90.0f;
                     break;
                 case Orientation::E:
-                    rotation = 180.0f;
+                    rotation = 180.0f - 90.0f;
                     break;
                 case Orientation::S:
-                    rotation = 90.0f;
+                    rotation = 90.0f - 90.0f;
                     break;
                 case Orientation::W:
-                    rotation = 0.0f;
+                    rotation = 0.0f - 90.0f;
                     break;
             }
 
-            // Calculate position: center the model on the tile correctly even when rotated
             raylib::Vector3 centerOffset = {center.x * scale, center.y * scale, center.z * scale};
             centerOffset = ::Vector3RotateByAxisAngle(centerOffset, {0, 1, 0}, rotation * DEG2RAD);
 
-            raylib::Vector3 vpos((float)pos->x - centerOffset.x, 2.01f - centerOffset.y,
-                                 (float)pos->y - centerOffset.z);
+            raylib::Vector3 vpos(move->visualX - centerOffset.x, 2.01f - centerOffset.y,
+                                 move->visualY - centerOffset.z);
 
             auto team = w.get_component<TeamName>(entity);
             if (team) {
-                int colorIndex = 0;
-                for (const auto& tn : teamNames) {
-                    if (tn == team->_team_name) {
-                        break;
-                    }
-                    colorIndex++;
-                }
-
                 raylib::Color tColor = team->_color;
 
-                addInstance("robot", vpos, {0, 1, 0}, rotation, {scale, scale, scale}, tColor,
-                            robot.transform);
+                // Draw mannequin manually to keep head white
+                Matrix matScale = MatrixScale(scale, scale, scale);
+                Matrix matRotation = MatrixRotate({0, 1, 0}, rotation * DEG2RAD);
+                Matrix matTranslation = MatrixTranslate(vpos.x, vpos.y, vpos.z);
+                Matrix matTransform =
+                    MatrixMultiply(MatrixMultiply(matScale, matRotation), matTranslation);
 
-                float wH = 0.12f; // Thicker height
-                float wT = 0.12f; // Thicker width
+                for (int i = 0; i < robot.meshCount; i++) {
+                    Material mat = robot.materials[robot.meshMaterial[i]];
+                    Color drawColor = tColor;
+                    if (i == 3) {
+                        drawColor = WHITE; // Head is white
+                    } else {
+                        drawColor = tColor;
+                    }
+                    mat.maps[MATERIAL_MAP_DIFFUSE].color = drawColor;
+                    ::DrawMesh(robot.meshes[i], mat, matTransform);
+                }
+
+                float wH = 0.12f;
+                float wT = 0.12f;
                 float yB = 2.02f;
                 float dist = 0.38f;
-                raylib::Vector3((float)pos->x, yB + wH / 2, (float)pos->y + dist)
+                raylib::Vector3(move->visualX, yB + wH / 2, move->visualY + dist)
                     .DrawCube(dist * 2 + wT, wH, wT, tColor);
-                raylib::Vector3((float)pos->x, yB + wH / 2, (float)pos->y - dist)
+                raylib::Vector3(move->visualX, yB + wH / 2, move->visualY - dist)
                     .DrawCube(dist * 2 + wT, wH, wT, tColor);
-                raylib::Vector3((float)pos->x + dist, yB + wH / 2, (float)pos->y)
+                raylib::Vector3(move->visualX + dist, yB + wH / 2, move->visualY)
                     .DrawCube(wT, wH, dist * 2 + wT, tColor);
-                raylib::Vector3((float)pos->x - dist, yB + wH / 2, (float)pos->y)
+                raylib::Vector3(move->visualX - dist, yB + wH / 2, move->visualY)
                     .DrawCube(wT, wH, dist * 2 + wT, tColor);
             }
         }
@@ -689,16 +726,16 @@ void RenderSystem::_renderResources(World& w) {
 
     raylib::Vector3 cameraTarget = _camera.target;
     auto& am = AssetManager::getInstance();
-    std::vector<std::string> grassAnimals = {"bunny", "cat", "cow", "dog", "piglet"};
-    std::vector<std::string> mountainAnimals = {"bear", "mole"};
-    std::vector<std::string> waterAnimals = {"axolotl", "crocodile", "frog", "penguin", "turtle"};
-    std::vector<std::string> sandAnimals = {"crocodile", "elephant", "turtle"};
-    std::vector<std::string> forestAnimals = {"bear",  "bunny", "fox",   "monkey",
-                                              "mouse", "panda", "parrot"};
-    std::vector<std::string> obsidianAnimals = {"mole", "mouse", "crocodile"};
-    std::vector<std::string> luminousAnimals = {"bunny", "frog", "parrot", "unicorn"};
-    std::vector<std::string> crystalAnimals = {"bear", "fox", "mole"};
-    std::vector<std::string> magneticAnimals = {"bear", "fox", "penguin"};
+
+    std::vector<std::string> grassFood = {"food_steak", "food_carrot"};
+    std::vector<std::string> mountainFood = {"food_ham_cooked", "food_cheese"};
+    std::vector<std::string> waterFood = {"food_ham"};
+    std::vector<std::string> sandFood = {"food_lettuce", "food_tomato"};
+    std::vector<std::string> forestFood = {"food_ham"};
+    std::vector<std::string> obsidianFood = {"food_ham_trash"};
+    std::vector<std::string> luminousFood = {"food_steak", "food_lettuce"};
+    std::vector<std::string> crystalFood = {"food_steak", "food_lettuce"};
+    std::vector<std::string> magneticFood = {"food_ham"};
 
     for (auto const& [entity, type] : *terrainStorage) {
         auto pos = w.get_component<Position>(entity);
@@ -713,83 +750,90 @@ void RenderSystem::_renderResources(World& w) {
 
             float yBase = 2.01f;
 
-            // Use biome-specific voxel animals for food, offset slightly from center
+            // Use raw ingredient models for food, offset slightly around the tile
             if (inv->food > 0) {
                 std::vector<std::string>* pool = nullptr;
-
                 switch (type->current_type) {
                     case TerrainType::GRASS:
-                        pool = &grassAnimals;
+                        pool = &grassFood;
                         break;
                     case TerrainType::MOUNTAIN:
-                        pool = &mountainAnimals;
+                        pool = &mountainFood;
                         break;
                     case TerrainType::WATER:
-                        pool = &waterAnimals;
+                        pool = &waterFood;
                         break;
                     case TerrainType::SAND:
-                        pool = &sandAnimals;
+                        pool = &sandFood;
                         break;
                     case TerrainType::FOREST:
-                        pool = &forestAnimals;
+                        pool = &forestFood;
                         break;
                     case TerrainType::OBSIDIAN_BARRENS:
-                        pool = &obsidianAnimals;
+                        pool = &obsidianFood;
                         break;
                     case TerrainType::LUMINOUS_ORCHARDS:
-                        pool = &luminousAnimals;
+                        pool = &luminousFood;
                         break;
                     case TerrainType::CRYSTAL_CANYONS:
-                        pool = &crystalAnimals;
+                        pool = &crystalFood;
                         break;
                     case TerrainType::MAGNETIC_TUNDRA:
-                        pool = &magneticAnimals;
+                        pool = &magneticFood;
                         break;
                 }
 
-                std::string selectedAnimal = "voxel_chicken"; // default
-                if (pool && !pool->empty()) {
-                    int index = (std::abs(pos->x * 137 + pos->y * 31)) % pool->size();
-                    selectedAnimal = "voxel_" + (*pool)[index];
+                int count = std::min(inv->food, 5); // Max 5 visual ingredients
+                for (int i = 0; i < count; ++i) {
+                    std::string selectedFood = "food_ham"; // fallback
+                    if (pool && !pool->empty()) {
+                        int index = (std::abs(pos->x * 137 + pos->y * 31 + i * 17)) % pool->size();
+                        selectedFood = (*pool)[index];
+                    }
+
+                    raylib::Model& foodModel = am.getModel(selectedFood);
+                    std::shared_ptr<BoundingBox> cBox = am.getBoundingBox(selectedFood, foodModel);
+
+                    float sizeX = cBox->max.x - cBox->min.x;
+                    float sizeZ = cBox->max.z - cBox->min.z;
+                    float sizeY = cBox->max.y - cBox->min.y;
+                    float maxDim = std::max({sizeX, sizeY, sizeZ});
+                    float scale = (maxDim > 0) ? (0.25f / maxDim) : 0.10f; // Scale it nicely
+
+                    raylib::Vector3 cCenter = {(cBox->min.x + cBox->max.x) / 2.0f, cBox->min.y,
+                                               (cBox->min.z + cBox->max.z) / 2.0f};
+
+                    // Deterministic random offset for food within the tile
+                    float rX =
+                        ((std::abs(pos->x * 71 + pos->y * 13 + i * 23)) % 81) / 100.0f - 0.4f;
+                    float rZ =
+                        ((std::abs(pos->x * 23 + pos->y * 89 + i * 47)) % 81) / 100.0f - 0.4f;
+
+                    raylib::Vector3 cPos((float)pos->x + rX - (cCenter.x * scale),
+                                         yBase - (cCenter.y * scale),
+                                         (float)pos->y + rZ - (cCenter.z * scale));
+
+                    float rotAngle = ((std::abs(pos->x * 47 + pos->y * 59 + i * 11)) % 360);
+
+                    addInstance(selectedFood, cPos, {0, 1, 0}, rotAngle, {scale, scale, scale},
+                                WHITE, foodModel.transform);
                 }
-
-                raylib::Model& foodModel = am.getModel(selectedAnimal);
-                std::shared_ptr<BoundingBox> cBox = am.getBoundingBox(selectedAnimal, foodModel);
-
-                float sizeX = cBox->max.x - cBox->min.x;
-                float sizeZ = cBox->max.z - cBox->min.z;
-                float sizeY = cBox->max.y - cBox->min.y;
-                float maxDim = std::max({sizeX, sizeY, sizeZ});
-                // Make animals smaller: max dim is 0.2f
-                float scale = (maxDim > 0) ? (0.20f / maxDim) : 0.10f;
-
-                raylib::Vector3 cCenter = {(cBox->min.x + cBox->max.x) / 2.0f, cBox->min.y,
-                                           (cBox->min.z + cBox->max.z) / 2.0f};
-
-                // Deterministic random offset for food within the tile
-                float rX = ((std::abs(pos->x * 71 + pos->y * 13)) % 81) / 100.0f - 0.4f;
-                float rZ = ((std::abs(pos->x * 23 + pos->y * 89)) % 81) / 100.0f - 0.4f;
-
-                raylib::Vector3 cPos((float)pos->x + rX - (cCenter.x * scale),
-                                     yBase - (cCenter.y * scale),
-                                     (float)pos->y + rZ - (cCenter.z * scale));
-
-                // Deterministic random rotation
-                float rotAngle = ((std::abs(pos->x * 47 + pos->y * 59)) % 360);
-
-                addInstance(selectedAnimal, cPos, {0, 1, 0}, rotAngle, {scale, scale, scale}, WHITE,
-                            foodModel.transform);
             }
 
-            auto drawGem = [&](const std::string& modelName, float dx, float dz,
-                               raylib::Color tint) {
+            auto drawResourceModel = [&](int count, float dx, float dz, raylib::Color tint) {
+                if (count <= 0) {
+                    return;
+                }
+                int modelIdx = std::clamp(count, 1, 9);
+                std::string modelName = "resource_" + std::to_string(modelIdx);
+
                 raylib::Model& rockModel = am.getModel(modelName);
                 auto box = am.getBoundingBox(modelName, rockModel);
                 float sizeX = box->max.x - box->min.x;
                 float sizeZ = box->max.z - box->min.z;
                 float sizeY = box->max.y - box->min.y;
                 float maxDim = std::max({sizeX, sizeY, sizeZ});
-                float rockScale = (maxDim > 0) ? (0.15f / maxDim) : 0.05f;
+                float rockScale = (maxDim > 0) ? (0.35f / maxDim) : 0.05f;
 
                 raylib::Vector3 rockCenter = {(box->min.x + box->max.x) / 2.0f, box->min.y,
                                               (box->min.z + box->max.z) / 2.0f};
@@ -806,24 +850,12 @@ void RenderSystem::_renderResources(World& w) {
                             {rockScale, rockScale, rockScale}, tint, rockModel.transform);
             };
 
-            if (inv->linemate > 0) {
-                drawGem("rock1", 0.0f, 0.0f, WHITE);
-            }
-            if (inv->deraumere > 0) {
-                drawGem("rock2", 0.2f, 0.0f, SKYBLUE);
-            }
-            if (inv->sibur > 0) {
-                drawGem("rock1", 0.4f, 0.0f, DARKBLUE);
-            }
-            if (inv->mendiane > 0) {
-                drawGem("rock2", 0.0f, 0.2f, PINK);
-            }
-            if (inv->phiras > 0) {
-                drawGem("rock1", 0.2f, 0.2f, DARKPURPLE);
-            }
-            if (inv->thystame > 0) {
-                drawGem("rock2", 0.4f, 0.2f, GOLD);
-            }
+            drawResourceModel(inv->linemate, 0.0f, 0.0f, raylib::Color(110, 210, 120, 255));
+            drawResourceModel(inv->deraumere, 0.2f, 0.0f, raylib::Color(100, 180, 240, 255));
+            drawResourceModel(inv->sibur, 0.4f, 0.0f, raylib::Color(190, 130, 230, 255));
+            drawResourceModel(inv->mendiane, 0.0f, 0.2f, raylib::Color(240, 220, 110, 255));
+            drawResourceModel(inv->phiras, 0.2f, 0.2f, raylib::Color(235, 120, 120, 255));
+            drawResourceModel(inv->thystame, 0.4f, 0.2f, raylib::Color(245, 245, 245, 255));
         }
     }
 }
