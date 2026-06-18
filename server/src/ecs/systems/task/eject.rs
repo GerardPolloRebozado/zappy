@@ -1,3 +1,5 @@
+use log::error;
+
 use crate::{
     ecs::{
         components::{egg::Egg, inhabitant_tag::InhabitantTag, position::Position},
@@ -22,7 +24,7 @@ pub fn eject(world: &mut World, entity: Entity) -> (Response, Option<ServerEvent
         RelativeOrientation::Right => new_pos.x += 1,
         RelativeOrientation::Back => new_pos.y += 1,
         RelativeOrientation::Left => new_pos.x -= 1,
-        _ => (),
+        _ => error!("Orientation on player should never be diagonal"),
     }
 
     for (e, _) in world.get_storage::<InhabitantTag>().unwrap().iter() {
@@ -34,6 +36,9 @@ pub fn eject(world: &mut World, entity: Entity) -> (Response, Option<ServerEvent
     }
 
     for i in inhabitants_in_tile {
+        if i == entity {
+            continue;
+        }
         let pos = world.get_component_mut::<Position>(i).unwrap();
         *pos = new_pos.clone();
     }
@@ -81,15 +86,17 @@ mod tests {
     #[test]
     fn eject_player_facing_north() {
         let mut world = World::default();
-        let entity = world.spawn();
-        build_inhabitant_with_entity(entity, 1, 1, RelativeOrientation::Forward, &mut world);
+        let inhabitant1 = world.spawn();
+        build_inhabitant_with_entity(inhabitant1, 1, 1, RelativeOrientation::Forward, &mut world);
         let inhabitant2 = world.spawn();
         build_inhabitant_with_entity(inhabitant2, 1, 1, RelativeOrientation::Forward, &mut world);
 
         let (response, event) = eject(&mut world, inhabitant2);
         assert_eq!(response.code, ResponseCode::Status(Ok));
         let inhabitant2_pos = world.get_component::<Position>(inhabitant2).unwrap();
-        assert_eq!(*inhabitant2_pos, Position { x: 1, y: 0 });
+        assert_eq!(*inhabitant2_pos, Position { x: 1, y: 1 });
+        let inhabitant1_pos = world.get_component::<Position>(inhabitant1).unwrap();
+        assert_eq!(*inhabitant1_pos, Position { x: 1, y: 0 });
         assert!(event.is_some());
     }
 

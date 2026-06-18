@@ -48,6 +48,8 @@ set(CORE_SOURCES
         src/Network/TcpSocket.cpp
         src/Systems/RenderSystem.cpp
         src/Systems/ParticleSystem.cpp
+        src/Systems/AnimationSystem.cpp
+        src/Systems/MusicSystem.cpp
         src/Graphics/AssetManager.cpp
         src/Graphics/VoxelBatcher.cpp
         src/UI/AUIComponent.cpp
@@ -63,6 +65,7 @@ set(CORE_SOURCES
         include/Components/ComponentShared.hpp
         include/Components/ComponentInhabitant.hpp
         include/Components/ComponentTile.hpp
+        include/Components/ComponentMusic.hpp
         include/UI/IUIComponent.hpp
         include/UI/AUIComponent.hpp
         include/UI/UIEvent.hpp
@@ -87,7 +90,7 @@ set(CORE_SOURCES
         include/Commands/CommandPlayerInventory.hpp
         include/Commands/CommandMapSize.hpp
         include/Commands/CommandMapContent.hpp
-        include/Commands/FactoryCommands.cpp
+        src/Commands/FactoryCommands.cpp
         include/ECS/Entity.hpp
         include/ECS/IComponentStorage.hpp
         include/ECS/World.hpp

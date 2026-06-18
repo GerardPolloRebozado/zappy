@@ -30,6 +30,10 @@ class AssetManager {
     // Fonts
     raylib::Font& getFont(const std::string& name);
 
+    // Audio
+    raylib::Sound& getSound(const std::string& name);
+    std::string getMusicPath(const std::string& name);
+
     // Textures
     raylib::Texture2D& getTexture(const std::string& name);
 
@@ -38,6 +42,14 @@ class AssetManager {
 
     std::shared_ptr<raylib::BoundingBox> getBoundingBox(const std::string& name,
                                                         raylib::Model& model);
+
+    /**
+     * @brief Retrieves a loaded 3D model animation by its name identifier.
+     * @param name The name of the animation to retrieve (e.g., "inhabitant_general_Idle_A").
+     * @return Reference to the loaded raylib::ModelAnimation.
+     * @throws ErrorAsset If the animation cannot be found.
+     */
+    raylib::ModelAnimation& getAnimation(const std::string& name);
 
   private:
     AssetManager() = default;
@@ -51,10 +63,18 @@ class AssetManager {
     std::map<std::string, std::unique_ptr<raylib::Font>> _fonts;
     std::unordered_map<std::string, std::shared_ptr<raylib::BoundingBox>> _boundingBoxes;
 
+    std::map<std::string, ::ModelAnimation*> _animations;
+    std::map<std::string, std::pair<::ModelAnimation*, int>> _animationArrays;
+
+    std::map<std::string, std::unique_ptr<raylib::Sound>> _sounds;
+    std::map<std::string, std::string> _musicPaths;
+
     void _loadModels();
     void _loadTextures();
     void _loadShaders();
     void _loadFonts();
+    void _loadAnimations();
+    void _loadAudio();
 };
 
 } // namespace zappy
