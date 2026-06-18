@@ -921,9 +921,10 @@ void RenderSystem::_renderPOV(World& w) {
         return;
     }
 
-    if (raylib::Keyboard::IsKeyDown(KEY_W) && raylib::Keyboard::IsKeyDown(KEY_A) &&
-        raylib::Keyboard::IsKeyDown(KEY_S) && raylib::Keyboard::IsKeyDown(KEY_D)) {
+    if (raylib::Keyboard::IsKeyDown(KEY_W) || raylib::Keyboard::IsKeyDown(KEY_A) ||
+        raylib::Keyboard::IsKeyDown(KEY_S) || raylib::Keyboard::IsKeyDown(KEY_D)) {
         followingEntity->clear();
+        return;
     }
     auto entity = followingEntity->begin()->first;
     auto pos = w.get_component<Position>(entity);
