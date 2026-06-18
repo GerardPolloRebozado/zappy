@@ -41,6 +41,19 @@ struct TimeUnit {
 struct ServerId {
     int id;
 };
+struct Animation {
+    std::string currentAnim;
+    float currentFrame = 0.0f;
+    float baseFps = 60.0f;
+    float speedMultiplier = 1.0f;
+    bool loop = true;
+};
+
+struct MovementInterpolation {
+    float visualX = -1.0f;
+    float visualY = -1.0f;
+    bool isMoving = false;
+};
 } // namespace zappy
 
 #endif // ZAPPY_GUI_COMPONENTSHARED_HPP

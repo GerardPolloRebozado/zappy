@@ -122,6 +122,12 @@ void RenderSystem::render(World& w) {
                                    (unsigned char)((oldColor.g * tint.g) / 255),
                                    (unsigned char)((oldColor.b * tint.b) / 255),
                                    (unsigned char)((oldColor.a * tint.a) / 255)};
+
+            // Skip tinting the head mesh (index 3) of the mannequin so it stays white
+            if (key.modelName == "robot" && i == 3) {
+                combinedColor = oldColor;
+            }
+
             model.materials[model.meshMaterial[i]].maps[MATERIAL_MAP_DIFFUSE].color = combinedColor;
 
             DrawMeshInstanced(model.meshes[i], model.materials[model.meshMaterial[i]],
@@ -611,8 +617,18 @@ void RenderSystem::_renderInhabitants(World& w) {
     }
 
     auto& am = AssetManager::getInstance();
-    const raylib::Model& robot = am.getModel("robot");
-    constexpr float scale = 0.1f;
+    raylib::Model& robot = const_cast<raylib::Model&>(am.getModel("robot"));
+    constexpr float scale = 0.8f;
+
+    // Get server frequency
+    float freq = 100.0f;
+    auto timeStorage = w.get_storage<TimeUnit>();
+    if (timeStorage && timeStorage->begin() != timeStorage->end()) {
+        freq = static_cast<float>(timeStorage->begin()->second->frequency);
+    }
+    if (freq <= 0.0f) {
+        freq = 1.0f;
+    }
 
     // Get bounding box to center the model
     BoundingBox box = robot.GetBoundingBox();
@@ -630,56 +646,72 @@ void RenderSystem::_renderInhabitants(World& w) {
 
     for (auto const& [entity, orientationPtr] : *orientationStorage) {
         auto pos = w.get_component<Position>(entity);
-        if (pos) {
+        auto move = w.get_component<MovementInterpolation>(entity);
+        auto anim = w.get_component<Animation>(entity);
+        if (pos && move) {
+            if (anim) {
+                try {
+                    auto& modelAnim = am.getAnimation(anim->currentAnim);
+                    UpdateModelAnimation(robot, modelAnim, static_cast<int>(anim->currentFrame));
+                } catch (...) {
+                }
+            }
             float rotation = 0.0f;
             switch (orientationPtr->current_direction) {
                 case Orientation::N:
-                    rotation = 270.0f;
+                    rotation = 270.0f - 90.0f;
                     break;
                 case Orientation::E:
-                    rotation = 180.0f;
+                    rotation = 180.0f - 90.0f;
                     break;
                 case Orientation::S:
-                    rotation = 90.0f;
+                    rotation = 90.0f - 90.0f;
                     break;
                 case Orientation::W:
-                    rotation = 0.0f;
+                    rotation = 0.0f - 90.0f;
                     break;
             }
 
-            // Calculate position: center the model on the tile correctly even when rotated
             raylib::Vector3 centerOffset = {center.x * scale, center.y * scale, center.z * scale};
             centerOffset = ::Vector3RotateByAxisAngle(centerOffset, {0, 1, 0}, rotation * DEG2RAD);
 
-            raylib::Vector3 vpos((float)pos->x - centerOffset.x, 2.01f - centerOffset.y,
-                                 (float)pos->y - centerOffset.z);
+            raylib::Vector3 vpos(move->visualX - centerOffset.x, 2.01f - centerOffset.y,
+                                 move->visualY - centerOffset.z);
 
             auto team = w.get_component<TeamName>(entity);
             if (team) {
-                int colorIndex = 0;
-                for (const auto& tn : teamNames) {
-                    if (tn == team->_team_name) {
-                        break;
-                    }
-                    colorIndex++;
-                }
-
                 raylib::Color tColor = team->_color;
 
-                addInstance("robot", vpos, {0, 1, 0}, rotation, {scale, scale, scale}, tColor,
-                            robot.transform);
+                // Draw mannequin manually to keep head white
+                Matrix matScale = MatrixScale(scale, scale, scale);
+                Matrix matRotation = MatrixRotate({0, 1, 0}, rotation * DEG2RAD);
+                Matrix matTranslation = MatrixTranslate(vpos.x, vpos.y, vpos.z);
+                Matrix matTransform =
+                    MatrixMultiply(MatrixMultiply(matScale, matRotation), matTranslation);
 
-                float wH = 0.12f; // Thicker height
-                float wT = 0.12f; // Thicker width
+                for (int i = 0; i < robot.meshCount; i++) {
+                    Material mat = robot.materials[robot.meshMaterial[i]];
+                    Color drawColor = tColor;
+                    if (i == 3) {
+                        drawColor = WHITE; // Head is white
+                    } else {
+                        drawColor = tColor;
+                    }
+                    mat.maps[MATERIAL_MAP_DIFFUSE].color = drawColor;
+                    ::DrawMesh(robot.meshes[i], mat, matTransform);
+                }
+
+                float wH = 0.12f;
+                float wT = 0.12f;
                 float yB = 2.02f;
                 float dist = 0.38f;
-                raylib::Vector3((float)pos->x, yB + wH / 2, (float)pos->y + dist)
+                raylib::Vector3(move->visualX, yB + wH / 2, move->visualY + dist)
                     .DrawCube(dist * 2 + wT, wH, wT, tColor);
-                raylib::Vector3((float)pos->x, yB + wH / 2, (float)pos->y - dist)
+                raylib::Vector3(move->visualX, yB + wH / 2, move->visualY - dist)
                     .DrawCube(dist * 2 + wT, wH, wT, tColor);
-                raylib::Vector3((float)pos->x + dist, yB + wH / 2, (float)pos->y)
+                raylib::Vector3(move->visualX + dist, yB + wH / 2, move->visualY)
                     .DrawCube(wT, wH, dist * 2 + wT, tColor);
-                raylib::Vector3((float)pos->x - dist, yB + wH / 2, (float)pos->y)
+                raylib::Vector3(move->visualX - dist, yB + wH / 2, move->visualY)
                     .DrawCube(wT, wH, dist * 2 + wT, tColor);
             }
         }

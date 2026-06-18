@@ -39,6 +39,9 @@ class AssetManager {
     std::shared_ptr<raylib::BoundingBox> getBoundingBox(const std::string& name,
                                                         raylib::Model& model);
 
+    // Animations
+    raylib::ModelAnimation& getAnimation(const std::string& name);
+
   private:
     AssetManager() = default;
     ~AssetManager() = default;
@@ -51,10 +54,14 @@ class AssetManager {
     std::map<std::string, std::unique_ptr<raylib::Font>> _fonts;
     std::unordered_map<std::string, std::shared_ptr<raylib::BoundingBox>> _boundingBoxes;
 
+    std::map<std::string, ::ModelAnimation*> _animations;
+    std::map<std::string, std::pair<::ModelAnimation*, int>> _animationArrays;
+
     void _loadModels();
     void _loadTextures();
     void _loadShaders();
     void _loadFonts();
+    void _loadAnimations();
 };
 
 } // namespace zappy
