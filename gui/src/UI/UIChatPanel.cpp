@@ -5,22 +5,31 @@ namespace zappy {
 UIChatPanel::UIChatPanel(raylib::Rectangle bounds, std::shared_ptr<ChatLogs> chatLogs, World& world,
                          int zIndex)
     : AUIComponent(bounds, nullptr, zIndex), _chatLogs(chatLogs), _world(world), _fontSize(15),
-      _spacing(1.5f) {}
+      _spacing(1.5f) {
+    _isVisible = true;
+}
 
 void UIChatPanel::update(float dt, raylib::Vector2 mousePos,
                          std::shared_ptr<std::vector<UIEvent>> events) {
-    (void)dt;
-    (void)mousePos;
-    (void)events;
+    if (raylib::Keyboard::IsKeyPressed(KEY_C)) {
+        _isVisible = !_isVisible;
+    }
 }
 
 void UIChatPanel::render() {
+    if (!_isVisible) {
+        return;
+    }
+
     _bounds.Draw(raylib::Color{0, 0, 0, 150});
+
+    auto& font = AssetManager::getInstance().getFont("TextFont");
+    raylib::Vector2 titlePos = {_bounds.x, _bounds.y - 25}; // Un poco más arriba del fondo
+    font.DrawText("World Chat", titlePos, 20, 1.5f, raylib::Color::RayWhite());
 
     if (!_chatLogs) {
         return;
     }
-
     const auto& messages = _chatLogs->getLogs();
     if (messages.empty()) {
         return;
@@ -33,7 +42,6 @@ void UIChatPanel::render() {
         startIndex = messages.size() - maxLines;
     }
 
-    auto& font = AssetManager::getInstance().getFont("TextFont");
     float currentY = _bounds.y + 5;
 
     for (size_t i = startIndex; i < messages.size(); ++i) {

@@ -52,6 +52,7 @@ class UIChatPanel : public AUIComponent {
     World& _world;
     int _fontSize;
     float _spacing;
+    bool _isVisible = true;
     /**
      * @brief Dictionary of colors for system events without a team.
      */
