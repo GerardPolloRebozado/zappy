@@ -8,14 +8,15 @@
 #include "Core.hpp"
 #include "Color.hpp"
 #include "Components/ComponentInhabitant.hpp"
-#include "Components/ComponentShared.hpp"
 #include "Components/ComponentMusic.hpp"
+#include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
 #include "CoreErrors.hpp"
 #include "Graphics/AssetManager.hpp"
 #include "Logging/Logger.hpp"
 #include "Network/NetworkErrors.hpp"
 #include "UI/UIButton.hpp"
+#include "UI/UIChatPanel.hpp"
 #include "UI/UIHudPanel.hpp"
 #include "UI/UIInput.hpp"
 #include "UI/UIManager.hpp"
@@ -370,12 +371,12 @@ void Core::_setupGameUI() {
         backgroundMusic,
         std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
 
-    // Logs Panel
-    _uiManager->addComponent(std::make_shared<UIPanel>(raylib::Rectangle{10, 720, 480, 240},
-                                                       raylib::Color{0, 0, 255, 100}, 10));
-    _uiManager->addComponent(std::make_shared<UIText>(raylib::Rectangle{10, 740, 460, 20},
-                                                      "World Chat", 80, raylib::Color::RayWhite(),
+    // Chat Panel
+    _uiManager->addComponent(std::make_shared<UIText>(raylib::Rectangle{10, 450, 460, 20},
+                                                      "World Chat", 20, raylib::Color::RayWhite(),
                                                       15, 1.5f));
+    _uiManager->addComponent(
+        std::make_shared<UIChatPanel>(raylib::Rectangle{10, 480, 460, 230}, _chatLogs, 10));
 }
 
 void Core::_setupTestingData() {
