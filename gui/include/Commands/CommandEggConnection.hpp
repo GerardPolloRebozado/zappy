@@ -49,6 +49,15 @@ class CommandEggConnection : public ACommand {
                         world.add_component<Position>(eventEntity, *posComponent);
                         world.add_component<EventEggHatched>(eventEntity, EventEggHatched{});
                     }
+                    std::string teamStr = "";
+                    auto teamComp = world.get_component<TeamName>(entity);
+                    if (teamComp) {
+                        teamStr = teamComp->_team_name;
+                    }
+                    if (_chatLogs) {
+                        _chatLogs->addChatLog("Player connected via Egg #" + std::to_string(eggId),
+                                              "JOIN", teamStr);
+                    }
                     world.despawn(entity);
                     log_info("Protocol: Player connected to egg #" + std::to_string(eggId) +
                              " (egg removed)");

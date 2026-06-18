@@ -44,6 +44,11 @@ class CommandIncantationStart : public ACommand {
             playerIds.push_back(playerId);
         }
 
+        if (_chatLogs) {
+            _chatLogs->addChatLog("Incantation started at (" + std::to_string(x) + "," +
+                                      std::to_string(y) + ") for Lvl " + std::to_string(level),
+                                  "INFO");
+        }
         log_info("Protocol: Incantation started at (" + std::to_string(x) + ", " +
                  std::to_string(y) + ") for level " + std::to_string(level) + " with " +
                  std::to_string(playerIds.size()) + " players.");
