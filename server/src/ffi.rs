@@ -1,6 +1,3 @@
-//! Foreign Function Interface for the Zappy engine.
-//! Allows Python to interact with the game logic directly.
-
 use crate::ecs::components::network::NetworkData;
 use crate::protocol::Request;
 use crate::server::Server;
@@ -63,9 +60,11 @@ pub extern "C" fn zappy_add_player(server: *mut Server, team_name: *const c_char
     server
         .world
         .add_component(entity, NetworkData::new_headless());
+    server.world.add_component(
+        entity,
+        crate::ecs::components::team::Team::WaitingForTeamName,
+    );
 
-    // Authentication is usually handled via handle_request with "TeamName\n"
-    // For simplicity in FFI, we might want a direct way or just send the command.
     let req = format!("{}\n", team_name).parse::<Request>().unwrap();
     crate::commands::handle_request(server, entity, req);
 
@@ -78,9 +77,6 @@ pub extern "C" fn zappy_send_command(server: *mut Server, player_id: u32, comman
     let c_str = unsafe { CStr::from_ptr(command) };
     let cmd_str = c_str.to_string_lossy().into_owned();
 
-    // Find entity by ID
-    // Note: This is a bit inefficient if we don't have a map, but for FFI it's okay for now.
-    // In a real ECS we might want a better way.
     let entity = crate::ecs::storage::Entity::from_id(player_id, &server.world);
     if let Some(entity) = entity {
         if let Ok(req) = cmd_str.parse::<Request>() {
