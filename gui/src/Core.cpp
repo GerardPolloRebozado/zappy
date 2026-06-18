@@ -8,8 +8,8 @@
 #include "Core.hpp"
 #include "Color.hpp"
 #include "Components/ComponentInhabitant.hpp"
-#include "Components/ComponentShared.hpp"
 #include "Components/ComponentMusic.hpp"
+#include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
 #include "CoreErrors.hpp"
 #include "Graphics/AssetManager.hpp"
@@ -42,8 +42,9 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
     // Initialize the speakers and add the background.
     InitAudioDevice();
     auto backgroundMusic = _world.spawn();
-    _world.add_component(backgroundMusic, std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
-
+    _world.add_component(
+        backgroundMusic,
+        std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
 
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
@@ -256,11 +257,17 @@ void Core::_setupSettingsMenu() {
 
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 150, (float)cy + 110, 140, 50}, "-",
-        [this]() { _musicSystem.volumeDown(); /*log_debug("Volume Down");*/ }, 1));
+        [this]() {
+            _musicSystem.volumeDown(); /*log_debug("Volume Down");*/
+        },
+        1));
 
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx + 10, (float)cy + 110, 140, 50}, "+",
-        [this]() { _musicSystem.volumeUp(); /*log_debug("Volume Up"); */}, 1));
+        [this]() {
+            _musicSystem.volumeUp(); /*log_debug("Volume Up"); */
+        },
+        1));
 
     // Back Button
     _uiManager->addComponent(std::make_shared<UIButton>(
@@ -351,6 +358,9 @@ void Core::_setupGameUI() {
         std::make_shared<UISlider>(raylib::Rectangle{(float)_window->GetWidth() - 270,
                                                      (float)_window->GetHeight() - 60, 250, 40},
                                    _world, _network, 10));
+
+    _uiManager->addComponent(std::make_shared<UIPanel>(raylib::Rectangle{10, 720, 480, 240},
+                                                       raylib::Color{0, 0, 255, 100}, 10));
 }
 
 void Core::_setupTestingData() {
