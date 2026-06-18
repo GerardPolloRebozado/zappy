@@ -152,6 +152,7 @@ mod tests {
     fn no_event_does_not_crash() {
         let mut world = World::default();
         world.map_event = MapEvent::None;
+        world.last_event_trigger_check = Date::now().to_timestamp();
         map_event_system(&mut world);
         assert_eq!(world.map_event, MapEvent::None);
     }
