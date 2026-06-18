@@ -139,8 +139,8 @@ mod tests {
     use crate::ecs::components::network::NetworkData;
     use crate::ecs::components::task::{Task, TaskList, TaskType};
     use crate::ecs::components::terrain_type::TerrainType;
-    use crate::ecs::systems::task::any_finished_task;
     use crate::ecs::storage;
+    use crate::ecs::systems::task::any_finished_task;
     use crate::server::Server;
 
     /// gets an existing resource using tasks
