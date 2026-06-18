@@ -1,5 +1,13 @@
+/*
+** EPITECH PROJECT, 2026
+** zappy_gui
+** File description:
+** UIChatPanel.cpp
+*/
+
 #include "UI/UIChatPanel.hpp"
 #include "Components/ComponentInhabitant.hpp"
+#include <sstream>
 namespace zappy {
 
 UIChatPanel::UIChatPanel(raylib::Rectangle bounds, std::shared_ptr<ChatLogs> chatLogs, World& world,
@@ -58,12 +66,32 @@ void UIChatPanel::render() {
             }
         }
 
-        std::string displayText = "[" + msg.Type + "] " + msg.Log;
+        std::string rawText = "[" + msg.Type + "] " + msg.Log;
+        std::string displayText = "";
+        std::string currentLine = "";
+
+        std::istringstream words(rawText);
+        std::string word;
+        float maxTextWidth = _bounds.width - 20;
+
+        while (words >> word) {
+            std::string testLine = currentLine.empty() ? word : currentLine + " " + word;
+
+            raylib::Vector2 size = font.MeasureText(testLine, _fontSize, _spacing);
+
+            if (size.x > maxTextWidth) {
+                displayText += currentLine + "\n";
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        displayText += currentLine;
 
         raylib::Vector2 pos{_bounds.x + 10, currentY};
         font.DrawText(displayText, pos, _fontSize, _spacing, textColor);
-
-        currentY += (_fontSize + 5);
+        int lineCount = std::count(displayText.begin(), displayText.end(), '\n') + 1;
+        currentY += (_fontSize + 5) * lineCount;
     }
 }
 
