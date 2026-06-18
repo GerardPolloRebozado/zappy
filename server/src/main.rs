@@ -26,13 +26,10 @@ fn main() -> io::Result<()> {
 
     let mut server = Server::new(config);
     server.load();
-    let mut last_tick = std::time::Instant::now();
+    let start_time = std::time::Instant::now();
+    let initial_time = server.world.current_time;
     loop {
-        let now = std::time::Instant::now();
-        let delta = now.duration_since(last_tick).as_millis() as u64;
-        last_tick = now;
-
-        server.world.current_time += delta;
+        server.world.current_time = initial_time + start_time.elapsed().as_millis() as u64;
         server.run();
     }
 }
