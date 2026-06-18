@@ -58,7 +58,13 @@ void UIChatPanel::render() {
         raylib::Color textColor = raylib::Color::RayWhite();
 
         if (!msg.Team.empty()) {
-            textColor = TeamName::findTeam(msg.Team, _world);
+            auto it = _teamColorCache.find(msg.Team);
+            if (it != _teamColorCache.end()) {
+                textColor = it->second;
+            } else {
+                textColor = TeamName::findTeam(msg.Team, _world);
+                _teamColorCache[msg.Team] = textColor;
+            }
         } else {
             auto it = _typeColors.find(msg.Type);
             if (it != _typeColors.end()) {

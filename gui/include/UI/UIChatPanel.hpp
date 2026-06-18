@@ -15,6 +15,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 namespace zappy {
 
@@ -53,6 +54,7 @@ class UIChatPanel : public AUIComponent {
     int _fontSize;
     float _spacing;
     bool _isVisible = true;
+    std::unordered_map<std::string, raylib::Color> _teamColorCache;
     /**
      * @brief Dictionary of colors for system events without a team.
      */
