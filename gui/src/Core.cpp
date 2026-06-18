@@ -382,7 +382,7 @@ void Core::_setupGameUI() {
                                                       "World Chat", 20, raylib::Color::RayWhite(),
                                                       15, 1.5f));
     _uiManager->addComponent(
-        std::make_shared<UIChatPanel>(raylib::Rectangle{10, 480, 460, 230}, _chatLogs, 10));
+        std::make_shared<UIChatPanel>(raylib::Rectangle{10, 480, 460, 230}, _chatLogs, _world, 10));
     // if (_chatLogs) {
     //     _chatLogs->addChatLog("Conectando con el servidor Zappy...", "INFO");
     //     _chatLogs->addChatLog("¡Conexión establecida con éxito!", "JOIN");
