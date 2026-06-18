@@ -14,6 +14,7 @@ struct EggTag {};
 struct MapTag {};
 struct TeamTag {};
 struct EventEggHatched {};
+struct TombTag {};
 } // namespace zappy
 
 #endif // ZAPPY_GUI_COMPONENTTAGS_HPP

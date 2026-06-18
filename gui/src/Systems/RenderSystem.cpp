@@ -17,6 +17,7 @@
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
 #include "Components/FollowingEntity.hpp"
+#include "Components/ComponentTags.hpp"
 #include "Core.hpp"
 #include "ECS/World.hpp"
 #include "Graphics/TileTextures.hpp"
@@ -106,6 +107,7 @@ void RenderSystem::render(World& w) {
     _renderEggs(w);
     _renderPOV(w);
     _renderParticles(w);
+    _renderTombs(w);
 
     // Hardware Instancing Rendering Phase
     // Iterate through batches of grouped models and pass their accumulated
@@ -500,6 +502,30 @@ void RenderSystem::_renderEggs(World& w) {
                                        static_cast<float>(pos->y));
             addInstance("egg", vpos, {0, 1, 0}, 0.0f, {scale, scale, scale}, WHITE,
                         eggModel.transform);
+        }
+    }
+}
+
+void RenderSystem::_renderTombs(World& w) {
+    auto tombStorage = w.get_storage<TombTag>();
+    if (!tombStorage) {
+        return;
+    }
+
+    raylib::Model& tombModel = AssetManager::getInstance().getModel("skull");
+    constexpr float scale = 0.8f;
+
+    printf("After getModel\n");
+
+    for (const auto& entity : *tombStorage | std::views::keys) {
+        auto pos = w.get_component<Position>(entity);
+        printf("After get_component position\n");
+        if (pos) {
+            const raylib::Vector3 vpos(static_cast<float>(pos->x), 2.3f,
+                                       static_cast<float>(pos->y));
+            addInstance("skull", vpos, {0, 1, 0}, 0.0f, {scale, scale, scale}, WHITE,
+                        tombModel.transform);
+            printf("After addInstance tomb\n");
         }
     }
 }
