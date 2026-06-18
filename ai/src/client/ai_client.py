@@ -29,7 +29,6 @@ class ZappyAiClient:
         try:
             self.connection.connect()
 
-            # receive welcome
             welcome = self.connection.receive_line()
             if welcome != "WELCOME":
                 logger.warning(f"Unexpected welcome message: {welcome}")
@@ -45,6 +44,7 @@ class ZappyAiClient:
             dimensions = self.connection.receive_line()
             logger.info(f"Map dimensions: {dimensions}")
             return 0
+
         except (ConnectionRefusedError, socket.gaierror):
             logger.error(f"Could not connect to server at {self.ip}:{self.port}")
             return 84
@@ -59,40 +59,52 @@ class ZappyAiClient:
         """
         return self.connection.receive_line()
 
+    def _handle_game_event(self, line):
+        """
+        Game Logic Layer: Processes asynchronous events pushed by the server.
+        Returns True if the line was a game event (and thus handled), False otherwise.
+        """
+        if line == "dead":
+            self.is_dead = True
+            return True
+        if line.startswith("message"):
+            parsed = parse_broadcast(line)
+            if parsed:
+                self.messages.append(parsed)
+            return True
+
+        if line.startswith("eject:"):
+            logger.info(f"Event: {line}")
+            return True
+
+        if line.startswith("Current level:"):
+            try:
+                self.level = int(line.split(":")[1].strip())
+                logger.info(f"Event: {line}")
+            except (ValueError, IndexError):
+                logger.warning(f"Failed to parse level up message: {line}")
+            return False
+
+        return False
+
     def wait_for_response(self):
         """
-        Wait for a response while catching broadcasts and death.
-        Returns:
-            - The response string (ok, [tile1...], etc.)
-            - None if the connection is closed.
+        Network Logic Layer: Waits for the direct response to a command.
+        Sends asynchronous game events to the game logic layer automatically.
         """
         while True:
             line = self.connection.receive_line()
-            match line:
-                case None:
-                    return None
-                case "":
-                    continue
-                case "dead":
-                    self.is_dead = True
+
+            if line is None:
+                return None
+            if line == "":
+                continue
+
+            if self._handle_game_event(line):
+                if line == "dead":
                     return "dead"
-                case s if s.startswith("message"):
-                    parsed = parse_broadcast(s)
-                    if parsed:
-                        self.messages.append(parsed)
-                    continue
-                case s if s.startswith("eject:"):
-                    logger.info(f"Event: {s}")
-                    continue
-                case s if s.startswith("Current level:"):
-                    try:
-                        self.level = int(s.split(":")[1].strip())
-                        logger.info(f"Event: {s}")
-                    except (ValueError, IndexError):
-                        logger.warning(f"Failed to parse level up message: {s}")
-                    return s
-                case _:
-                    return line
+                continue
+            return line
 
     def forward(self):
         """

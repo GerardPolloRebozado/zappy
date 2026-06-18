@@ -9,6 +9,7 @@
 #include "Color.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
+#include "Components/ComponentMusic.hpp"
 #include "Components/ComponentTile.hpp"
 #include "CoreErrors.hpp"
 #include "Graphics/AssetManager.hpp"
@@ -20,6 +21,7 @@
 #include "UI/UIManager.hpp"
 #include "UI/UIPanel.hpp"
 #include "UI/UIScoreboardPanel.hpp"
+#include "UI/UISlider.hpp"
 #include "UI/UIText.hpp"
 #include "errors/IError.hpp"
 #include "raylib.h"
@@ -36,6 +38,12 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
     _window->SetExitKey(0);
 
     _window->Maximize();
+
+    // Initialize the speakers and add the background.
+    InitAudioDevice();
+    auto backgroundMusic = _world.spawn();
+    _world.add_component(backgroundMusic, std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
+
 
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
@@ -92,6 +100,7 @@ void Core::_update() {
             _animationSystem.update(_world);
             _renderSystem.update(_world, dt);
             _particleSystem.update(_world, dt);
+            _musicSystem.update(_world, dt);
         } else {
             // Server disconnected, go back to menu
             _appState = AppState::MENU;
@@ -247,11 +256,11 @@ void Core::_setupSettingsMenu() {
 
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 150, (float)cy + 110, 140, 50}, "-",
-        []() { log_debug("Volume Down"); }, "btn_normal", "btn_hover", "btn_pressed", 1));
+        [this]() { _musicSystem.volumeDown(); /*log_debug("Volume Down");*/ }, 1));
 
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx + 10, (float)cy + 110, 140, 50}, "+",
-        []() { log_debug("Volume Up"); }, "btn_normal", "btn_hover", "btn_pressed", 1));
+        [this]() { _musicSystem.volumeUp(); /*log_debug("Volume Up"); */}, 1));
 
     // Back Button
     _uiManager->addComponent(std::make_shared<UIButton>(
@@ -336,6 +345,12 @@ void Core::_setupGameUI() {
     _uiManager->addComponent(std::make_shared<UIHudPanel>(
         raylib::Rectangle{(float)_window->GetWidth() - 220, 50, 200, 400}, _world, _renderSystem,
         nullptr, 10));
+
+    // Time frequency slider
+    _uiManager->addComponent(
+        std::make_shared<UISlider>(raylib::Rectangle{(float)_window->GetWidth() - 270,
+                                                     (float)_window->GetHeight() - 60, 250, 40},
+                                   _world, _network, 10));
 }
 
 void Core::_setupTestingData() {
