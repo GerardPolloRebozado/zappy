@@ -4,6 +4,7 @@
 #include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
+#include "Graphics/AssetManager.hpp"
 #include <cstdlib>
 
 namespace zappy {
@@ -36,8 +37,7 @@ void ParticleSystem::update(World& w, float dt) {
                                         raylib::Color::Orange()};
 
                 w.add_component(entity, emitter);
-                w.add_component(entity, std::make_shared<ComponentMusic>(
-                                            std::string("assets/sounds/effect/egg_layed.mp3")));
+                ::PlaySound(AssetManager::getInstance().getSound("egg_layed"));
             }
             eventsToRemove.push_back(entity);
         }
