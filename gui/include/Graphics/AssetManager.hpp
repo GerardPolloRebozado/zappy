@@ -39,7 +39,12 @@ class AssetManager {
     std::shared_ptr<raylib::BoundingBox> getBoundingBox(const std::string& name,
                                                         raylib::Model& model);
 
-    // Animations
+    /**
+     * @brief Retrieves a loaded 3D model animation by its name identifier.
+     * @param name The name of the animation to retrieve (e.g., "inhabitant_general_Idle_A").
+     * @return Reference to the loaded raylib::ModelAnimation.
+     * @throws ErrorAsset If the animation cannot be found.
+     */
     raylib::ModelAnimation& getAnimation(const std::string& name);
 
   private:
