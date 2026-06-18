@@ -41,6 +41,7 @@ pub fn handle_ai_command(server: &mut Server, entity: Entity, request: Request) 
                 network_data
                     .pending_responses
                     .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
+                return;
             }
             let resource = resource.unwrap();
             queue_task(server, entity, TaskType::Take(resource))

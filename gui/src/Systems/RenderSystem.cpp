@@ -479,7 +479,7 @@ void RenderSystem::_renderEggs(World& w) {
     }
 
     raylib::Model& eggModel = AssetManager::getInstance().getModel("egg");
-    constexpr float scale = 0.02f;
+    constexpr float scale = 0.1f;
 
     for (const auto& entity : *eggStorage | std::views::keys) {
         auto pos = w.get_component<Position>(entity);
