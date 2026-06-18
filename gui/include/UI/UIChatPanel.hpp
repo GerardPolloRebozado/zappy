@@ -1,23 +1,20 @@
-/*
-** EPITECH PROJECT, 2026
-** zappy_gui
-** File description:
-** UIChatPanel.hpp
-*/
-
 #ifndef ZAPPY_UICHATPANEL_HPP
 #define ZAPPY_UICHATPANEL_HPP
 
 #include "AUIComponent.hpp"
+#include "ECS/World.hpp"
 #include "Graphics/AssetManager.hpp"
 #include "Logging/ChatLogs.hpp"
+#include <map>
 #include <memory>
+#include <string>
 
 namespace zappy {
 
 class UIChatPanel : public AUIComponent {
   public:
-    UIChatPanel(raylib::Rectangle bounds, std::shared_ptr<ChatLogs> chatLogs, int zIndex = 0);
+    UIChatPanel(raylib::Rectangle bounds, std::shared_ptr<ChatLogs> chatLogs, World& world,
+                int zIndex = 0);
     ~UIChatPanel() override = default;
 
     void update(float dt, raylib::Vector2 mousePos,
@@ -26,6 +23,7 @@ class UIChatPanel : public AUIComponent {
 
   private:
     std::shared_ptr<ChatLogs> _chatLogs;
+    World& _world;
     int _fontSize;
     float _spacing;
     std::map<std::string, raylib::Color> _typeColors = {

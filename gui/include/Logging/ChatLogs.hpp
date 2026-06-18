@@ -15,6 +15,7 @@ namespace zappy {
 struct LogMessage {
     std::string Log;
     std::string Type;
+    std::string Team;
 };
 
 class ChatLogs {
@@ -24,12 +25,13 @@ class ChatLogs {
     ChatLogs() = default;
     ~ChatLogs() = default;
 
-    void addChatLog(const std::string& message, const std::string& type) {
+    void addChatLog(const std::string& message, const std::string& type,
+                    const std::string& team = "") {
         if (_logMessages.size() >= MAX_LOGS) {
             _logMessages.erase(_logMessages.begin());
         }
 
-        _logMessages.push_back({message, type});
+        _logMessages.push_back({message, type, team});
     }
 
     void clearChatLogs() { _logMessages.clear(); }
