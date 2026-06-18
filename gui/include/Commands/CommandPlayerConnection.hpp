@@ -38,7 +38,11 @@ class CommandPlayerConnection : public ACommand {
             log_error("Protocol: failed to parse player connection args: " + args);
             return;
         }
-
+        _chatLogs->addChatLog("Player #" + std::to_string(playerId) +
+                                  " "
+                                  "connected (Team: " +
+                                  teamName + ")",
+                              "JOIN");
         // TODO: create player util fn?
         Entity player = world.spawn();
         world.add_component<ServerId>(player, {playerId});
