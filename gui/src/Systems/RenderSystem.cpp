@@ -21,6 +21,8 @@
 #include "ECS/World.hpp"
 #include "Graphics/TileTextures.hpp"
 #include "Graphics/VoxelBatcher.hpp"
+#include "Keyboard.hpp"
+#include "Vector3.hpp"
 #include "raylib.h"
 
 #include <algorithm>
@@ -159,6 +161,7 @@ void RenderSystem::_handleInput(float dt) {
 
     raylib::Vector3 forward = (raylib::Vector3)_camera.target - (raylib::Vector3)_camera.position;
     raylib::Vector3 right = forward.CrossProduct(_camera.up).Normalize();
+    raylib::Vector3 up = right.CrossProduct(forward).Normalize();
 
     // Yaw Rotation (Q/E)
     if (raylib::Keyboard::IsKeyDown(KEY_Q)) {
@@ -197,6 +200,7 @@ void RenderSystem::_handleInput(float dt) {
     forward.y = 0;
     forward = forward.Normalize();
     right = forward.CrossProduct(_camera.up);
+    up = right.CrossProduct(forward).Normalize();
 
     if (raylib::Keyboard::IsKeyDown(KEY_W)) {
         _camera.position = (raylib::Vector3)_camera.position + forward * moveSpeed;
@@ -213,6 +217,14 @@ void RenderSystem::_handleInput(float dt) {
     if (raylib::Keyboard::IsKeyDown(KEY_D)) {
         _camera.position = (raylib::Vector3)_camera.position + right * moveSpeed;
         _camera.target = (raylib::Vector3)_camera.target + right * moveSpeed;
+    }
+    if (raylib::Keyboard::IsKeyDown(KEY_LEFT_CONTROL)) {
+        _camera.position = (raylib::Vector3)_camera.position - up * moveSpeed;
+        _camera.target = (raylib::Vector3)_camera.target - up * moveSpeed;
+    }
+    if (raylib::Keyboard::IsKeyDown(KEY_SPACE)) {
+        _camera.position = (raylib::Vector3)_camera.position + up * moveSpeed;
+        _camera.target = (raylib::Vector3)_camera.target + up * moveSpeed;
     }
 
     if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -933,7 +945,7 @@ void RenderSystem::_renderPOV(World& w) {
         return;
     }
 
-    Vector3 headPos = {static_cast<float>(pos->x), 3.0f, static_cast<float>(pos->y)};
+    Vector3 headPos = {static_cast<float>(pos->x), 3.5f, static_cast<float>(pos->y)};
     Vector3 lookDir = {0.0f, 0.0f, 0.0f};
 
     switch (orientation->current_direction) {
