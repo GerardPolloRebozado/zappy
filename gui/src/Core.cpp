@@ -7,6 +7,7 @@
 
 #include "Core.hpp"
 #include "Color.hpp"
+#include "Commands/FactoryCommands.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentMusic.hpp"
 #include "Components/ComponentShared.hpp"
@@ -53,6 +54,7 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
                          std::make_shared<ComponentMusic>(
                              AssetManager::getInstance().getMusicPath("country"), true));
     _chatLogs = std::make_shared<ChatLogs>();
+    FactoryCommands::setChatLogs(_chatLogs);
     _uiManager = std::make_shared<UIManager>();
     _appState = AppState::MENU;
     _setupMainMenu();
@@ -377,6 +379,10 @@ void Core::_setupGameUI() {
                                                       15, 1.5f));
     _uiManager->addComponent(
         std::make_shared<UIChatPanel>(raylib::Rectangle{10, 480, 460, 230}, _chatLogs, 10));
+    // if (_chatLogs) {
+    //     _chatLogs->addChatLog("Conectando con el servidor Zappy...", "INFO");
+    //     _chatLogs->addChatLog("¡Conexión establecida con éxito!", "JOIN");
+    // }
 }
 
 void Core::_setupTestingData() {

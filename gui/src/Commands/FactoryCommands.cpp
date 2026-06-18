@@ -70,4 +70,11 @@ ACommand& FactoryCommands::getCommand(const std::string& commandName) {
     }
     throw ErrorProtocol("Unknown command: " + commandName);
 }
+void FactoryCommands::setChatLogs(std::shared_ptr<ChatLogs> chatLogs) {
+    for (const auto& [name, command] : _commands) {
+        if (command) {
+            command->setChatLogs(chatLogs);
+        }
+    }
+}
 } // namespace zappy
