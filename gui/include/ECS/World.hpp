@@ -2,6 +2,7 @@
 #define ZAPPY_WORLD_HPP
 
 #include "ComponentMap.hpp"
+#include "ECS/Entity.hpp"
 #include <cstdint>
 #include <memory>
 #include <typeindex>
@@ -180,6 +181,17 @@ class World {
         if (storage) {
             storage->remove(entity);
         }
+    }
+
+    /**
+     * Allows to remove all created entities, used when going back to the menu from the game
+     */
+    void despawn_all_entities() {
+        for (auto& [_, storage] : storages) {
+            storage->clear();
+        }
+        entity_generations.clear();
+        free_ids.clear();
     }
 };
 
