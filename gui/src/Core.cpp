@@ -95,6 +95,7 @@ void Core::_update() {
         if (raylib::Keyboard::IsKeyPressed(KEY_ESCAPE)) {
             _network.disconnect();
             _appState = AppState::MENU;
+            _world.despawn_all_entities();
             _setupMainMenu();
             return;
         }
@@ -361,6 +362,11 @@ void Core::_setupGameUI() {
         std::make_shared<UISlider>(raylib::Rectangle{(float)_window->GetWidth() - 270,
                                                      (float)_window->GetHeight() - 60, 250, 40},
                                    _world, _network, 10));
+
+    auto backgroundMusic = _world.spawn();
+    _world.add_component(
+        backgroundMusic,
+        std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
 
     _uiManager->addComponent(std::make_shared<UIPanel>(raylib::Rectangle{10, 720, 480, 240},
                                                        raylib::Color{0, 0, 255, 100}, 10));
