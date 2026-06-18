@@ -8,6 +8,8 @@
 #define ZAPPY_COMMANDPLAYERBROADCAST_HPP
 
 #include "ACommand.hpp"
+#include "Components/ComponentInhabitant.hpp"
+#include "Components/ComponentShared.hpp"
 #include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
@@ -38,6 +40,25 @@ class CommandPlayerBroadcast : public ACommand {
             return;
         }
 
+        std::string teamStr = "";
+        auto posStorage = world.get_storage<Position>();
+        if (posStorage) {
+            for (auto const& [entity, pos] : *posStorage) {
+                auto serverId = world.get_component<ServerId>(entity);
+                if (serverId && serverId->id == playerId) {
+                    auto teamComp = world.get_component<TeamName>(entity);
+                    if (teamComp) {
+                        teamStr = teamComp->_team_name;
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (_chatLogs) {
+            _chatLogs->addChatLog("Player #" + std::to_string(playerId) + " shouts: " + message,
+                                  "BROADCAST", teamStr);
+        }
         log_info("Protocol: Player #" + std::to_string(playerId) + " broadcasted: " + message);
     }
 };

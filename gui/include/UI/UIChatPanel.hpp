@@ -1,3 +1,10 @@
+/*
+** EPITECH PROJECT, 2026
+** zappy_gui
+** File description:
+** UIChatPanel.hpp
+*/
+
 #ifndef ZAPPY_UICHATPANEL_HPP
 #define ZAPPY_UICHATPANEL_HPP
 
