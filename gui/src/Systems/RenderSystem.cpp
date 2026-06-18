@@ -12,6 +12,7 @@
 
 #include "Systems/RenderSystem.hpp"
 #include "Color.hpp"
+#include "Components/ComponentIncantationEffect.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
@@ -92,6 +93,13 @@ void RenderSystem::update(World& w, float dt) {
     (void)w;
     _handleInput(dt);
     _updateHoverState();
+
+    auto incantationStorage = w.get_storage<ComponentIncantationEffect>();
+    if (incantationStorage) {
+        for (auto& [entity, effect] : *incantationStorage) {
+            effect->timeElapsed += dt;
+        }
+    }
 }
 
 void RenderSystem::render(World& w) {
@@ -105,6 +113,7 @@ void RenderSystem::render(World& w) {
     _renderInhabitants(w);
     _renderEggs(w);
     _renderPOV(w);
+    _renderIncantations(w);
     _renderParticles(w);
 
     // Hardware Instancing Rendering Phase
@@ -965,6 +974,71 @@ void RenderSystem::_renderPOV(World& w) {
 
     _camera.position = headPos;
     _camera.target = Vector3Add(headPos, lookDir);
+}
+
+void RenderSystem::_renderIncantations(World& w) {
+    auto incantationStorage = w.get_storage<ComponentIncantationEffect>();
+    if (!incantationStorage) {
+        return;
+    }
+
+    ::rlDisableDepthMask();
+
+    for (const auto& [entity, effect] : *incantationStorage) {
+        float x = (float)effect->x;
+        float z = (float)effect->y;
+        float time = effect->timeElapsed;
+
+        // Fade in over 1.5 seconds
+        float fadeIn = std::min(time / 1.5f, 1.0f);
+
+        // The Aura (Vertical gradient cone)
+        float pulse = (std::sin(time * 5.0f) + 1.0f) * 0.5f; // 0.0 to 1.0
+
+        int segments = 20;
+        float totalHeight = 6.0f;
+        float segHeight = totalHeight / segments;
+
+        for (int i = 0; i < segments; i++) {
+            float yStart = 2.0f + i * segHeight;
+            float yEnd = yStart + segHeight;
+
+            float progressBottom = (float)i / segments;
+            float progressTop = (float)(i + 1) / segments;
+
+            // Shape: Cone (wide at base, point at top)
+            float rBottom = 0.7f * (1.0f - progressBottom);
+            float rTop = 0.7f * (1.0f - progressTop);
+
+            // Alpha: fades to 0 at the top
+            float alphaBottom = std::max(0.0f, 1.0f - std::pow(progressBottom, 1.5f));
+
+            unsigned char baseAlpha =
+                (unsigned char)((35.0f + 25.0f * pulse) * alphaBottom * fadeIn);
+            raylib::Color color = raylib::Color(255, 250, 200, baseAlpha);
+
+            ::DrawCylinderEx(raylib::Vector3{x, yStart, z}, raylib::Vector3{x, yEnd, z}, rBottom,
+                             rTop, 24, color);
+        }
+
+        // The descending halo rings
+        for (int i = 0; i < 3; i++) {
+            float offset = (float)i * 2.0f;
+            float haloY = 10.0f - std::fmod(time * 2.0f + offset, 8.0f); // falls from 10.0 to 2.0
+            if (haloY >= 2.0f) {
+                float heightFade = (haloY - 2.0f) / 8.0f; // 0.0 at bottom, 1.0 at top
+                unsigned char fillAlpha = (unsigned char)(80.0f * heightFade * fadeIn);
+                unsigned char wireAlpha = (unsigned char)(140.0f * heightFade * fadeIn);
+                raylib::Color haloColor = raylib::Color(255, 255, 255, fillAlpha);
+                raylib::Color wireColor = raylib::Color(255, 240, 150, wireAlpha);
+                ::DrawCylinder(raylib::Vector3{x, haloY, z}, 0.55f, 0.55f, 0.05f, 16, haloColor);
+                ::DrawCylinderWires(raylib::Vector3{x, haloY, z}, 0.55f, 0.55f, 0.05f, 16,
+                                    wireColor);
+            }
+        }
+    }
+
+    ::rlEnableDepthMask();
 }
 
 } // namespace zappy

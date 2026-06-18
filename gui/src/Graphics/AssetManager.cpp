@@ -340,6 +340,23 @@ void AssetManager::_loadAnimations() {
             _animations["inhabitant_movement_" + std::string(moveAnims[i].name)] = &moveAnims[i];
         }
 
+        int countSim = 0;
+        ::ModelAnimation* simAnims =
+            ::LoadModelAnimations("assets/models/inhabitant/anim_simulation.glb", &countSim);
+        _animationArrays["inhabitant_simulation"] = {simAnims, countSim};
+        for (int i = 0; i < countSim; i++) {
+            _animations["inhabitant_simulation_" + std::string(simAnims[i].name)] = &simAnims[i];
+        }
+
+        int countSpecial = 0;
+        ::ModelAnimation* specialAnims =
+            ::LoadModelAnimations("assets/models/inhabitant/anim_special.glb", &countSpecial);
+        _animationArrays["inhabitant_special"] = {specialAnims, countSpecial};
+        for (int i = 0; i < countSpecial; i++) {
+            _animations["inhabitant_special_" + std::string(specialAnims[i].name)] =
+                &specialAnims[i];
+        }
+
         // Apply mannequin bone mapping hack immediately
         int animMapping[] = {0,  1, 2, 3,  4,  5,  6,  7,  14, 15, 16,
                              17, 8, 9, 10, 11, 12, 19, 20, 21, 22};
@@ -358,6 +375,30 @@ void AssetManager::_loadAnimations() {
 
         if (_animations.count("inhabitant_movement_Walking_A")) {
             ::ModelAnimation* anim = _animations["inhabitant_movement_Walking_A"];
+            for (int f = 0; f < anim->keyframeCount; f++) {
+                std::vector<Transform> oldPose(anim->keyframePoses[f],
+                                               anim->keyframePoses[f] + anim->boneCount);
+                for (int i = 0; i < 21; i++) {
+                    anim->keyframePoses[f][i] = oldPose[animMapping[i]];
+                }
+            }
+            anim->boneCount = 21;
+        }
+
+        if (_animations.count("inhabitant_simulation_Cheering")) {
+            ::ModelAnimation* anim = _animations["inhabitant_simulation_Cheering"];
+            for (int f = 0; f < anim->keyframeCount; f++) {
+                std::vector<Transform> oldPose(anim->keyframePoses[f],
+                                               anim->keyframePoses[f] + anim->boneCount);
+                for (int i = 0; i < 21; i++) {
+                    anim->keyframePoses[f][i] = oldPose[animMapping[i]];
+                }
+            }
+            anim->boneCount = 21;
+        }
+
+        if (_animations.count("inhabitant_special_Skeletons_Awaken_Standing")) {
+            ::ModelAnimation* anim = _animations["inhabitant_special_Skeletons_Awaken_Standing"];
             for (int f = 0; f < anim->keyframeCount; f++) {
                 std::vector<Transform> oldPose(anim->keyframePoses[f],
                                                anim->keyframePoses[f] + anim->boneCount);

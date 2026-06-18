@@ -1,4 +1,5 @@
 #include "Systems/ParticleSystem.hpp"
+#include "Components/ComponentIncantationEffect.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentMusic.hpp"
 #include "Components/ComponentParticleEmitter.hpp"
@@ -46,6 +47,138 @@ void ParticleSystem::update(World& w, float dt) {
         }
     }
 
+    auto incantationStartStorage = w.get_storage<EventIncantationStart>();
+    if (incantationStartStorage) {
+        std::vector<Entity> startEventsToRemove;
+        for (auto const& [entity, event] : *incantationStartStorage) {
+            auto posComponent = w.get_component<Position>(entity);
+            if (posComponent) {
+                int x = posComponent->x;
+                int y = posComponent->y;
+
+                for (Entity player : event->participants) {
+                    auto anim = w.get_component<Animation>(player);
+                    if (anim) {
+                        anim->currentAnim = "inhabitant_special_Skeletons_Awaken_Standing";
+                        anim->loop = true;
+                    }
+                }
+
+                auto effectEntity = w.spawn();
+                ComponentParticleEmitter colEmitter;
+                colEmitter.isPlaying = true;
+                colEmitter.loop = true;
+                colEmitter.emitRate = 60.0f;
+                colEmitter.minLifetime = 2.0f;
+                colEmitter.maxLifetime = 4.0f;
+                colEmitter.minSize = 0.05f;
+                colEmitter.maxSize = 0.1f;
+                colEmitter.startColor = raylib::Color(255, 255, 255, 255);
+                colEmitter.endColor = raylib::Color(255, 200, 100, 0);
+                colEmitter.offset = raylib::Vector3(0.0f, 2.0f, 0.0f);
+                colEmitter.spawnVolumeMin = raylib::Vector3(-0.4f, 0.0f, -0.4f);
+                colEmitter.spawnVolumeMax = raylib::Vector3(0.4f, 10.0f, 0.4f);
+                colEmitter.minVelocity = raylib::Vector3(-0.2f, -0.5f, -0.2f);
+                colEmitter.maxVelocity = raylib::Vector3(0.2f, 0.5f, 0.2f);
+
+                w.add_component(effectEntity, colEmitter);
+                w.add_component(effectEntity,
+                                ComponentIncantationEffect{x, y, event->participants});
+                w.add_component(effectEntity, Position{x, y});
+
+                auto baseEntity = w.spawn();
+                ComponentParticleEmitter baseEmitter;
+                baseEmitter.isPlaying = true;
+                baseEmitter.loop = true;
+                baseEmitter.emitRate = 30.0f;
+                baseEmitter.minLifetime = 1.0f;
+                baseEmitter.maxLifetime = 2.0f;
+                baseEmitter.minSize = 0.1f;
+                baseEmitter.maxSize = 0.2f;
+                baseEmitter.startColor = raylib::Color(255, 220, 100, 150);
+                baseEmitter.endColor = raylib::Color(200, 50, 255, 0);
+                baseEmitter.offset = raylib::Vector3(0.0f, 2.0f, 0.0f);
+                baseEmitter.spawnVolumeMin = raylib::Vector3(-0.5f, 0.0f, -0.5f);
+                baseEmitter.spawnVolumeMax = raylib::Vector3(0.5f, 1.5f, 0.5f);
+                baseEmitter.minVelocity = raylib::Vector3(-0.5f, 0.5f, -0.5f);
+                baseEmitter.maxVelocity = raylib::Vector3(0.5f, 2.5f, 0.5f);
+
+                w.add_component(baseEntity, baseEmitter);
+                w.add_component(baseEntity, ComponentIncantationEffect{x, y, {}});
+                w.add_component(baseEntity, Position{x, y});
+            }
+            startEventsToRemove.push_back(entity);
+        }
+        for (const auto& e : startEventsToRemove) {
+            w.remove_component<EventIncantationStart>(e);
+        }
+    }
+
+    auto incantationEndStorage = w.get_storage<EventIncantationEnd>();
+    if (incantationEndStorage) {
+        std::vector<Entity> endEventsToRemove;
+        for (auto const& [entity, event] : *incantationEndStorage) {
+            auto posComponent = w.get_component<Position>(entity);
+            if (posComponent) {
+                int x = posComponent->x;
+                int y = posComponent->y;
+                int result = event->result;
+
+                auto effectStorage = w.get_storage<ComponentIncantationEffect>();
+                std::vector<Entity> effectsToRemove;
+
+                if (effectStorage) {
+                    for (const auto& [effEntity, effect] : *effectStorage) {
+                        if (effect->x == x && effect->y == y) {
+                            effectsToRemove.push_back(effEntity);
+
+                            for (Entity player : effect->participants) {
+                                auto anim = w.get_component<Animation>(player);
+                                if (anim) {
+                                    anim->currentAnim = "inhabitant_general_Idle_A";
+                                }
+                            }
+
+                            auto burstEntity = w.spawn();
+                            ComponentParticleEmitter burst;
+                            burst.isPlaying = true;
+                            burst.loop = false;
+                            burst.emitRate = 200.0f;
+                            burst.duration = 0.5f;
+                            burst.minLifetime = 0.5f;
+                            burst.maxLifetime = 1.0f;
+                            burst.minSize = 0.1f;
+                            burst.maxSize = 0.3f;
+                            if (result == 1) {
+                                burst.startColor = raylib::Color(50, 255, 50, 255);
+                                burst.endColor = raylib::Color(200, 255, 200, 0);
+                            } else {
+                                burst.startColor = raylib::Color(255, 50, 50, 255);
+                                burst.endColor = raylib::Color(255, 200, 200, 0);
+                            }
+                            burst.offset = raylib::Vector3(0.0f, 0.5f, 0.0f);
+                            burst.spawnVolumeMin = raylib::Vector3(-0.5f, 0.0f, -0.5f);
+                            burst.spawnVolumeMax = raylib::Vector3(0.5f, 1.0f, 0.5f);
+                            burst.minVelocity = raylib::Vector3(-2.0f, 1.0f, -2.0f);
+                            burst.maxVelocity = raylib::Vector3(2.0f, 4.0f, 2.0f);
+
+                            w.add_component(burstEntity, burst);
+                            w.add_component(burstEntity, Position{x, y});
+                        }
+                    }
+                }
+
+                for (Entity e : effectsToRemove) {
+                    w.despawn(e);
+                }
+            }
+            endEventsToRemove.push_back(entity);
+        }
+        for (const auto& e : endEventsToRemove) {
+            w.remove_component<EventIncantationEnd>(e);
+        }
+    }
+
     auto storage = w.get_storage<ComponentParticleEmitter>();
     if (!storage) {
         return;
@@ -74,6 +207,9 @@ void ParticleSystem::update(World& w, float dt) {
 
                     Particle p;
                     p.position = basePos + emitter.offset;
+                    p.position.x += randf(emitter.spawnVolumeMin.x, emitter.spawnVolumeMax.x);
+                    p.position.y += randf(emitter.spawnVolumeMin.y, emitter.spawnVolumeMax.y);
+                    p.position.z += randf(emitter.spawnVolumeMin.z, emitter.spawnVolumeMax.z);
                     p.velocity =
                         raylib::Vector3(randf(emitter.minVelocity.x, emitter.maxVelocity.x),
                                         randf(emitter.minVelocity.y, emitter.maxVelocity.y),
