@@ -383,10 +383,6 @@ void Core::_setupGameUI() {
                                                       15, 1.5f));
     _uiManager->addComponent(
         std::make_shared<UIChatPanel>(raylib::Rectangle{10, 480, 460, 230}, _chatLogs, _world, 10));
-    // if (_chatLogs) {
-    //     _chatLogs->addChatLog("Conectando con el servidor Zappy...", "INFO");
-    //     _chatLogs->addChatLog("¡Conexión establecida con éxito!", "JOIN");
-    // }
 }
 
 void Core::_setupTestingData() {
