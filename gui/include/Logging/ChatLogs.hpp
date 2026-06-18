@@ -7,8 +7,8 @@
 #ifndef ZAPPY_CHATLOGS_HPP
 #define ZAPPY_CHATLOGS_HPP
 
+#include <deque>
 #include <string>
-#include <vector>
 
 namespace zappy {
 
@@ -46,7 +46,7 @@ class ChatLogs {
     void addChatLog(const std::string& message, const std::string& type,
                     const std::string& team = "") {
         if (_logMessages.size() >= MAX_LOGS) {
-            _logMessages.erase(_logMessages.begin());
+            _logMessages.pop_front();
         }
 
         _logMessages.push_back({message, type, team});
@@ -58,10 +58,10 @@ class ChatLogs {
      * @brief Retrieves the current list of logged messages.
      * @return A constant reference to the vector of LogMessage objects.
      */
-    const std::vector<LogMessage>& getLogs() const { return _logMessages; }
+    const std::deque<LogMessage>& getLogs() const { return _logMessages; }
 
   private:
-    std::vector<LogMessage> _logMessages;
+    std::deque<LogMessage> _logMessages;
 };
 
 } // namespace zappy
