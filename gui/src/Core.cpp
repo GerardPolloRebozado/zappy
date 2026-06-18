@@ -43,10 +43,6 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
 
     // Initialize the speakers
     InitAudioDevice();
-    auto backgroundMusic = _world.spawn();
-    _world.add_component(
-        backgroundMusic,
-        std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
 
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
