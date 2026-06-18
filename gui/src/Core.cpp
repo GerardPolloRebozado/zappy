@@ -39,19 +39,28 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
 
     _window->Maximize();
 
-    // Initialize the speakers and add the background.
+    // Initialize the speakers
     InitAudioDevice();
 
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
     raylib::Window::HideCursor();
 
+    // Add the background music
+    auto backgroundMusic = _world.spawn();
+    _world.add_component(backgroundMusic,
+                         std::make_shared<ComponentMusic>(
+                             AssetManager::getInstance().getMusicPath("country"), true));
+
     _uiManager = std::make_shared<UIManager>();
     _appState = AppState::MENU;
     _setupMainMenu();
 }
 
-Core::~Core() { AssetManager::getInstance().unloadAll(); }
+Core::~Core() {
+    AssetManager::getInstance().unloadAll();
+    CloseAudioDevice();
+}
 
 void Core::run() {
     while (!_window->ShouldClose() && !_shouldClose) {

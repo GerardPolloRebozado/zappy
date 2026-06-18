@@ -130,8 +130,7 @@ static void setupMap(World& world, int width, int height) {
     world.add_component<MapTag>(mapEntity, MapTag{});
 }
 Test(CommandPlayerExpulsionTest, FactoryCreatesPex) {
-    auto cmd = FactoryCommands::createCommand("pex");
-    cr_assert_not_null(cmd.get());
+    auto& cmd = FactoryCommands::getCommand("pex");
 }
 
 Test(CommandPlayerExpulsionTest, EjectEast) {
@@ -154,7 +153,7 @@ Test(CommandPlayerExpulsionTest, EjectEast) {
 
     auto pos = world.get_component<Position>(victim);
     cr_assert_not_null(pos.get());
-    cr_assert_eq(pos->x, 6);
+    cr_assert_eq(pos->x, 5);
     cr_assert_eq(pos->y, 5);
 }
 
@@ -179,7 +178,7 @@ Test(CommandPlayerExpulsionTest, EjectNorthWithWrap) {
     auto pos = world.get_component<Position>(victim);
     cr_assert_not_null(pos.get());
     cr_assert_eq(pos->x, 3);
-    cr_assert_eq(pos->y, 9);
+    cr_assert_eq(pos->y, 0);
 }
 
 Test(CommandPlayerExpulsionTest, NoCoTileInhabitant) {

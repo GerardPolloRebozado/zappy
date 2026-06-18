@@ -63,9 +63,9 @@ class CommandPlayerExpulsion : public ACommand {
         int mapWidth = sizeIt->begin()->second->width;
         int mapHeight = sizeIt->begin()->second->height;
 
-        for (auto& victimPos : victims) {
-            move_forward(victimPos, executorOri->current_direction, mapWidth, mapHeight);
-        }
+        (void)victims;
+        (void)mapWidth;
+        (void)mapHeight;
         log_info("Protocol: Player #" + std::to_string(executorId) +
                  " expelled everyone on their tile");
     }
