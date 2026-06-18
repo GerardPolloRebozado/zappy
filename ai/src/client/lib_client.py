@@ -36,9 +36,9 @@ class ZappyLib:
         ]
 
         self.lib.zappy_get_response.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
-        self.lib.zappy_get_response.restype = ctypes.c_char_p
+        self.lib.zappy_get_response.restype = ctypes.c_void_p
 
-        self.lib.zappy_free_string.argtypes = [ctypes.c_char_p]
+        self.lib.zappy_free_string.argtypes = [ctypes.c_void_p]
 
     def _resolve_lib_path(self):
         base_dir = Path(__file__).resolve().parents[3]
@@ -82,7 +82,7 @@ class ZappyLibClient:
         while ticks < max_ticks:
             resp_ptr = self.lib.zappy_get_response(self.server_ptr, self.player_id)
             if resp_ptr:
-                resp = ctypes.string_at(resp_ptr).decode("utf-8")
+                resp = ctypes.cast(resp_ptr, ctypes.c_char_p).value.decode("utf-8")
                 self.lib.zappy_free_string(resp_ptr)
 
                 if resp == "dead":

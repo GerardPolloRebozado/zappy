@@ -160,6 +160,7 @@ class NetworkZappyEnv:
 
         self.client = ZappyAiClient(self.port, self.team_name, self.ip)
         self.client.connect()
+        self.env.client = self.client
 
         observation = self.env._get_real_observation()
         info = {}
@@ -206,6 +207,11 @@ class LibZappyEnv:
         self.client = ZappyLibClient(
             self.zappy_lib.lib, self.server_ptr, player_id, self.freq
         )
+        self.env.client = self.client
+
+        # Consume initial auth responses ("ok", slots, map size)
+        for _ in range(3):
+            self.client.wait_for_response()
 
         observation = self.env._get_real_observation()
         info = {}
