@@ -90,7 +90,7 @@ set(CORE_SOURCES
         include/Commands/CommandPlayerInventory.hpp
         include/Commands/CommandMapSize.hpp
         include/Commands/CommandMapContent.hpp
-        include/Commands/FactoryCommands.cpp
+        src/Commands/FactoryCommands.cpp
         include/ECS/Entity.hpp
         include/ECS/IComponentStorage.hpp
         include/ECS/World.hpp
