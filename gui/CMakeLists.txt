@@ -48,6 +48,7 @@ set(CORE_SOURCES
         src/Network/TcpSocket.cpp
         src/Systems/RenderSystem.cpp
         src/Systems/ParticleSystem.cpp
+        src/Systems/AnimationSystem.cpp
         src/Graphics/AssetManager.cpp
         src/Graphics/VoxelBatcher.cpp
         src/UI/AUIComponent.cpp
