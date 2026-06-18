@@ -11,11 +11,10 @@ namespace zappy {
 class FactoryCommands {
   public:
     // Throws ErrorProtocol if commandName is unknown.
-    static std::unique_ptr<ACommand> createCommand(const std::string& commandName);
+    static ACommand& getCommand(const std::string& commandName);
 
   private:
-    using CommandCreator = std::function<std::unique_ptr<ACommand>()>;
-    static const std::unordered_map<std::string, CommandCreator> _creators;
+    static const std::unordered_map<std::string, std::unique_ptr<ACommand>> _commands;
 };
 } // namespace zappy
 

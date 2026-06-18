@@ -11,16 +11,14 @@
 using namespace zappy;
 
 Test(FactoryCommandsTest, CreateValidCommands) {
-    auto cmdMsz = FactoryCommands::createCommand("msz");
-    auto cmdBct = FactoryCommands::createCommand("bct");
-
-    cr_assert_not_null(cmdMsz.get());
-    cr_assert_not_null(cmdBct.get());
+    // getCommand throws if invalid, so completing this block means success
+    auto& cmdMsz = FactoryCommands::getCommand("msz");
+    auto& cmdBct = FactoryCommands::getCommand("bct");
 }
 
 Test(FactoryCommandsTest, CreateInvalidCommandThrows) {
     try {
-        FactoryCommands::createCommand("comando_inventado");
+        FactoryCommands::getCommand("comando_inventado");
         cr_assert_fail("Expected ErrorProtocol to be thrown");
     } catch (const IError& e) {
         cr_assert_not_null(e.what());
@@ -29,11 +27,9 @@ Test(FactoryCommandsTest, CreateInvalidCommandThrows) {
 
 Test(CommandMapSizeTest, ExecuteValidMapSize) {
     World world;
-    auto cmd = FactoryCommands::createCommand("msz");
+    auto& cmd = FactoryCommands::getCommand("msz");
 
-    cr_assert_not_null(cmd.get());
-
-    cmd->execute("20 10", world);
+    cmd.execute("20 10", world);
 
     auto storage = world.get_storage<Size>();
     cr_assert_not_null(storage);
@@ -50,9 +46,9 @@ Test(CommandMapSizeTest, ExecuteValidMapSize) {
 
 Test(CommandMapSizeTest, ExecuteInvalidMapSize) {
     World world;
-    auto cmd = FactoryCommands::createCommand("msz");
+    auto& cmd = FactoryCommands::getCommand("msz");
 
-    cmd->execute("20 hola", world);
+    cmd.execute("20 hola", world);
 
     auto storage = world.get_storage<Size>();
     if (storage) {
@@ -66,11 +62,9 @@ Test(CommandMapSizeTest, ExecuteInvalidMapSize) {
 
 Test(CommandTileContentTest, ExecuteValidTileContent) {
     World world;
-    auto cmd = FactoryCommands::createCommand("bct");
+    auto& cmd = FactoryCommands::getCommand("bct");
 
-    cr_assert_not_null(cmd.get());
-
-    cmd->execute("5 4 10 1 2 0 0 0 0 1", world);
+    cmd.execute("5 4 10 1 2 0 0 0 0 1", world);
 
     auto posStorage = world.get_storage<Position>();
     cr_assert_not_null(posStorage);
