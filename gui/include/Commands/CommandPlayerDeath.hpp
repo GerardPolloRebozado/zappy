@@ -44,7 +44,9 @@ class CommandPlayerDeath : public ACommand {
                     world.remove_component<Animation>(entity);
                     world.remove_component<MovementInterpolation>(entity);
                     world.add_component<TombTag>(entity, TombTag{});
-                    world.add_component<EventEggHatched>(entity, EventEggHatched{});
+                    Entity eventEntity = world.spawn();
+                    world.add_component<Position>(eventEntity, pos);
+                    world.add_component<EventEggHatched>(eventEntity, EventEggHatched{});
                     log_info("Protocol: Player #" + std::to_string(playerId) + " died");
                     break;
                 }
