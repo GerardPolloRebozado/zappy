@@ -29,7 +29,7 @@ pub fn build_ppo_line(world: &World, player_id: u32, player_entity: Entity) -> O
 
     Some(format!(
         "ppo #{player_id} {x} {y} {}",
-        orientation.as_protocol_k()
+        orientation.as_gui_orientation()
     ))
 }
 
@@ -69,13 +69,7 @@ mod tests {
     fn build_ppo_line_formats_position_and_orientation() {
         let mut world = World::default();
         let player_entity = world.spawn();
-        build_inhabitant_with_entity(
-            player_entity,
-            3,
-            7,
-            RelativeOrientation::ForwardLeft,
-            &mut world,
-        );
+        build_inhabitant_with_entity(player_entity, 3, 7, RelativeOrientation::Right, &mut world);
 
         let line = build_ppo_line(&world, player_entity.id(), player_entity).unwrap();
         assert_eq!(line, format!("ppo #{} 3 7 2", player_entity.id()));

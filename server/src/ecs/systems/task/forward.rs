@@ -82,7 +82,7 @@ mod tests {
 
     #[test]
     fn execute_forward_moves_east() {
-        let (mut world, entity) = setup_inhabitant(5, 5, RelativeOrientation::ForwardLeft, 10, 10);
+        let (mut world, entity) = setup_inhabitant(5, 5, RelativeOrientation::Right, 10, 10);
         execute_forward(&mut world, entity);
         let pos = world.get_component::<Position>(entity).unwrap();
         assert_eq!((pos.x, pos.y), (6, 5));

@@ -62,15 +62,15 @@ fn get_relative_coords(
             i32::try_from(pos.x).unwrap() + r,
             i32::try_from(pos.y).unwrap() - f,
         ),
-        RelativeOrientation::ForwardLeft => (
+        RelativeOrientation::Right => (
             i32::try_from(pos.x).unwrap() + f,
             i32::try_from(pos.y).unwrap() + r,
         ),
-        RelativeOrientation::Left => (
+        RelativeOrientation::Back => (
             i32::try_from(pos.x).unwrap() - r,
             i32::try_from(pos.y).unwrap() + f,
         ),
-        RelativeOrientation::BackLeft => (
+        RelativeOrientation::Left => (
             i32::try_from(pos.x).unwrap() - f,
             i32::try_from(pos.y).unwrap() - r,
         ),

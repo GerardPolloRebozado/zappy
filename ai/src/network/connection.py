@@ -22,29 +22,24 @@ class Connection:
         self.socket.connect((self.ip, self.port))
         self.socket.setblocking(False)
 
-    def send_line(self, message):
+    def send_line(self, text):
         """
-        Sends a message to the server followed by a newline.
-        Uses selectors to handle non-blocking write.
+        Sends a line of text to the server.
         """
-        msg = (message + "\n").encode()
-        self.selector.register(self.socket, selectors.EVENT_WRITE)
+        if not self.socket:
+            return
+
+        msg = (text + "\n").encode()
+        total_sent = 0
 
         try:
-            total_sent = 0
             while total_sent < len(msg):
-                events = self.selector.select()
-                for key, mask in events:
-                    if mask & selectors.EVENT_WRITE:
-                        sent = self.socket.send(msg[total_sent:])
-                        if sent == 0:
-                            raise RuntimeError("Socket connection broken")
-                        total_sent += sent
-        finally:
-            try:
-                self.selector.unregister(self.socket)
-            except KeyError:
-                pass
+                sent = self.socket.send(msg[total_sent:])
+                if sent == 0:
+                    break
+                total_sent += sent
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def receive_line(self, timeout=None):
         """
