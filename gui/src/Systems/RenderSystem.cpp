@@ -992,48 +992,56 @@ void RenderSystem::_renderIncantations(World& w) {
         // Fade in over 1.5 seconds
         float fadeIn = std::min(time / 1.5f, 1.0f);
 
-        // The Aura (Vertical gradient cone)
-        float pulse = (std::sin(time * 5.0f) + 1.0f) * 0.5f; // 0.0 to 1.0
+        raylib::Shader& shader = AssetManager::getInstance().getShader("incantation_aura");
+        int timeLoc = ::GetShaderLocation(shader, "time");
+        ::SetShaderValue(shader, timeLoc, &time, SHADER_UNIFORM_FLOAT);
 
-        int segments = 20;
-        float totalHeight = 6.0f;
-        float segHeight = totalHeight / segments;
+        ::BeginShaderMode(shader);
 
-        for (int i = 0; i < segments; i++) {
-            float yStart = 2.0f + i * segHeight;
-            float yEnd = yStart + segHeight;
+        unsigned char alpha = (unsigned char)(255.0f * fadeIn);
+        raylib::Color color = raylib::Color(255, 255, 255, alpha);
 
-            float progressBottom = (float)i / segments;
-            float progressTop = (float)(i + 1) / segments;
+        ::rlDisableBackfaceCulling();
+        ::rlDisableDepthMask();
 
-            // Shape: Cone (wide at base, point at top)
-            float rBottom = 0.7f * (1.0f - progressBottom);
-            float rTop = 0.7f * (1.0f - progressTop);
+        // Draw a flat quad on the ground for the magic circle
+        float yBase = 2.02f; // Slightly above terrain to avoid Z-fighting
+        float size = 0.6f;   // Total diameter 1.2 (radius 0.6)
 
-            // Alpha: fades to 0 at the top
-            float alphaBottom = std::max(0.0f, 1.0f - std::pow(progressBottom, 1.5f));
+        ::rlBegin(RL_QUADS);
+        ::rlColor4ub(color.r, color.g, color.b, color.a);
 
-            unsigned char baseAlpha =
-                (unsigned char)((35.0f + 25.0f * pulse) * alphaBottom * fadeIn);
-            raylib::Color color = raylib::Color(255, 250, 200, baseAlpha);
+        ::rlTexCoord2f(0.0f, 0.0f);
+        ::rlVertex3f(x - size, yBase, z - size);
+        ::rlTexCoord2f(0.0f, 1.0f);
+        ::rlVertex3f(x - size, yBase, z + size);
+        ::rlTexCoord2f(1.0f, 1.0f);
+        ::rlVertex3f(x + size, yBase, z + size);
+        ::rlTexCoord2f(1.0f, 0.0f);
+        ::rlVertex3f(x + size, yBase, z - size);
 
-            ::DrawCylinderEx(raylib::Vector3{x, yStart, z}, raylib::Vector3{x, yEnd, z}, rBottom,
-                             rTop, 24, color);
-        }
+        ::rlEnd();
 
-        // The descending halo rings
-        for (int i = 0; i < 3; i++) {
-            float offset = (float)i * 2.0f;
-            float haloY = 10.0f - std::fmod(time * 2.0f + offset, 8.0f); // falls from 10.0 to 2.0
-            if (haloY >= 2.0f) {
-                float heightFade = (haloY - 2.0f) / 8.0f; // 0.0 at bottom, 1.0 at top
-                unsigned char fillAlpha = (unsigned char)(80.0f * heightFade * fadeIn);
-                unsigned char wireAlpha = (unsigned char)(140.0f * heightFade * fadeIn);
-                raylib::Color haloColor = raylib::Color(255, 255, 255, fillAlpha);
-                raylib::Color wireColor = raylib::Color(255, 240, 150, wireAlpha);
-                ::DrawCylinder(raylib::Vector3{x, haloY, z}, 0.55f, 0.55f, 0.05f, 16, haloColor);
-                ::DrawCylinderWires(raylib::Vector3{x, haloY, z}, 0.55f, 0.55f, 0.05f, 16,
-                                    wireColor);
+        ::rlEnableDepthMask();
+        ::rlEnableBackfaceCulling();
+
+        ::EndShaderMode();
+
+        ::rlDisableDepthMask();
+        for (Entity player : effect->participants) {
+            auto move = w.get_component<MovementInterpolation>(player);
+            if (move) {
+                float pulse = (std::sin(time * 5.0f) + 1.0f) * 0.5f;
+                unsigned char pAlpha = (unsigned char)((30.0f + 20.0f * pulse) * fadeIn);
+                raylib::Color innerColor = raylib::Color(255, 255, 255, pAlpha);
+                raylib::Color outerColor = raylib::Color(200, 230, 255, pAlpha / 2);
+
+                // Draw layered spheres to create a soft, glowing aura around the body
+                // The center of the mannequin is roughly at y = 2.6
+                ::DrawSphere(raylib::Vector3{move->visualX, 2.6f, move->visualY}, 0.45f,
+                             innerColor);
+                ::DrawSphere(raylib::Vector3{move->visualX, 2.6f, move->visualY}, 0.55f,
+                             outerColor);
             }
         }
     }

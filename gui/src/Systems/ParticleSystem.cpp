@@ -59,8 +59,34 @@ void ParticleSystem::update(World& w, float dt) {
                 for (Entity player : event->participants) {
                     auto anim = w.get_component<Animation>(player);
                     if (anim) {
-                        anim->currentAnim = "inhabitant_special_Skeletons_Awaken_Standing";
+                        anim->currentAnim = "inhabitant_simulation_Push_Ups";
                         anim->loop = true;
+                    }
+
+                    auto move = w.get_component<MovementInterpolation>(player);
+                    if (move) {
+                        auto feetEntity = w.spawn();
+                        ComponentParticleEmitter feetEmitter;
+                        feetEmitter.isPlaying = true;
+                        feetEmitter.loop = true;
+                        feetEmitter.emitRate = 30.0f;
+                        feetEmitter.minLifetime = 0.5f;
+                        feetEmitter.maxLifetime = 1.0f;
+                        feetEmitter.minSize = 0.02f;
+                        feetEmitter.maxSize = 0.04f;
+                        feetEmitter.startColor = raylib::Color(255, 255, 255, 255);
+                        feetEmitter.endColor = raylib::Color(150, 200, 255, 0);
+                        // basePos will be (x, 2.0f, y). We offset it to visual position:
+                        feetEmitter.offset =
+                            raylib::Vector3(move->visualX - x, 0.0f, move->visualY - y);
+                        feetEmitter.spawnVolumeMin = raylib::Vector3(-0.3f, 0.0f, -0.3f);
+                        feetEmitter.spawnVolumeMax = raylib::Vector3(0.3f, 0.2f, 0.3f);
+                        feetEmitter.minVelocity = raylib::Vector3(-0.2f, 0.5f, -0.2f);
+                        feetEmitter.maxVelocity = raylib::Vector3(0.2f, 1.0f, 0.2f);
+
+                        w.add_component(feetEntity, feetEmitter);
+                        w.add_component(feetEntity, ComponentIncantationEffect{x, y, {}});
+                        w.add_component(feetEntity, Position{x, y});
                     }
                 }
 
@@ -71,41 +97,21 @@ void ParticleSystem::update(World& w, float dt) {
                 colEmitter.emitRate = 60.0f;
                 colEmitter.minLifetime = 2.0f;
                 colEmitter.maxLifetime = 4.0f;
-                colEmitter.minSize = 0.05f;
-                colEmitter.maxSize = 0.1f;
+                colEmitter.minSize = 0.02f;
+                colEmitter.maxSize = 0.05f;
                 colEmitter.startColor = raylib::Color(255, 255, 255, 255);
-                colEmitter.endColor = raylib::Color(255, 200, 100, 0);
+                colEmitter.endColor = raylib::Color(150, 200, 255, 0);
                 colEmitter.offset = raylib::Vector3(0.0f, 2.0f, 0.0f);
-                colEmitter.spawnVolumeMin = raylib::Vector3(-0.4f, 0.0f, -0.4f);
-                colEmitter.spawnVolumeMax = raylib::Vector3(0.4f, 10.0f, 0.4f);
-                colEmitter.minVelocity = raylib::Vector3(-0.2f, -0.5f, -0.2f);
+                colEmitter.spawnRadius = 0.6f;
+                colEmitter.spawnVolumeMin = raylib::Vector3(0.0f, 0.0f, 0.0f);
+                colEmitter.spawnVolumeMax = raylib::Vector3(0.0f, 5.0f, 0.0f);
+                colEmitter.minVelocity = raylib::Vector3(-0.2f, -0.2f, -0.2f);
                 colEmitter.maxVelocity = raylib::Vector3(0.2f, 0.5f, 0.2f);
 
                 w.add_component(effectEntity, colEmitter);
                 w.add_component(effectEntity,
                                 ComponentIncantationEffect{x, y, event->participants});
                 w.add_component(effectEntity, Position{x, y});
-
-                auto baseEntity = w.spawn();
-                ComponentParticleEmitter baseEmitter;
-                baseEmitter.isPlaying = true;
-                baseEmitter.loop = true;
-                baseEmitter.emitRate = 30.0f;
-                baseEmitter.minLifetime = 1.0f;
-                baseEmitter.maxLifetime = 2.0f;
-                baseEmitter.minSize = 0.1f;
-                baseEmitter.maxSize = 0.2f;
-                baseEmitter.startColor = raylib::Color(255, 220, 100, 150);
-                baseEmitter.endColor = raylib::Color(200, 50, 255, 0);
-                baseEmitter.offset = raylib::Vector3(0.0f, 2.0f, 0.0f);
-                baseEmitter.spawnVolumeMin = raylib::Vector3(-0.5f, 0.0f, -0.5f);
-                baseEmitter.spawnVolumeMax = raylib::Vector3(0.5f, 1.5f, 0.5f);
-                baseEmitter.minVelocity = raylib::Vector3(-0.5f, 0.5f, -0.5f);
-                baseEmitter.maxVelocity = raylib::Vector3(0.5f, 2.5f, 0.5f);
-
-                w.add_component(baseEntity, baseEmitter);
-                w.add_component(baseEntity, ComponentIncantationEffect{x, y, {}});
-                w.add_component(baseEntity, Position{x, y});
             }
             startEventsToRemove.push_back(entity);
         }
@@ -207,9 +213,16 @@ void ParticleSystem::update(World& w, float dt) {
 
                     Particle p;
                     p.position = basePos + emitter.offset;
-                    p.position.x += randf(emitter.spawnVolumeMin.x, emitter.spawnVolumeMax.x);
-                    p.position.y += randf(emitter.spawnVolumeMin.y, emitter.spawnVolumeMax.y);
-                    p.position.z += randf(emitter.spawnVolumeMin.z, emitter.spawnVolumeMax.z);
+                    if (emitter.spawnRadius > 0.0f) {
+                        float angle = randf(0.0f, 2.0f * 3.14159f);
+                        p.position.x += std::cos(angle) * emitter.spawnRadius;
+                        p.position.z += std::sin(angle) * emitter.spawnRadius;
+                        p.position.y += randf(emitter.spawnVolumeMin.y, emitter.spawnVolumeMax.y);
+                    } else {
+                        p.position.x += randf(emitter.spawnVolumeMin.x, emitter.spawnVolumeMax.x);
+                        p.position.y += randf(emitter.spawnVolumeMin.y, emitter.spawnVolumeMax.y);
+                        p.position.z += randf(emitter.spawnVolumeMin.z, emitter.spawnVolumeMax.z);
+                    }
                     p.velocity =
                         raylib::Vector3(randf(emitter.minVelocity.x, emitter.maxVelocity.x),
                                         randf(emitter.minVelocity.y, emitter.maxVelocity.y),
