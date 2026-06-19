@@ -1036,6 +1036,7 @@ void RenderSystem::_renderAnimatedResources(World& w) {
                         {finalScale, finalScale, finalScale}, tint, model.transform);
         }
     }
+}
 void RenderSystem::_renderIncantations(World& w) {
     auto incantationStorage = w.get_storage<ComponentIncantationEffect>();
     if (!incantationStorage) {
@@ -1089,7 +1090,7 @@ void RenderSystem::_renderIncantations(World& w) {
 
         ::rlDisableDepthMask();
         for (Entity player : effect->participants) {
-            auto move = w.get_component<MovementInterpolation>(player);
+            auto move = w.get_component<MovementInterpolation2D>(player);
             if (move) {
                 float pulse = (std::sin(time * 5.0f) + 1.0f) * 0.5f;
                 unsigned char pAlpha = (unsigned char)((30.0f + 20.0f * pulse) * fadeIn);
@@ -1108,5 +1109,4 @@ void RenderSystem::_renderIncantations(World& w) {
 
     ::rlEnableDepthMask();
 }
-
 } // namespace zappy
