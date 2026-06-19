@@ -1,9 +1,12 @@
-use crate::commands::ppo;
+use crate::commands::{gev, ppo};
 use crate::ecs::components::network::NetworkData;
+use crate::ecs::map_events::map_event_from_name;
 use crate::ecs::map_size;
 use crate::ecs::storage::Entity;
+use crate::ecs::systems::map_event::activate_map_event;
 use crate::protocol::{Command, Request, Response, ResponseCode, StatusCode};
 use crate::server::Server;
+use crate::utils::date::Date;
 
 pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request) {
     let width = server.world.map_size.width;
@@ -135,6 +138,51 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
             }
         }
 
+        Command::Mev(name) => {
+            let width = server.world.map_size.width;
+            let height = server.world.map_size.height;
+
+            let line = if server.world.map_event.is_active() {
+                None
+            } else if let Some(event) = map_event_from_name(&name, width, height) {
+                let now = Date::now().to_timestamp();
+                activate_map_event(&mut server.world, event, now);
+                Some(format!("mev {name}"))
+            } else {
+                None
+            };
+
+            let network_data = server.world.get_component_mut::<NetworkData>(entity);
+            if network_data.is_none() {
+                return;
+            }
+            let network_data = network_data.unwrap();
+
+            if let Some(line) = line {
+                network_data.pending_responses.push(Response::new(
+                    ResponseCode::Status(StatusCode::Ok),
+                    Some(line),
+                ));
+            } else {
+                network_data
+                    .pending_responses
+                    .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
+            }
+        }
+
+        Command::Gev => {
+            let line = gev::build_gev_line(&server.world);
+            let network_data = server.world.get_component_mut::<NetworkData>(entity);
+            if network_data.is_none() {
+                return;
+            }
+            let network_data = network_data.unwrap();
+            network_data.pending_responses.push(Response::new(
+                ResponseCode::Status(StatusCode::Ok),
+                Some(line),
+            ));
+        }
+
         Command::Unknown(_) => {
             let network_data = server.world.get_component_mut::<NetworkData>(entity);
             if network_data.is_none() {
@@ -164,6 +212,7 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
 mod tests {
     use super::*;
     use crate::ecs::components::network::MockSocket;
+    use crate::ecs::map_events::MapEvent;
     use crate::ecs::storage::World;
 
     fn create_test_server(freq: u32) -> Server {
@@ -291,6 +340,139 @@ mod tests {
         assert_eq!(
             network_data.pending_responses[1].data.as_ref().unwrap(),
             "tna TeamB"
+        );
+    }
+
+    #[test]
+    fn test_mev_triggers_solar_flare() {
+        let mut server = create_test_server(100);
+        let entity = spawn_gui_entity(&mut server);
+
+        handle_gui_command(
+            &mut server,
+            entity,
+            Request {
+                command: Command::Mev("solar_flare".to_string()),
+            },
+        );
+
+        assert!(server.world.map_event.is_active());
+        assert!(matches!(
+            server.world.map_event,
+            MapEvent::SolarFlare { .. }
+        ));
+        let network_data = server.world.get_component::<NetworkData>(entity).unwrap();
+        assert_eq!(network_data.pending_responses.len(), 1);
+        assert_eq!(
+            network_data.pending_responses[0].data.as_ref().unwrap(),
+            "mev solar_flare"
+        );
+    }
+
+    #[test]
+    fn test_mev_ko_when_event_active() {
+        let mut server = create_test_server(100);
+        let entity = spawn_gui_entity(&mut server);
+        server.world.map_event = MapEvent::new_meteor_shower();
+
+        handle_gui_command(
+            &mut server,
+            entity,
+            Request {
+                command: Command::Mev("solar_flare".to_string()),
+            },
+        );
+
+        assert!(matches!(
+            server.world.map_event,
+            MapEvent::MeteorShower { .. }
+        ));
+        let network_data = server.world.get_component::<NetworkData>(entity).unwrap();
+        assert_eq!(network_data.pending_responses.len(), 1);
+        assert!(network_data.pending_responses[0].data.is_none());
+    }
+
+    #[test]
+    fn test_mev_ko_for_invalid_name() {
+        let mut server = create_test_server(100);
+        let entity = spawn_gui_entity(&mut server);
+
+        handle_gui_command(
+            &mut server,
+            entity,
+            Request {
+                command: Command::Mev("unknown_event".to_string()),
+            },
+        );
+
+        assert!(!server.world.map_event.is_active());
+        let network_data = server.world.get_component::<NetworkData>(entity).unwrap();
+        assert_eq!(network_data.pending_responses.len(), 1);
+        assert!(network_data.pending_responses[0].data.is_none());
+    }
+
+    #[test]
+    fn test_gev_no_active_event() {
+        let mut server = create_test_server(100);
+        let entity = spawn_gui_entity(&mut server);
+
+        handle_gui_command(
+            &mut server,
+            entity,
+            Request {
+                command: Command::Gev,
+            },
+        );
+
+        let network_data = server.world.get_component::<NetworkData>(entity).unwrap();
+        assert_eq!(network_data.pending_responses.len(), 1);
+        assert_eq!(
+            network_data.pending_responses[0].data.as_ref().unwrap(),
+            "gev none"
+        );
+    }
+
+    #[test]
+    fn test_gev_with_active_event() {
+        let mut server = create_test_server(100);
+        let entity = spawn_gui_entity(&mut server);
+        server.world.map_event = MapEvent::new_solar_flare();
+
+        handle_gui_command(
+            &mut server,
+            entity,
+            Request {
+                command: Command::Gev,
+            },
+        );
+
+        let network_data = server.world.get_component::<NetworkData>(entity).unwrap();
+        assert_eq!(network_data.pending_responses.len(), 1);
+        assert_eq!(
+            network_data.pending_responses[0].data.as_ref().unwrap(),
+            "gev solar_flare"
+        );
+    }
+
+    #[test]
+    fn test_gev_gravity_well_includes_coords() {
+        let mut server = create_test_server(100);
+        let entity = spawn_gui_entity(&mut server);
+        server.world.map_event = MapEvent::new_gravity_well(3, 7);
+
+        handle_gui_command(
+            &mut server,
+            entity,
+            Request {
+                command: Command::Gev,
+            },
+        );
+
+        let network_data = server.world.get_component::<NetworkData>(entity).unwrap();
+        assert_eq!(network_data.pending_responses.len(), 1);
+        assert_eq!(
+            network_data.pending_responses[0].data.as_ref().unwrap(),
+            "gev gravity_well 3 7"
         );
     }
 }

@@ -119,6 +119,25 @@ impl MapEvent {
     }
 }
 
+/// Creates a [`MapEvent`] from a protocol name string (as used by `mev` and `gev`).
+///
+/// Returns `None` for unrecognized names. `GravityWell` picks a random center
+/// within the map bounds, matching the behavior of [`try_trigger_random_event`].
+pub fn map_event_from_name(name: &str, map_width: u32, map_height: u32) -> Option<MapEvent> {
+    match name {
+        "meteor_shower" => Some(MapEvent::new_meteor_shower()),
+        "solar_flare" => Some(MapEvent::new_solar_flare()),
+        "gravity_well" => {
+            let mut rng = rng();
+            let cx = rng.random_range(0..map_width);
+            let cy = rng.random_range(0..map_height);
+            Some(MapEvent::new_gravity_well(cx, cy))
+        }
+        "psionic_echo" => Some(MapEvent::PsionicEcho),
+        _ => None,
+    }
+}
+
 /// Rolls a random chance and, on success, returns a randomly selected [`MapEvent`].
 ///
 /// The probability of triggering is [`EVENT_TRIGGER_CHANCE`]. When triggered,
@@ -223,6 +242,47 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn map_event_from_name_meteor_shower() {
+        let event = map_event_from_name("meteor_shower", 10, 10).unwrap();
+        assert!(matches!(event, MapEvent::MeteorShower { .. }));
+    }
+
+    #[test]
+    fn map_event_from_name_solar_flare() {
+        let event = map_event_from_name("solar_flare", 10, 10).unwrap();
+        assert!(matches!(event, MapEvent::SolarFlare { .. }));
+    }
+
+    #[test]
+    fn map_event_from_name_gravity_well_respects_bounds() {
+        for _ in 0..200 {
+            let event = map_event_from_name("gravity_well", 5, 8).unwrap();
+            if let MapEvent::GravityWell {
+                center_x, center_y, ..
+            } = event
+            {
+                assert!(center_x < 5);
+                assert!(center_y < 8);
+            } else {
+                panic!("expected GravityWell");
+            }
+        }
+    }
+
+    #[test]
+    fn map_event_from_name_psionic_echo() {
+        let event = map_event_from_name("psionic_echo", 10, 10).unwrap();
+        assert!(matches!(event, MapEvent::PsionicEcho));
+    }
+
+    #[test]
+    fn map_event_from_name_invalid_returns_none() {
+        assert!(map_event_from_name("unknown", 10, 10).is_none());
+        assert!(map_event_from_name("", 10, 10).is_none());
+        assert!(map_event_from_name("MeteorShower", 10, 10).is_none());
     }
 
     #[test]
