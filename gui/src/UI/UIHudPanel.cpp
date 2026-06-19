@@ -27,12 +27,24 @@ void UIHudPanel::render() {
         return;
     }
 
-    _bounds.Draw(raylib::Color(15, 20, 40, 230));
-    _bounds.DrawLines(raylib::Color(0, 100, 255, 255), 2.0f);
+    auto& tex = AssetManager::getInstance().getTexture("menu_bg");
+    if (tex.id != 0) {
+        ::NPatchInfo npatchInfo = {
+            (raylib::Rectangle){0.0f, 0.0f, (float)tex.width, (float)tex.height},
+            20,
+            20,
+            20,
+            20, // margin left, top, right, bottom
+            NPATCH_NINE_PATCH};
+        tex.Draw(npatchInfo, _bounds, raylib::Vector2(0, 0), 0.0f, raylib::Color::White());
+    } else {
+        _bounds.Draw(raylib::Color(15, 20, 40, 230));
+        _bounds.DrawLines(raylib::Color(0, 100, 255, 255), 2.0f);
+    }
 
     raylib::Text infoText("Tile [" + std::to_string(selX) + ", " + std::to_string(selZ) + "]", 20,
-                          raylib::Color::RayWhite(),
-                          AssetManager::getInstance().getFont("BoldPixels"), 1.5f);
+                          raylib::Color(80, 50, 40, 255),
+                          AssetManager::getInstance().getFont("TextFont"), 1.5f);
     infoText.Draw(_bounds.x + 15, _bounds.y + 15);
 
     auto terrainStorage = _world.get_storage<TerrainType>();
@@ -88,13 +100,13 @@ void UIHudPanel::render() {
                 biomeEffect = "Random Bcast Dir";
                 break;
         }
-        raylib::Text(biomeName, 16, raylib::Color::LightGray(),
-                     AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+        raylib::Text(biomeName, 16, raylib::Color(60, 40, 30, 255),
+                     AssetManager::getInstance().getFont("TextFont"), 1.5f)
             .Draw(_bounds.x + 15, (float)yOffset);
         yOffset += 20;
         if (!biomeEffect.empty()) {
-            raylib::Text(biomeEffect, 12, ORANGE, AssetManager::getInstance().getFont("BoldPixels"),
-                         1.5f)
+            raylib::Text(biomeEffect, 12, raylib::Color(150, 60, 30, 255),
+                         AssetManager::getInstance().getFont("TextFont"), 1.5f)
                 .Draw(_bounds.x + 15, (float)yOffset);
             yOffset += 15;
         }
@@ -106,24 +118,25 @@ void UIHudPanel::render() {
         auto drawResource = [&](const std::string& name, int count, raylib::Color col) {
             if (count > 0) {
                 std::string text = name + ": " + std::to_string(count);
-                raylib::Text(text, 14, col, AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+                raylib::Text(text, 14, col, AssetManager::getInstance().getFont("TextFont"), 1.5f)
                     .Draw(_bounds.x + 20, (float)yOffset);
                 yOffset += 18;
             }
         };
 
-        drawResource("Food", inv->food, ORANGE);
-        drawResource("Linemate", inv->linemate, GREEN);
-        drawResource("Deraumere", inv->deraumere, BLUE);
-        drawResource("Sibur", inv->sibur, PURPLE);
-        drawResource("Mendiane", inv->mendiane, YELLOW);
-        drawResource("Phiras", inv->phiras, RED);
-        drawResource("Thystame", inv->thystame, WHITE);
+        drawResource("Food", inv->food, raylib::Color(245, 160, 100, 255));         // Peach Orange
+        drawResource("Linemate", inv->linemate, raylib::Color(110, 210, 120, 255)); // Mint Green
+        drawResource("Deraumere", inv->deraumere,
+                     raylib::Color(100, 180, 240, 255));                      // Soft Sky Blue
+        drawResource("Sibur", inv->sibur, raylib::Color(190, 130, 230, 255)); // Lavender Purple
+        drawResource("Mendiane", inv->mendiane, raylib::Color(240, 220, 110, 255)); // Warm Yellow
+        drawResource("Phiras", inv->phiras, raylib::Color(235, 120, 120, 255));     // Coral Red
+        drawResource("Thystame", inv->thystame, raylib::Color(245, 245, 245, 255)); // Bright White
     }
 
     yOffset += 10;
-    raylib::Text("Entities:", 18, raylib::Color(0, 150, 255, 255),
-                 AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+    raylib::Text("Entities:", 18, raylib::Color(40, 70, 100, 255),
+                 AssetManager::getInstance().getFont("TextFont"), 1.5f)
         .Draw(_bounds.x + 15, (float)yOffset);
     yOffset += 25;
 
@@ -147,13 +160,13 @@ void UIHudPanel::render() {
                 if (level) {
                     pInfo += " (Lvl " + std::to_string(level->level) + ")";
                 }
-                raylib::Text(pInfo, 16, RED, AssetManager::getInstance().getFont("BoldPixels"),
-                             1.5f)
+                raylib::Text(pInfo, 16, raylib::Color(150, 40, 40, 255),
+                             AssetManager::getInstance().getFont("TextFont"), 1.5f)
                     .Draw(_bounds.x + 20, (float)yOffset);
                 yOffset += 18;
                 if (team) {
-                    raylib::Text(team->_team_name, 14, RAYWHITE,
-                                 AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+                    raylib::Text(team->_team_name, 14, raylib::Color(100, 80, 80, 255),
+                                 AssetManager::getInstance().getFont("TextFont"), 1.5f)
                         .Draw(_bounds.x + 35, (float)yOffset);
                     yOffset += 16;
                 }
@@ -162,7 +175,8 @@ void UIHudPanel::render() {
     }
 
     if (!foundPlayer) {
-        raylib::Text("None", 16, GRAY, AssetManager::getInstance().getFont("BoldPixels"), 1.5f)
+        raylib::Text("None", 16, raylib::Color(100, 80, 80, 255),
+                     AssetManager::getInstance().getFont("TextFont"), 1.5f)
             .Draw(_bounds.x + 20, (float)yOffset);
     }
 }

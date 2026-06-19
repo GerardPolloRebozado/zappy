@@ -107,6 +107,7 @@ class RenderSystem {
     void _renderTerrain(World& w);
     void _renderEggs(World& w);
     void _renderParticles(World& w);
+    void _renderIncantations(World& w);
 
     /**
      * @brief Renders the inhabitants in the world.
@@ -119,6 +120,7 @@ class RenderSystem {
      * @param w The world to fetch resource data from.
      */
     void _renderResources(World& w);
+    void _renderAnimatedResources(World& w);
 
     /**
      * @brief Renders landmarks like monoliths and fissures.

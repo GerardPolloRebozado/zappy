@@ -49,6 +49,10 @@ class CommandPlayerConnection : public ACommand {
         world.add_component<TeamName>(player, {teamName, TeamName::findTeam(teamName, world)});
         world.add_component<Inventory>(player, {0, 0, 0, 0, 0, 0, 0});
         world.add_component<InhabitantTag>(player, InhabitantTag{});
+        world.add_component<Animation>(player,
+                                       {"inhabitant_general_Idle_A", 0.0f, 60.0f, 1.0f, true});
+        world.add_component<MovementInterpolation2D>(
+            player, {static_cast<float>(x), static_cast<float>(y), false});
 
         log_info("Protocol: New player #" + std::to_string(playerId) +
                  " connected (Team: " + teamName + ")");

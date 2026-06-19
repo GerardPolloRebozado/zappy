@@ -8,6 +8,7 @@
 #include "Core.hpp"
 #include "Color.hpp"
 #include "Components/ComponentInhabitant.hpp"
+#include "Components/ComponentMusic.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTile.hpp"
 #include "CoreErrors.hpp"
@@ -20,8 +21,10 @@
 #include "UI/UIManager.hpp"
 #include "UI/UIPanel.hpp"
 #include "UI/UIScoreboardPanel.hpp"
+#include "UI/UISlider.hpp"
 #include "UI/UIText.hpp"
 #include "errors/IError.hpp"
+#include "raylib.h"
 #include <memory>
 
 namespace zappy {
@@ -36,16 +39,28 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
 
     _window->Maximize();
 
+    // Initialize the speakers
+    InitAudioDevice();
+
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
     raylib::Window::HideCursor();
+
+    // Add the background music
+    auto backgroundMusic = _world.spawn();
+    _world.add_component(backgroundMusic,
+                         std::make_shared<ComponentMusic>(
+                             AssetManager::getInstance().getMusicPath("country"), true));
 
     _uiManager = std::make_shared<UIManager>();
     _appState = AppState::MENU;
     _setupMainMenu();
 }
 
-Core::~Core() { AssetManager::getInstance().unloadAll(); }
+Core::~Core() {
+    AssetManager::getInstance().unloadAll();
+    CloseAudioDevice();
+}
 
 void Core::run() {
     while (!_window->ShouldClose() && !_shouldClose) {
@@ -82,14 +97,17 @@ void Core::_update() {
         if (raylib::Keyboard::IsKeyPressed(KEY_ESCAPE)) {
             _network.disconnect();
             _appState = AppState::MENU;
+            _world.despawn_all_entities();
             _setupMainMenu();
             return;
         }
 
         _network.update(_world);
         if (_network.isConnected()) {
+            _animationSystem.update(_world);
             _renderSystem.update(_world, dt);
             _particleSystem.update(_world, dt);
+            _musicSystem.update(_world, dt);
         } else {
             // Server disconnected, go back to menu
             _appState = AppState::MENU;
@@ -133,28 +151,28 @@ void Core::_setupMainMenu() {
     int cy = sh / 2;
 
     // Background panel
-    _uiManager->addComponent(std::make_shared<UIPanel>(
-        raylib::Rectangle{0, 0, (float)sw, (float)sh}, raylib::Color(15, 20, 40, 255), 0));
+    _uiManager->addComponent(
+        std::make_shared<UIPanel>(raylib::Rectangle{0, 0, (float)sw, (float)sh}, "menu_bg", 0));
 
     // Title
     _uiManager->addComponent(
         std::make_shared<UIText>(raylib::Rectangle{(float)cx - 150, (float)cy - 250, 300, 80},
-                                 "ZAPPY", 80, raylib::Color::RayWhite(), 1));
+                                 "ZAPPY", 80, raylib::Color::RayWhite(), 1, 1.5f, "HeaderFont"));
 
     // Play Button
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 150, (float)cy - 50, 300, 60}, "Play",
-        [this]() { this->_showConnectionOverlay(); }, 1));
+        [this]() { this->_showConnectionOverlay(); }, "btn_normal", "btn_hover", "btn_pressed", 1));
 
     // Settings Button
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 150, (float)cy + 30, 300, 60}, "Settings",
-        [this]() { this->_setupSettingsMenu(); }, 1));
+        [this]() { this->_setupSettingsMenu(); }, "btn_normal", "btn_hover", "btn_pressed", 1));
 
     // Quit Button
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 150, (float)cy + 110, 300, 60}, "Quit",
-        [this]() { this->_shouldClose = true; }, 1));
+        [this]() { this->_shouldClose = true; }, "btn_normal", "btn_hover", "btn_pressed", 1));
 }
 
 void Core::_setupSettingsMenu() {
@@ -166,13 +184,13 @@ void Core::_setupSettingsMenu() {
 
     // Background panel
     _uiManager->addComponent(std::make_shared<UIPanel>(
-        raylib::Rectangle{0, 0, (float)_window->GetWidth(), (float)_window->GetHeight()},
-        raylib::Color(15, 20, 40, 255), 0));
+        raylib::Rectangle{0, 0, (float)_window->GetWidth(), (float)_window->GetHeight()}, "menu_bg",
+        0));
 
     // Title
     _uiManager->addComponent(
         std::make_shared<UIText>(raylib::Rectangle{(float)cx - 150, (float)cy - 300, 300, 60},
-                                 "SETTINGS", 60, raylib::Color::RayWhite(), 1, 4.0f));
+                                 "SETTINGS", 60, raylib::Color::RayWhite(), 1, 4.0f, "HeaderFont"));
 
     auto setResolution = [this](int w, int h) {
         int monitor = GetCurrentMonitor();
@@ -199,22 +217,26 @@ void Core::_setupSettingsMenu() {
     // 800x600 Button
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 160, (float)cy - 150, 150, 50}, "800x600",
-        [setResolution]() { setResolution(800, 600); }, 1));
+        [setResolution]() { setResolution(800, 600); }, "btn_normal", "btn_hover", "btn_pressed",
+        1));
 
     // 1280x720 Button
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx + 10, (float)cy - 150, 150, 50}, "1280x720",
-        [setResolution]() { setResolution(1280, 720); }, 1));
+        [setResolution]() { setResolution(1280, 720); }, "btn_normal", "btn_hover", "btn_pressed",
+        1));
 
     // 1600x900 Button
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 160, (float)cy - 80, 150, 50}, "1600x900",
-        [setResolution]() { setResolution(1600, 900); }, 1));
+        [setResolution]() { setResolution(1600, 900); }, "btn_normal", "btn_hover", "btn_pressed",
+        1));
 
     // 1920x1080 Button
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx + 10, (float)cy - 80, 150, 50}, "1920x1080",
-        [setResolution]() { setResolution(1920, 1080); }, 1));
+        [setResolution]() { setResolution(1920, 1080); }, "btn_normal", "btn_hover", "btn_pressed",
+        1));
 
     // Fullscreen Button
     _uiManager->addComponent(std::make_shared<UIButton>(
@@ -232,7 +254,7 @@ void Core::_setupSettingsMenu() {
             }
             this->_setupSettingsMenu(); // Re-center UI
         },
-        1));
+        "btn_normal", "btn_hover", "btn_pressed", 1));
 
     // Volume Controls (Placeholder)
     _uiManager->addComponent(
@@ -241,16 +263,22 @@ void Core::_setupSettingsMenu() {
 
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 150, (float)cy + 110, 140, 50}, "-",
-        []() { log_debug("Volume Down"); }, 1));
+        [this]() {
+            _musicSystem.volumeDown(); /*log_debug("Volume Down");*/
+        },
+        1));
 
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx + 10, (float)cy + 110, 140, 50}, "+",
-        []() { log_debug("Volume Up"); }, 1));
+        [this]() {
+            _musicSystem.volumeUp(); /*log_debug("Volume Up"); */
+        },
+        1));
 
     // Back Button
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 150, (float)cy + 190, 300, 60}, "Back",
-        [this]() { this->_setupMainMenu(); }, 1));
+        [this]() { this->_setupMainMenu(); }, "btn_normal", "btn_hover", "btn_pressed", 1));
 }
 
 void Core::_showConnectionOverlay() {
@@ -262,29 +290,30 @@ void Core::_showConnectionOverlay() {
 
     // Background panel
     _uiManager->addComponent(std::make_shared<UIPanel>(
-        raylib::Rectangle{0, 0, (float)_window->GetWidth(), (float)_window->GetHeight()},
-        raylib::Color(15, 20, 40, 255), 0));
+        raylib::Rectangle{0, 0, (float)_window->GetWidth(), (float)_window->GetHeight()}, "menu_bg",
+        0));
 
     // Title
     _uiManager->addComponent(
         std::make_shared<UIText>(raylib::Rectangle{(float)cx - 150, (float)cy - 200, 300, 60},
-                                 "CONNECT", 60, raylib::Color::RayWhite(), 1, 4.0f));
+                                 "CONNECT", 60, raylib::Color::RayWhite(), 1, 4.0f, "HeaderFont"));
 
     // Host Input
-    auto hostInput = std::make_shared<UIInput>(
-        raylib::Rectangle{(float)cx - 150, (float)cy - 80, 300, 50}, _host, "Host...", 256, 1);
+    auto hostInput =
+        std::make_shared<UIInput>(raylib::Rectangle{(float)cx - 150, (float)cy - 80, 300, 50},
+                                  _host, "Host...", "input_bg", 256, 1);
     _uiManager->addComponent(hostInput);
 
     // Port Input
     auto portInput =
         std::make_shared<UIInput>(raylib::Rectangle{(float)cx - 150, (float)cy - 10, 300, 50},
-                                  std::to_string(_port), "Port...", 10, 1);
+                                  std::to_string(_port), "Port...", "input_bg", 10, 1);
     _uiManager->addComponent(portInput);
 
     // Go Back Button
     _uiManager->addComponent(std::make_shared<UIButton>(
         raylib::Rectangle{(float)cx - 150, (float)cy + 60, 140, 50}, "Go Back",
-        [this]() { this->_setupMainMenu(); }, 1));
+        [this]() { this->_setupMainMenu(); }, "btn_normal", "btn_hover", "btn_pressed", 1));
 
     // Connect Button
     _uiManager->addComponent(std::make_shared<UIButton>(
@@ -299,7 +328,7 @@ void Core::_showConnectionOverlay() {
             }
             this->_connectToServer(h, p);
         },
-        1));
+        "btn_normal", "btn_hover", "btn_pressed", 1));
 }
 
 void Core::_connectToServer(const std::string& host, int port) {
@@ -329,6 +358,17 @@ void Core::_setupGameUI() {
     _uiManager->addComponent(std::make_shared<UIHudPanel>(
         raylib::Rectangle{(float)_window->GetWidth() - 220, 50, 200, 400}, _world, _renderSystem,
         nullptr, 10));
+
+    // Time frequency slider
+    _uiManager->addComponent(
+        std::make_shared<UISlider>(raylib::Rectangle{(float)_window->GetWidth() - 270,
+                                                     (float)_window->GetHeight() - 60, 250, 40},
+                                   _world, _network, 10));
+
+    auto backgroundMusic = _world.spawn();
+    _world.add_component(
+        backgroundMusic,
+        std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
 }
 
 void Core::_setupTestingData() {

@@ -33,21 +33,32 @@ impl RelativeOrientation {
 
     pub fn turn_right(self) -> RelativeOrientation {
         match self {
-            RelativeOrientation::Forward => RelativeOrientation::ForwardLeft,
-            RelativeOrientation::ForwardLeft => RelativeOrientation::Left,
-            RelativeOrientation::Left => RelativeOrientation::BackLeft,
-            RelativeOrientation::BackLeft => RelativeOrientation::Forward,
+            RelativeOrientation::Forward => RelativeOrientation::Right,
+            RelativeOrientation::Right => RelativeOrientation::Back,
+            RelativeOrientation::Back => RelativeOrientation::Left,
+            RelativeOrientation::Left => RelativeOrientation::Forward,
             _ => self,
         }
     }
 
     pub fn turn_left(self) -> RelativeOrientation {
         match self {
-            RelativeOrientation::Forward => RelativeOrientation::BackLeft,
-            RelativeOrientation::ForwardLeft => RelativeOrientation::Forward,
-            RelativeOrientation::Left => RelativeOrientation::ForwardLeft,
-            RelativeOrientation::BackLeft => RelativeOrientation::Left,
+            RelativeOrientation::Forward => RelativeOrientation::Left,
+            RelativeOrientation::Left => RelativeOrientation::Back,
+            RelativeOrientation::Back => RelativeOrientation::Right,
+            RelativeOrientation::Right => RelativeOrientation::Forward,
             _ => self,
+        }
+    }
+
+    /// Maps cardinal player orientation to the GUI protocol O value (1=N, 2=E, 3=S, 4=W).
+    pub fn as_gui_orientation(self) -> u32 {
+        match self {
+            RelativeOrientation::Forward => 1,
+            RelativeOrientation::Right => 2,
+            RelativeOrientation::Back => 3,
+            RelativeOrientation::Left => 4,
+            _ => 1,
         }
     }
 }
@@ -63,9 +74,9 @@ fn world_delta_to_relative_offset(
 ) -> (i32, i32) {
     match orientation.as_protocol_k() {
         1 => (world_x, world_y),
-        2 => (world_y, -world_x),
-        3 => (-world_x, -world_y),
-        4 => (-world_y, world_x),
+        7 => (world_y, -world_x),
+        5 => (-world_x, -world_y),
+        3 => (-world_y, world_x),
         _ => (0, 0),
     }
 }
@@ -180,7 +191,7 @@ mod tests {
         let player = Inhabitant::default()
             .with_id(1)
             .with_pos(5, 5)
-            .with_orientation(RelativeOrientation::ForwardLeft);
+            .with_orientation(RelativeOrientation::Right);
         assert_eq!(calc_k(5, 4, &player, 10, 10), 3);
     }
 
@@ -244,11 +255,11 @@ mod tests {
     fn turn_right_full_cycle() {
         let mut o = RelativeOrientation::Forward;
         o = o.turn_right();
-        assert_eq!(o, RelativeOrientation::ForwardLeft);
+        assert_eq!(o, RelativeOrientation::Right);
+        o = o.turn_right();
+        assert_eq!(o, RelativeOrientation::Back);
         o = o.turn_right();
         assert_eq!(o, RelativeOrientation::Left);
-        o = o.turn_right();
-        assert_eq!(o, RelativeOrientation::BackLeft);
         o = o.turn_right();
         assert_eq!(o, RelativeOrientation::Forward);
     }
@@ -257,11 +268,11 @@ mod tests {
     fn turn_left_full_cycle() {
         let mut o = RelativeOrientation::Forward;
         o = o.turn_left();
-        assert_eq!(o, RelativeOrientation::BackLeft);
-        o = o.turn_left();
         assert_eq!(o, RelativeOrientation::Left);
         o = o.turn_left();
-        assert_eq!(o, RelativeOrientation::ForwardLeft);
+        assert_eq!(o, RelativeOrientation::Back);
+        o = o.turn_left();
+        assert_eq!(o, RelativeOrientation::Right);
         o = o.turn_left();
         assert_eq!(o, RelativeOrientation::Forward);
     }

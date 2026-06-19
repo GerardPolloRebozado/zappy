@@ -1,6 +1,5 @@
 import unittest
 import os
-from training.training_env import ServerManager
 from training.training_env.server_manager import ServerManager
 
 

@@ -17,6 +17,9 @@ class UIInput : public AUIComponent {
   public:
     UIInput(raylib::Rectangle bounds, const std::string& initialText,
             const std::string& placeholder, size_t maxLength = 256, int zIndex = 0);
+    UIInput(raylib::Rectangle bounds, const std::string& initialText,
+            const std::string& placeholder, const std::string& textureName, size_t maxLength = 256,
+            int zIndex = 0);
     ~UIInput() override = default;
 
     void update(float dt, raylib::Vector2 mousePos,
@@ -35,6 +38,9 @@ class UIInput : public AUIComponent {
     raylib::Color _focusedColor;
     raylib::Color _textColor;
     raylib::Color _placeholderColor;
+
+    std::string _textureName;
+    bool _isTextured;
 };
 
 } // namespace zappy

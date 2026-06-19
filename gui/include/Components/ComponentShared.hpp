@@ -41,6 +41,42 @@ struct TimeUnit {
 struct ServerId {
     int id;
 };
+/**
+ * @struct Animation
+ * @brief Component that holds the state of a 3D model animation.
+ */
+struct Animation {
+    std::string currentAnim;   ///< Identifier name of the animation loaded in the AssetManager.
+    float currentFrame = 0.0f; ///< Current playback frame of the animation.
+    float baseFps = 60.0f;     ///< Base frames per second the animation should run at.
+    float speedMultiplier =
+        1.0f;         ///< Multiplier to adjust animation speed based on game time frequency.
+    bool loop = true; ///< Whether the animation should restart when reaching the end.
+};
+
+/**
+ * @struct MovementInterpolation2D
+ * @brief Component that decouples the logical ECS position from the rendering position.
+ */
+struct MovementInterpolation2D {
+    float visualX = -1.0f; ///< The smooth visual X coordinate of the entity.
+    float visualY = -1.0f; ///< The smooth visual Y coordinate of the entity.
+    bool isMoving =
+        false; ///< True if the visual position is currently moving towards the logical position.
+};
+
+/**
+ * @struct MovementInterpolation3D
+ * @brief Component that decouples the logical ECS position from the rendering position.
+ */
+struct MovementInterpolation3D {
+    float visualX = -1.0f; ///< The smooth visual X coordinate of the entity.
+    float visualY = -1.0f; ///< The smooth visual Y coordinate of the entity.
+    float visualZ = -1.0f;
+    bool isMoving =
+        false; ///< True if the visual position is currently moving towards the logical position.
+    float targetZ = 2.01f;
+};
 } // namespace zappy
 
 #endif // ZAPPY_GUI_COMPONENTSHARED_HPP

@@ -260,8 +260,26 @@ mod tests {
 
     #[test]
     fn test_queue_task_limit() {
-        let mut server = Server::default();
-        let client_socket = std::net::TcpStream::connect(format!("127.0.0.1:{}", 8080)).unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let mut server = Server {
+            listener,
+            _users: HashMap::new(),
+            _freq: 100,
+            game_start: 0,
+            world: World::new(
+                crate::ecs::map_size::MapSize {
+                    width: 10,
+                    height: 10,
+                },
+                100,
+            ),
+            clients_nb: 1,
+            team_names: vec!["team".to_string()],
+        };
+
+        let client_socket = std::net::TcpStream::connect(addr).unwrap();
         let network = NetworkData::new(client_socket);
         let entity = server.world.spawn();
         let entity = build_inhabitant_with_entity(

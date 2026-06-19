@@ -42,6 +42,7 @@
 use log::info;
 
 use crate::ecs::components::inventory::Inventory;
+use crate::ecs::map_events::MapEvent;
 use crate::ecs::map_size::MapSize;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
@@ -177,6 +178,11 @@ pub struct World {
     /// used to know when to spawn new resources
     pub last_resource_spawn: u64,
     pub resources_amount: Inventory,
+    pub map_event: MapEvent,
+    /// Timestamp of the last event tick (for duration countdown)
+    pub last_event_check: u64,
+    /// Timestamp of the last random event trigger roll
+    pub last_event_trigger_check: u64,
 }
 
 impl Default for World {
@@ -204,6 +210,9 @@ impl World {
             current_time,
             last_resource_spawn: current_time,
             resources_amount: Inventory::new(),
+            map_event: MapEvent::None,
+            last_event_check: 1,
+            last_event_trigger_check: 1,
         }
     }
 

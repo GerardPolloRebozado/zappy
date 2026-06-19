@@ -20,6 +20,12 @@ class UIButton : public AUIComponent {
   public:
     UIButton(raylib::Rectangle bounds, const std::string& text, std::function<void()> onClick,
              int zIndex = 0);
+
+    // Textured constructor
+    UIButton(raylib::Rectangle bounds, const std::string& text, std::function<void()> onClick,
+             const std::string& normalTex, const std::string& hoverTex,
+             const std::string& pressedTex, int zIndex = 0);
+
     ~UIButton() override = default;
 
     void update(float dt, raylib::Vector2 mousePos,
@@ -35,6 +41,11 @@ class UIButton : public AUIComponent {
     raylib::Color _normalColor;
     raylib::Color _hoverColor;
     raylib::Color _pressedColor;
+
+    std::string _normalTex;
+    std::string _hoverTex;
+    std::string _pressedTex;
+    bool _isTextured;
 };
 
 } // namespace zappy
