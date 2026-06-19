@@ -264,7 +264,7 @@ mod tests {
         let addr = listener.local_addr().unwrap();
 
         let mut server = Server {
-            listener,
+            listener: Some(listener),
             _users: HashMap::new(),
             _freq: 100,
             game_start: 0,
@@ -274,6 +274,7 @@ mod tests {
                     height: 10,
                 },
                 100,
+                Date::now().to_timestamp(),
             ),
             clients_nb: 1,
             team_names: vec!["team".to_string()],
