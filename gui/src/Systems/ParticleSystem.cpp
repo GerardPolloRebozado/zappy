@@ -63,7 +63,7 @@ void ParticleSystem::update(World& w, float dt) {
                         anim->loop = true;
                     }
 
-                    auto move = w.get_component<MovementInterpolation>(player);
+                    auto move = w.get_component<MovementInterpolation2D>(player);
                     if (move) {
                         auto feetEntity = w.spawn();
                         ComponentParticleEmitter feetEmitter;

@@ -17,6 +17,9 @@ struct EggTag {};
 struct MapTag {};
 struct TeamTag {};
 struct EventEggHatched {};
+struct AnimatedResource {
+    int resourceId = 0;
+};
 
 struct EventIncantationStart {
     std::vector<Entity> participants;
