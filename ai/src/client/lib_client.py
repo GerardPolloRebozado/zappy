@@ -1,5 +1,6 @@
 import ctypes
 import os
+import re
 from pathlib import Path
 from src.utils import parse_look, parse_broadcast, Inventory
 
@@ -46,8 +47,8 @@ class ZappyLib:
         # Look for the library in common locations
         suffix = ".dylib" if os.uname().sysname == "Darwin" else ".so"
         possible_locations = [
-            base_dir / "server" / "target" / "debug" / f"libzappy_engine{suffix}",
             base_dir / "server" / "target" / "release" / f"libzappy_engine{suffix}",
+            base_dir / "server" / "target" / "debug" / f"libzappy_engine{suffix}",
             base_dir / f"libzappy_engine{suffix}",
         ]
 
@@ -74,15 +75,18 @@ class ZappyLibClient:
         self.lib.zappy_tick(self.server_ptr, ms)
 
     def wait_for_response(self):
-        # In headless mode, we might need to tick the engine to advance tasks
-        # Each tick we check for a response.
-        # Max timeout to prevent infinite loops if something goes wrong
+        # Calculate the actual millisecond length of one server tick.
+        tick_size_ms = max(1, int(1000 / self.freq))
+
         max_ticks = 100000
         ticks = 0
         while ticks < max_ticks:
             resp_ptr = self.lib.zappy_get_response(self.server_ptr, self.player_id)
             if resp_ptr:
-                resp = ctypes.cast(resp_ptr, ctypes.c_char_p).value.decode("utf-8")
+                # Decode and strip the trailing newline from Rust
+                resp = (
+                    ctypes.cast(resp_ptr, ctypes.c_char_p).value.decode("utf-8").strip()
+                )
                 self.lib.zappy_free_string(resp_ptr)
 
                 if resp == "dead":
@@ -101,8 +105,7 @@ class ZappyLibClient:
                     return resp
                 return resp
 
-            # Tick by 1ms (very granular for training, maybe more?)
-            self._tick(1)
+            self._tick(tick_size_ms)
             ticks += 1
 
         return None
@@ -127,7 +130,15 @@ class ZappyLibClient:
     def inventory(self):
         self.lib.zappy_send_command(self.server_ptr, self.player_id, b"Inventory\n")
         resp = self.wait_for_response()
-        return Inventory.from_string(resp) if resp and resp.startswith("[") else resp
+
+        if resp and resp.startswith("["):
+            matches = re.findall(r"([a-zA-Z]+)[^0-9a-zA-Z]*(\d+)", resp)
+            clean_resp = (
+                "[" + ", ".join(f"{name} {count}" for name, count in matches) + "]"
+            )
+            return Inventory.from_string(clean_resp)
+
+        return resp
 
     def broadcast(self, text):
         cmd = f"Broadcast {text}\n".encode("utf-8")
