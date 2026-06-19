@@ -14,6 +14,9 @@ struct EggTag {};
 struct MapTag {};
 struct TeamTag {};
 struct EventEggHatched {};
+struct AnimatedResource {
+    int resourceId = 0;
+};
 } // namespace zappy
 
 #endif // ZAPPY_GUI_COMPONENTTAGS_HPP

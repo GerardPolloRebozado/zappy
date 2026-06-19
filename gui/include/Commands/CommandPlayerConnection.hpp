@@ -51,7 +51,7 @@ class CommandPlayerConnection : public ACommand {
         world.add_component<InhabitantTag>(player, InhabitantTag{});
         world.add_component<Animation>(player,
                                        {"inhabitant_general_Idle_A", 0.0f, 60.0f, 1.0f, true});
-        world.add_component<MovementInterpolation>(
+        world.add_component<MovementInterpolation2D>(
             player, {static_cast<float>(x), static_cast<float>(y), false});
 
         log_info("Protocol: New player #" + std::to_string(playerId) +

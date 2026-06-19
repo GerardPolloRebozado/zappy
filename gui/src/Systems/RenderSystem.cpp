@@ -15,6 +15,7 @@
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
+#include "Components/ComponentTags.hpp"
 #include "Components/ComponentTile.hpp"
 #include "Components/FollowingEntity.hpp"
 #include "Core.hpp"
@@ -102,6 +103,7 @@ void RenderSystem::render(World& w) {
     _renderTerrain(w);
     _renderLandmarks(w);
     _renderResources(w);
+    _renderAnimatedResources(w);
     _renderInhabitants(w);
     _renderEggs(w);
     _renderPOV(w);
@@ -658,10 +660,10 @@ void RenderSystem::_renderInhabitants(World& w) {
 
     for (auto const& [entity, orientationPtr] : *orientationStorage) {
         auto pos = w.get_component<Position>(entity);
-        auto move = w.get_component<MovementInterpolation>(entity);
+        auto move = w.get_component<MovementInterpolation2D>(entity);
         auto anim = w.get_component<Animation>(entity);
         if (pos && move) {
-            if (anim) {
+            if (anim && !anim->currentAnim.empty()) {
                 try {
                     auto& modelAnim = am.getAnimation(anim->currentAnim);
                     UpdateModelAnimation(robot, modelAnim, static_cast<int>(anim->currentFrame));
@@ -965,6 +967,66 @@ void RenderSystem::_renderPOV(World& w) {
 
     _camera.position = headPos;
     _camera.target = Vector3Add(headPos, lookDir);
+}
+
+void RenderSystem::_renderAnimatedResources(World& w) {
+    auto animatedStorage = w.get_storage<AnimatedResource>();
+    if (!animatedStorage) {
+        return;
+    }
+    auto& am = AssetManager::getInstance();
+
+    for (auto const& [entity, animRes] : *animatedStorage) {
+        auto move3D = w.get_component<MovementInterpolation3D>(entity);
+        if (move3D) {
+            std::string modelName = "food_ham";
+            raylib::Color tint = WHITE;
+            float scale = 0.25f;
+
+            int resId = animRes->resourceId;
+            if (resId == 0) { // Food
+                modelName = "food_ham";
+                tint = WHITE;
+                scale = 0.25f;
+            } else { // Resources 1-6
+                modelName = "resource_1";
+                scale = 0.35f;
+                if (resId == 1) {
+                    tint = raylib::Color(110, 210, 120, 255); // linemate
+                } else if (resId == 2) {
+                    tint = raylib::Color(100, 180, 240, 255); // deraumere
+                } else if (resId == 3) {
+                    tint = raylib::Color(190, 130, 230, 255); // sibur
+                } else if (resId == 4) {
+                    tint = raylib::Color(240, 220, 110, 255); // mendiane
+                } else if (resId == 5) {
+                    tint = raylib::Color(235, 120, 120, 255); // phiras
+                } else if (resId == 6) {
+                    tint = raylib::Color(245, 245, 245, 255); // thystame
+                }
+            }
+
+            raylib::Model& model = am.getModel(modelName);
+            auto box = am.getBoundingBox(modelName, model);
+            float sizeX = box->max.x - box->min.x;
+            float sizeZ = box->max.z - box->min.z;
+            float sizeY = box->max.y - box->min.y;
+            float maxDim = std::max({sizeX, sizeY, sizeZ});
+            float finalScale = (maxDim > 0) ? (scale / maxDim) : 0.10f;
+
+            raylib::Vector3 center = {(box->min.x + box->max.x) / 2.0f, box->min.y,
+                                      (box->min.z + box->max.z) / 2.0f};
+
+            raylib::Vector3 drawPos(move3D->visualX - (center.x * finalScale),
+                                    move3D->visualZ - (center.y * finalScale),
+                                    move3D->visualY - (center.z * finalScale));
+
+            float rotAngle = static_cast<float>((entity.id() * 73) % 360);
+
+            addInstance(modelName, drawPos, {0, 1, 0}, rotAngle,
+                        {finalScale, finalScale, finalScale}, tint, model.transform);
+        }
+    }
 }
 
 } // namespace zappy

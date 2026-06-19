@@ -119,6 +119,7 @@ class RenderSystem {
      * @param w The world to fetch resource data from.
      */
     void _renderResources(World& w);
+    void _renderAnimatedResources(World& w);
 
     /**
      * @brief Renders landmarks like monoliths and fissures.

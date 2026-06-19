@@ -8,6 +8,9 @@
 #define ZAPPY_COMMANDRESOURCECOLLECT_HPP
 
 #include "AResourceCommand.hpp"
+#include "Components/ComponentShared.hpp"
+#include "ECS/Entity.hpp"
+#include "ECS/World.hpp"
 #include "Logging/Logger.hpp"
 #include <string>
 
