@@ -374,8 +374,9 @@ void Core::_setupGameUI() {
         std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
 
     // Chat Panel
-    _uiManager->addComponent(
-        std::make_shared<UIChatPanel>(raylib::Rectangle{10, 680, 460, 230}, _chatLogs, _world, 10));
+    float chatY = (float)_window->GetHeight() - 240.0f;
+    _uiManager->addComponent(std::make_shared<UIChatPanel>(
+        raylib::Rectangle{10.0f, chatY, 460.0f, 230.0f}, _chatLogs, _world, 10));
 }
 
 void Core::_setupTestingData() {
