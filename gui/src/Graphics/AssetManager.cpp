@@ -358,6 +358,18 @@ void AssetManager::_loadAnimations() {
             anim->boneCount = 21;
         }
 
+        if (_animations.count("inhabitant_general_Death_A")) {
+            ::ModelAnimation* anim = _animations["inhabitant_general_Death_A"];
+            for (int f = 0; f < anim->keyframeCount; f++) {
+                std::vector<Transform> oldPose(anim->keyframePoses[f],
+                                               anim->keyframePoses[f] + anim->boneCount);
+                for (int i = 0; i < 21; i++) {
+                    anim->keyframePoses[f][i] = oldPose[animMapping[i]];
+                }
+            }
+            anim->boneCount = 21;
+        }
+
         if (_animations.count("inhabitant_movement_Walking_A")) {
             ::ModelAnimation* anim = _animations["inhabitant_movement_Walking_A"];
             for (int f = 0; f < anim->keyframeCount; f++) {
