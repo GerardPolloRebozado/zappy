@@ -36,7 +36,17 @@ class CommandPlayerDeath : public ACommand {
             for (auto const& [entity, pos] : *posStorage) {
                 auto serverId = world.get_component<ServerId>(entity);
                 if (serverId && serverId->id == playerId && !world.get_component<TileTag>(entity)) {
-                    world.despawn(entity);
+                    world.remove_component<ServerId>(entity);
+                    world.remove_component<Level>(entity);
+                    world.remove_component<TeamName>(entity);
+                    world.remove_component<Inventory>(entity);
+                    world.remove_component<InhabitantTag>(entity);
+                    world.remove_component<Animation>(entity);
+                    world.remove_component<MovementInterpolation>(entity);
+                    world.add_component<TombTag>(entity, TombTag{});
+                    Entity eventEntity = world.spawn();
+                    world.add_component<Position>(eventEntity, pos);
+                    world.add_component<EventEggHatched>(eventEntity, EventEggHatched{});
                     log_info("Protocol: Player #" + std::to_string(playerId) + " died");
                     break;
                 }

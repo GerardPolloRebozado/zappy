@@ -28,6 +28,7 @@ struct EventIncantationStart {
 struct EventIncantationEnd {
     int result; // 1 for success, 0 for failure
 };
+struct TombTag {};
 } // namespace zappy
 
 #endif // ZAPPY_GUI_COMPONENTTAGS_HPP

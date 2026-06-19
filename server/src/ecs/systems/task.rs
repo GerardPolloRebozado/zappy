@@ -209,7 +209,7 @@ fn execute_task(
         TaskType::TurnLeft => turn::execute_turn_left(world, entity),
         TaskType::Look => look::execute_look(world, entity),
         TaskType::Inventory => inventory::execute_inventory(world, entity),
-        TaskType::Death => death::execute_death(),
+        TaskType::Death => death::execute_death(entity),
         TaskType::BroadcastText(text) => broadcast::execute_broadcast(world, entity, text),
         TaskType::Take(resource) => take_set::take_task(world, entity, resource),
         TaskType::Set(resource) => take_set::set_task(world, entity, resource),

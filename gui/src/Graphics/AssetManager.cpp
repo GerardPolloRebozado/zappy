@@ -139,6 +139,8 @@ void AssetManager::_loadModels() {
         _models["rock1"] = std::make_unique<raylib::Model>("assets/models/rock1.obj");
         _models["rock2"] = std::make_unique<raylib::Model>("assets/models/rock2.obj");
 
+        _models["skull"] = std::make_unique<raylib::Model>("assets/models/tomb/tomb_asset/Assets/obj/skull_candle.obj");
+
         for (int i = 1; i <= 9; ++i) {
             std::string key = "resource_" + std::to_string(i);
             _models[key] = std::make_unique<raylib::Model>("assets/models/" + key + ".obj");
@@ -420,6 +422,18 @@ void AssetManager::_loadAnimations() {
 
         if (_animations.count("inhabitant_general_Idle_A")) {
             ::ModelAnimation* anim = _animations["inhabitant_general_Idle_A"];
+            for (int f = 0; f < anim->keyframeCount; f++) {
+                std::vector<Transform> oldPose(anim->keyframePoses[f],
+                                               anim->keyframePoses[f] + anim->boneCount);
+                for (int i = 0; i < 21; i++) {
+                    anim->keyframePoses[f][i] = oldPose[animMapping[i]];
+                }
+            }
+            anim->boneCount = 21;
+        }
+
+        if (_animations.count("inhabitant_general_Death_A")) {
+            ::ModelAnimation* anim = _animations["inhabitant_general_Death_A"];
             for (int f = 0; f < anim->keyframeCount; f++) {
                 std::vector<Transform> oldPose(anim->keyframePoses[f],
                                                anim->keyframePoses[f] + anim->boneCount);
