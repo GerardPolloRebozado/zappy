@@ -5,7 +5,6 @@
 //! a [`crate::protocol::ServerEvent::Message`] for fan-out.
 
 use crate::ecs::components::resource::Resource;
-use crate::utils::date::Date;
 
 #[derive(Clone)]
 pub enum TaskType {
@@ -74,8 +73,8 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn is_finished(&self) -> bool {
-        self.finish_on != TASK_NOT_STARTED && self.finish_on <= Date::now().to_timestamp()
+    pub fn is_finished(&self, now: u64) -> bool {
+        self.finish_on != TASK_NOT_STARTED && self.finish_on <= now
     }
 }
 

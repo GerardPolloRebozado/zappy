@@ -55,14 +55,27 @@ struct Animation {
 };
 
 /**
- * @struct MovementInterpolation
+ * @struct MovementInterpolation2D
  * @brief Component that decouples the logical ECS position from the rendering position.
  */
-struct MovementInterpolation {
+struct MovementInterpolation2D {
     float visualX = -1.0f; ///< The smooth visual X coordinate of the entity.
     float visualY = -1.0f; ///< The smooth visual Y coordinate of the entity.
     bool isMoving =
         false; ///< True if the visual position is currently moving towards the logical position.
+};
+
+/**
+ * @struct MovementInterpolation3D
+ * @brief Component that decouples the logical ECS position from the rendering position.
+ */
+struct MovementInterpolation3D {
+    float visualX = -1.0f; ///< The smooth visual X coordinate of the entity.
+    float visualY = -1.0f; ///< The smooth visual Y coordinate of the entity.
+    float visualZ = -1.0f;
+    bool isMoving =
+        false; ///< True if the visual position is currently moving towards the logical position.
+    float targetZ = 2.01f;
 };
 } // namespace zappy
 

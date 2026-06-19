@@ -12,9 +12,11 @@
 
 #include "Systems/RenderSystem.hpp"
 #include "Color.hpp"
+#include "Components/ComponentIncantationEffect.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
+#include "Components/ComponentTags.hpp"
 #include "Components/ComponentTile.hpp"
 #include "Components/FollowingEntity.hpp"
 #include "Core.hpp"
@@ -92,6 +94,13 @@ void RenderSystem::update(World& w, float dt) {
     (void)w;
     _handleInput(dt);
     _updateHoverState();
+
+    auto incantationStorage = w.get_storage<ComponentIncantationEffect>();
+    if (incantationStorage) {
+        for (auto& [entity, effect] : *incantationStorage) {
+            effect->timeElapsed += dt;
+        }
+    }
 }
 
 void RenderSystem::render(World& w) {
@@ -102,9 +111,11 @@ void RenderSystem::render(World& w) {
     _renderTerrain(w);
     _renderLandmarks(w);
     _renderResources(w);
+    _renderAnimatedResources(w);
     _renderInhabitants(w);
     _renderEggs(w);
     _renderPOV(w);
+    _renderIncantations(w);
     _renderParticles(w);
 
     // Hardware Instancing Rendering Phase
@@ -658,10 +669,10 @@ void RenderSystem::_renderInhabitants(World& w) {
 
     for (auto const& [entity, orientationPtr] : *orientationStorage) {
         auto pos = w.get_component<Position>(entity);
-        auto move = w.get_component<MovementInterpolation>(entity);
+        auto move = w.get_component<MovementInterpolation2D>(entity);
         auto anim = w.get_component<Animation>(entity);
         if (pos && move) {
-            if (anim) {
+            if (anim && !anim->currentAnim.empty()) {
                 try {
                     auto& modelAnim = am.getAnimation(anim->currentAnim);
                     UpdateModelAnimation(robot, modelAnim, static_cast<int>(anim->currentFrame));
@@ -967,4 +978,135 @@ void RenderSystem::_renderPOV(World& w) {
     _camera.target = Vector3Add(headPos, lookDir);
 }
 
+void RenderSystem::_renderAnimatedResources(World& w) {
+    auto animatedStorage = w.get_storage<AnimatedResource>();
+    if (!animatedStorage) {
+        return;
+    }
+    auto& am = AssetManager::getInstance();
+
+    for (auto const& [entity, animRes] : *animatedStorage) {
+        auto move3D = w.get_component<MovementInterpolation3D>(entity);
+        if (move3D) {
+            std::string modelName = "food_ham";
+            raylib::Color tint = WHITE;
+            float scale = 0.25f;
+
+            int resId = animRes->resourceId;
+            if (resId == 0) { // Food
+                modelName = "food_ham";
+                tint = WHITE;
+                scale = 0.25f;
+            } else { // Resources 1-6
+                modelName = "resource_1";
+                scale = 0.35f;
+                if (resId == 1) {
+                    tint = raylib::Color(110, 210, 120, 255); // linemate
+                } else if (resId == 2) {
+                    tint = raylib::Color(100, 180, 240, 255); // deraumere
+                } else if (resId == 3) {
+                    tint = raylib::Color(190, 130, 230, 255); // sibur
+                } else if (resId == 4) {
+                    tint = raylib::Color(240, 220, 110, 255); // mendiane
+                } else if (resId == 5) {
+                    tint = raylib::Color(235, 120, 120, 255); // phiras
+                } else if (resId == 6) {
+                    tint = raylib::Color(245, 245, 245, 255); // thystame
+                }
+            }
+
+            raylib::Model& model = am.getModel(modelName);
+            auto box = am.getBoundingBox(modelName, model);
+            float sizeX = box->max.x - box->min.x;
+            float sizeZ = box->max.z - box->min.z;
+            float sizeY = box->max.y - box->min.y;
+            float maxDim = std::max({sizeX, sizeY, sizeZ});
+            float finalScale = (maxDim > 0) ? (scale / maxDim) : 0.10f;
+
+            raylib::Vector3 center = {(box->min.x + box->max.x) / 2.0f, box->min.y,
+                                      (box->min.z + box->max.z) / 2.0f};
+
+            raylib::Vector3 drawPos(move3D->visualX - (center.x * finalScale),
+                                    move3D->visualZ - (center.y * finalScale),
+                                    move3D->visualY - (center.z * finalScale));
+
+            float rotAngle = static_cast<float>((entity.id() * 73) % 360);
+
+            addInstance(modelName, drawPos, {0, 1, 0}, rotAngle,
+                        {finalScale, finalScale, finalScale}, tint, model.transform);
+        }
+    }
+}
+void RenderSystem::_renderIncantations(World& w) {
+    auto incantationStorage = w.get_storage<ComponentIncantationEffect>();
+    if (!incantationStorage) {
+        return;
+    }
+
+    ::rlDisableDepthMask();
+
+    for (const auto& [entity, effect] : *incantationStorage) {
+        float x = (float)effect->x;
+        float z = (float)effect->y;
+        float time = effect->timeElapsed;
+
+        // Fade in over 1.5 seconds
+        float fadeIn = std::min(time / 1.5f, 1.0f);
+
+        raylib::Shader& shader = AssetManager::getInstance().getShader("incantation_aura");
+        int timeLoc = ::GetShaderLocation(shader, "time");
+        ::SetShaderValue(shader, timeLoc, &time, SHADER_UNIFORM_FLOAT);
+
+        ::BeginShaderMode(shader);
+
+        unsigned char alpha = (unsigned char)(255.0f * fadeIn);
+        raylib::Color color = raylib::Color(255, 255, 255, alpha);
+
+        ::rlDisableBackfaceCulling();
+        ::rlDisableDepthMask();
+
+        // Draw a flat quad on the ground for the magic circle
+        float yBase = 2.02f; // Slightly above terrain to avoid Z-fighting
+        float size = 0.6f;   // Total diameter 1.2 (radius 0.6)
+
+        ::rlBegin(RL_QUADS);
+        ::rlColor4ub(color.r, color.g, color.b, color.a);
+
+        ::rlTexCoord2f(0.0f, 0.0f);
+        ::rlVertex3f(x - size, yBase, z - size);
+        ::rlTexCoord2f(0.0f, 1.0f);
+        ::rlVertex3f(x - size, yBase, z + size);
+        ::rlTexCoord2f(1.0f, 1.0f);
+        ::rlVertex3f(x + size, yBase, z + size);
+        ::rlTexCoord2f(1.0f, 0.0f);
+        ::rlVertex3f(x + size, yBase, z - size);
+
+        ::rlEnd();
+
+        ::rlEnableDepthMask();
+        ::rlEnableBackfaceCulling();
+
+        ::EndShaderMode();
+
+        ::rlDisableDepthMask();
+        for (Entity player : effect->participants) {
+            auto move = w.get_component<MovementInterpolation2D>(player);
+            if (move) {
+                float pulse = (std::sin(time * 5.0f) + 1.0f) * 0.5f;
+                unsigned char pAlpha = (unsigned char)((30.0f + 20.0f * pulse) * fadeIn);
+                raylib::Color innerColor = raylib::Color(255, 255, 255, pAlpha);
+                raylib::Color outerColor = raylib::Color(200, 230, 255, pAlpha / 2);
+
+                // Draw layered spheres to create a soft, glowing aura around the body
+                // The center of the mannequin is roughly at y = 2.6
+                ::DrawSphere(raylib::Vector3{move->visualX, 2.6f, move->visualY}, 0.45f,
+                             innerColor);
+                ::DrawSphere(raylib::Vector3{move->visualX, 2.6f, move->visualY}, 0.55f,
+                             outerColor);
+            }
+        }
+    }
+
+    ::rlEnableDepthMask();
+}
 } // namespace zappy

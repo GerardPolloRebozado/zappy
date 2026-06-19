@@ -1,6 +1,6 @@
 use crate::{
     ecs::components::resource::Resource::{self, Food},
-    utils::{constants::LIFE_UNIT_IN_TIME_UNITS, date::Date},
+    utils::constants::LIFE_UNIT_IN_TIME_UNITS,
 };
 use std::collections::HashMap;
 
@@ -25,8 +25,13 @@ impl Inventory {
     pub fn new() -> Self {
         Inventory {
             items: HashMap::new(),
-            last_time_consumed: Date::now().to_timestamp(),
+            last_time_consumed: 0,
         }
+    }
+
+    pub fn with_last_time_consumed(mut self, now: u64) -> Self {
+        self.last_time_consumed = now;
+        self
     }
 
     /// Adds a specified amount of a resource to an inventory.
@@ -35,8 +40,7 @@ impl Inventory {
     }
 
     ///removes some food to continue being alive till reaching 0
-    pub fn consume_food(&mut self, freq: u64) {
-        let now = Date::now().to_timestamp();
+    pub fn consume_food(&mut self, freq: u64, now: u64) {
         if now <= self.last_time_consumed {
             return;
         }
@@ -166,8 +170,8 @@ mod tests {
     fn test_consume_all_food() {
         let mut inv = Inventory::new();
         inv.add_item(Food, 10);
-        inv.last_time_consumed = 1;
-        inv.consume_food(1);
+        inv.last_time_consumed = 0;
+        inv.consume_food(1, 2_000_000);
         assert_eq!(inv.get_item_count(Food), 0);
     }
 
@@ -175,12 +179,12 @@ mod tests {
     fn test_consume_one_unit_of_food() {
         let mut inv = Inventory::new();
         inv.add_item(Food, 2);
-        inv.last_time_consumed -= LIFE_UNIT_IN_TIME_UNITS * 1000;
-        inv.consume_food(1);
+        inv.last_time_consumed = 1000;
+        inv.consume_food(1, 1000 + LIFE_UNIT_IN_TIME_UNITS * 1000);
         assert_eq!(inv.get_item_count(Food), 1);
-        inv.consume_food(1);
+        inv.consume_food(1, 1000 + LIFE_UNIT_IN_TIME_UNITS * 1000);
         assert_eq!(inv.get_item_count(Food), 1);
-        inv.consume_food(1);
+        inv.consume_food(1, 1000 + LIFE_UNIT_IN_TIME_UNITS * 1000);
         assert_eq!(inv.get_item_count(Food), 1);
     }
 }

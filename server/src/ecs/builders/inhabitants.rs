@@ -16,7 +16,7 @@ pub fn build_inhabitant_with_entity(
     orientation: RelativeOrientation,
     world: &mut World,
 ) -> Entity {
-    let mut inv = Inventory::new();
+    let mut inv = Inventory::new().with_last_time_consumed(world.current_time);
     inv.add_item(Food, STARTING_FOOD);
     world.add_component(entity, TaskList::default());
     world.add_component(entity, Position::new());

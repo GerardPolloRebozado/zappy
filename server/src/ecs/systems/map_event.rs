@@ -139,7 +139,11 @@ mod tests {
     use crate::utils::date::Date;
 
     fn world_with_tiles(width: u32, height: u32) -> World {
-        let mut world = World::new(crate::ecs::map_size::MapSize { width, height }, 100);
+        let mut world = World::new(
+            crate::ecs::map_size::MapSize { width, height },
+            100,
+            Date::now().to_timestamp(),
+        );
         for y in 0..height {
             for x in 0..width {
                 build_tile(Position { x, y }, &mut world, TerrainType::Grass);

@@ -8,7 +8,9 @@
 #define ZAPPY_COMMANDINCANTATIONSTART_HPP
 
 #include "ACommand.hpp"
+#include "Components/ComponentIncantationEffect.hpp"
 #include "Components/ComponentShared.hpp"
+#include "Components/ComponentTags.hpp"
 #include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
@@ -52,6 +54,23 @@ class CommandIncantationStart : public ACommand {
         log_info("Protocol: Incantation started at (" + std::to_string(x) + ", " +
                  std::to_string(y) + ") for level " + std::to_string(level) + " with " +
                  std::to_string(playerIds.size()) + " players.");
+
+        auto serverIdStorage = world.get_storage<ServerId>();
+        std::vector<Entity> participatingEntities;
+
+        if (serverIdStorage) {
+            for (const auto& [entity, serverIdPtr] : *serverIdStorage) {
+                if (std::find(playerIds.begin(), playerIds.end(), serverIdPtr->id) !=
+                    playerIds.end()) {
+                    participatingEntities.push_back(entity);
+                }
+            }
+        }
+
+        // Spawn an event entity for systems to handle
+        auto eventEntity = world.spawn();
+        world.add_component(eventEntity, Position{x, y});
+        world.add_component(eventEntity, EventIncantationStart{participatingEntities});
     }
 };
 } // namespace zappy

@@ -13,14 +13,14 @@ use crate::protocol::{Request, Response, ResponseCode, ServerEvent, StatusCode};
 use crate::utils::Config;
 use crate::utils::date::Date;
 use log::{error, info};
-use nix::poll::{PollFd, PollFlags, PollTimeout};
+use nix::poll::{PollFd, PollFlags};
 use std::collections::HashMap;
 use std::io::Write;
 use std::net::TcpListener;
 use std::os::fd::AsFd;
 
 pub struct Server {
-    pub listener: TcpListener,
+    pub listener: Option<TcpListener>,
     pub _users: HashMap<String, Inhabitant>,
     pub _freq: u32,
     pub game_start: u64,
@@ -37,23 +37,28 @@ impl Default for Server {
 
 impl Server {
     pub fn new(config: Config) -> Server {
-        let listener =
-            TcpListener::bind(format!("0.0.0.0:{}", config.port)).expect("Error starting server");
-        listener
-            .set_nonblocking(true)
-            .expect("Cannot set non-blocking");
-        info!("Server started on port: {}", config.port);
+        let listener = if config.port != 0 {
+            let l = TcpListener::bind(format!("0.0.0.0:{}", config.port))
+                .expect("Error starting server");
+            l.set_nonblocking(true).expect("Cannot set non-blocking");
+            info!("Server started on port: {}", config.port);
+            Some(l)
+        } else {
+            None
+        };
+        let game_start = Date::now().to_timestamp();
         Server {
             listener,
             _users: HashMap::new(),
             _freq: config.freq,
-            game_start: Date::now().to_timestamp(),
+            game_start,
             world: World::new(
                 crate::ecs::map_size::MapSize {
                     width: config.width,
                     height: config.height,
                 },
                 config.freq as u64,
+                game_start,
             ),
             clients_nb: config.clients_nb,
             team_names: config.names,
@@ -62,12 +67,18 @@ impl Server {
 
     /// One main-loop tick: accept connections, read client input, advance the ECS task queue.
     pub fn run(&mut self) {
-        network_system(self);
+        if self.listener.is_some() {
+            network_system(self);
+        }
         run_systems(&mut self.world);
     }
 
     pub fn accept_connections(&mut self) {
-        while let Ok((socket, _addr)) = self.listener.accept() {
+        let listener = match &self.listener {
+            Some(l) => l,
+            None => return,
+        };
+        while let Ok((socket, _addr)) = listener.accept() {
             let _ = socket.set_nonblocking(true);
             let mut socket = socket;
             let _ = socket.write_all(b"WELCOME\n");
@@ -82,20 +93,30 @@ impl Server {
     }
 
     pub fn get_server_events(&self) -> Vec<PollFd<'_>> {
-        let mut fds = vec![PollFd::new(
-            self.listener.as_fd(),
-            PollFlags::POLLIN | PollFlags::POLLOUT,
-        )];
+        let mut fds = Vec::new();
+        if let Some(listener) = &self.listener {
+            fds.push(PollFd::new(
+                listener.as_fd(),
+                PollFlags::POLLIN | PollFlags::POLLOUT,
+            ));
+        }
 
         if let Some(network_data_keys) = self.world.get_storage::<NetworkData>() {
             for (_, network_data) in network_data_keys.iter() {
-                fds.push(PollFd::new(
-                    network_data.socket.as_fd(),
-                    PollFlags::POLLIN | PollFlags::POLLOUT,
-                ));
+                if let Some(socket) = &network_data.socket {
+                    fds.push(PollFd::new(
+                        socket.as_fd(),
+                        PollFlags::POLLIN | PollFlags::POLLOUT,
+                    ));
+                }
             }
         }
-        if let Err(_e) = nix::poll::poll(&mut fds, PollTimeout::MAX) {
+
+        if fds.is_empty() {
+            return fds;
+        }
+
+        if let Err(_e) = nix::poll::poll(&mut fds, 1u16) {
             return fds;
         }
 
@@ -114,8 +135,13 @@ impl Server {
             }
             let network_data_storage = network_data_storage.unwrap();
 
-            for (i, (entity, network_data)) in network_data_storage.iter_mut().enumerate() {
-                let revents = client_revents[i];
+            let mut current_fd_idx = 0;
+            for (entity, network_data) in network_data_storage.iter_mut() {
+                if network_data.socket.is_none() {
+                    continue;
+                }
+                let revents = client_revents[current_fd_idx];
+                current_fd_idx += 1;
 
                 if revents.contains(PollFlags::POLLOUT) {
                     requests_to_write.push(*entity);
@@ -196,7 +222,9 @@ impl Server {
             return;
         }
         let network_data = network_data.unwrap();
-        let _ = network_data.socket.write_all(response.to_string().as_ref());
+        if let Some(socket) = &mut network_data.socket {
+            let _ = socket.write_all(response.to_string().as_ref());
+        }
     }
 
     pub fn broadcast_global(&mut self, event: ServerEvent) {
@@ -236,7 +264,7 @@ mod tests {
         let addr = listener.local_addr().unwrap();
 
         let mut server = Server {
-            listener,
+            listener: Some(listener),
             _users: HashMap::new(),
             _freq: 100,
             game_start: 0,
@@ -246,6 +274,7 @@ mod tests {
                     height: 10,
                 },
                 100,
+                Date::now().to_timestamp(),
             ),
             clients_nb: 1,
             team_names: vec!["team".to_string()],
@@ -277,7 +306,7 @@ mod tests {
         let addr = listener.local_addr().unwrap();
 
         let mut server = Server {
-            listener,
+            listener: Some(listener),
             _users: HashMap::new(),
             _freq: 100,
             game_start: 0,
@@ -287,6 +316,7 @@ mod tests {
                     height: 10,
                 },
                 100,
+                0,
             ),
             clients_nb: 1,
             team_names: vec!["team".to_string()],

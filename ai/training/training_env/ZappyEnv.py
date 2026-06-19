@@ -5,6 +5,8 @@ import numpy as np
 from training.training_env.server_manager import ServerManager
 from src.client.ai_client import ZappyAiClient
 from enum import IntEnum
+from src.client.lib_client import ZappyLib, ZappyLibClient
+import ctypes
 
 """
 ---------------------------------------
@@ -141,13 +143,15 @@ class ObservationZappyEnv:
 
 
 class NetworkZappyEnv:
-    def reset(self, seed=None, options=None):
-        """
-        Resets the environment for a new episode.
-        Restarts the Rust server, connects the AI client, and fetches the initial observation.
-        """
-        super().reset(seed=seed)
+    def __init__(self, env, port=4242, ip="127.0.0.1", team_name="TeamAI"):
+        self.env = env
+        self.ip = ip
+        self.port = port
+        self.team_name = team_name
+        self.server_manager = ServerManager(port=port)
+        self.client = None
 
+    def reset(self, seed=None, options=None):
         if self.client:
             self.client.close()
 
@@ -156,8 +160,9 @@ class NetworkZappyEnv:
 
         self.client = ZappyAiClient(self.port, self.team_name, self.ip)
         self.client.connect()
+        self.env.client = self.client
 
-        observation = self._get_real_observation()
+        observation = self.env._get_real_observation()
         info = {}
         return observation, info
 
@@ -167,23 +172,86 @@ class NetworkZappyEnv:
         self.server_manager.stop()
 
 
-class ZappyEnv(NetworkZappyEnv, ObservationZappyEnv, gym.Env):
-    """
-    Custom Gymnasium environment for the Zappy AI.
-    """
-
-    def __init__(self, port=4242, ip="127.0.0.1", team_name="TeamAI"):
-        super(ZappyEnv, self).__init__()
-        self.ip = ip
-        self.port = port
-        self.team_name = team_name
-        self.server_manager = ServerManager(port=port)
+class LibZappyEnv:
+    def __init__(
+        self, env, width=10, height=10, freq=100, teams=["TeamAI"], clients_nb=10
+    ):
+        self.env = env
+        self.width = width
+        self.height = height
+        self.freq = freq
+        self.teams = teams
+        self.clients_nb = clients_nb
+        self.zappy_lib = ZappyLib()
+        self.server_ptr = None
         self.client = None
 
+    def reset(self, seed=None, options=None):
+        if self.server_ptr:
+            self.zappy_lib.lib.zappy_free(self.server_ptr)
+
+        # Convert teams to C types
+        team_count = len(self.teams)
+        TeamArray = ctypes.c_char_p * team_count
+        team_ptrs = TeamArray(*[t.encode("utf-8") for t in self.teams])
+
+        self.server_ptr = self.zappy_lib.lib.zappy_init(
+            self.width, self.height, self.freq, team_ptrs, team_count, self.clients_nb
+        )
+
+        # Add training player
+        player_id = self.zappy_lib.lib.zappy_add_player(
+            self.server_ptr, self.teams[0].encode("utf-8")
+        )
+
+        self.client = ZappyLibClient(
+            self.zappy_lib.lib, self.server_ptr, player_id, self.freq
+        )
+        self.env.client = self.client
+
+        # Consume initial auth responses ("ok", slots, map size)
+        for _ in range(3):
+            self.client.wait_for_response()
+
+        observation = self.env._get_real_observation()
+        info = {}
+        return observation, info
+
+    def close(self):
+        if self.server_ptr:
+            self.zappy_lib.lib.zappy_free(self.server_ptr)
+            self.server_ptr = None
+
+
+class ZappyEnv(ObservationZappyEnv, gym.Env):
+    """
+    Custom Gymnasium environment for the Zappy AI.
+    Can be used in Network mode (TCP) or Library mode (Direct FFI).
+    """
+
+    def __init__(
+        self, use_lib=True, port=4242, ip="127.0.0.1", team_name="TeamAI", **kwargs
+    ):
+        super(ZappyEnv, self).__init__()
+
+        if use_lib:
+            self.mode = LibZappyEnv(self, teams=[team_name], **kwargs)
+        else:
+            self.mode = NetworkZappyEnv(self, port=port, ip=ip, team_name=team_name)
+
+        self.client = None
         self.action_space = spaces.Discrete(24)
         self.observation_space = spaces.Box(
             low=0, high=10000, shape=(657,), dtype=np.int32
         )
+
+    def reset(self, seed=None, options=None):
+        obs, info = self.mode.reset(seed=seed, options=options)
+        self.client = self.mode.client
+        return obs, info
+
+    def close(self):
+        self.mode.close()
 
     def step(self, action):
         """
