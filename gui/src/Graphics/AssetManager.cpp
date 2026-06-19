@@ -292,6 +292,63 @@ void main()
     _shaders["alphaCutout"] =
         std::make_unique<raylib::Shader>(::LoadShaderFromMemory(nullptr, alphaFS));
 
+    const char* incantationFS = R"(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+
+uniform float time;
+
+out vec4 finalColor;
+
+void main()
+{
+    vec2 p = fragTexCoord - 0.5;
+    float r = length(p);
+    float a = atan(p.y, p.x);
+    // Smoothness factor for anti-aliasing
+    float sm = 0.01;
+    // Outer boundary (don't draw outside the quad)
+    if (r > 0.5) discard;
+    // Rotation
+    float a1 = a + time * 0.5; // Outer rotates one way
+    float a2 = a - time * 0.3; // Inner rotates another
+    float intensity = 0.0;
+    // Outer thick ring
+    intensity += smoothstep(0.02, 0.0, abs(r - 0.45));
+    // Outer dashed/runic ring
+    float dashRing = smoothstep(0.03, 0.0, abs(r - 0.4));
+    float dashes = step(0.0, sin(a1 * 30.0));
+    intensity += dashRing * dashes;
+
+    // Inner thin ring
+    intensity += smoothstep(0.01, 0.0, abs(r - 0.32));
+
+    // Hexagram (Two overlapping triangles)
+    // Distance to a triangle from center
+    float tri1 = max(max(r * cos(a2), r * cos(a2 + 2.09439)), r * cos(a2 - 2.09439));
+    float tri2 = max(max(r * cos(a2 + 3.14159), r * cos(a2 + 3.14159 + 2.09439)), r * cos(a2 + 3.14159 - 2.09439));
+    intensity += smoothstep(0.01, 0.0, abs(tri1 - 0.15));
+    intensity += smoothstep(0.01, 0.0, abs(tri2 - 0.15));
+    // Core pulsing dot
+    float pulse = sin(time * 4.0) * 0.5 + 0.5;
+    intensity += smoothstep(0.05 + pulse * 0.02, 0.0, r);
+
+    // Magic fire colors
+    vec3 primaryColor = vec3(1.0, 1.0, 1.0); // Bright white
+    vec3 secondaryColor = vec3(0.8, 0.9, 1.0); // Light heavenly blue
+    vec3 tertiaryColor = vec3(0.5, 0.7, 1.0); // Deep heavenly blue
+    float coreGlow = smoothstep(0.4, 0.0, r) * 0.5 * pulse;
+    vec3 finalRGB = mix(tertiaryColor, primaryColor, intensity) * (intensity + coreGlow);
+    float finalAlpha = (intensity + coreGlow) * fragColor.a;
+
+    finalColor = vec4(finalRGB, finalAlpha);
+    if (finalColor.a < 0.05) discard;
+}
+)";
+
+    _shaders["incantation_aura"] =
+        std::make_unique<raylib::Shader>(::LoadShaderFromMemory(nullptr, incantationFS));
+
     auto& shader = *_shaders["instancing"];
     for (auto& [name, model] : _models) {
         if (name == "robot") {
@@ -340,6 +397,23 @@ void AssetManager::_loadAnimations() {
             _animations["inhabitant_movement_" + std::string(moveAnims[i].name)] = &moveAnims[i];
         }
 
+        int countSim = 0;
+        ::ModelAnimation* simAnims =
+            ::LoadModelAnimations("assets/models/inhabitant/anim_simulation.glb", &countSim);
+        _animationArrays["inhabitant_simulation"] = {simAnims, countSim};
+        for (int i = 0; i < countSim; i++) {
+            _animations["inhabitant_simulation_" + std::string(simAnims[i].name)] = &simAnims[i];
+        }
+
+        int countSpecial = 0;
+        ::ModelAnimation* specialAnims =
+            ::LoadModelAnimations("assets/models/inhabitant/anim_special.glb", &countSpecial);
+        _animationArrays["inhabitant_special"] = {specialAnims, countSpecial};
+        for (int i = 0; i < countSpecial; i++) {
+            _animations["inhabitant_special_" + std::string(specialAnims[i].name)] =
+                &specialAnims[i];
+        }
+
         // Apply mannequin bone mapping hack immediately
         int animMapping[] = {0,  1, 2, 3,  4,  5,  6,  7,  14, 15, 16,
                              17, 8, 9, 10, 11, 12, 19, 20, 21, 22};
@@ -367,6 +441,32 @@ void AssetManager::_loadAnimations() {
             }
             anim->boneCount = 21;
         }
+
+        if (_animations.count("inhabitant_simulation_Push_Ups")) {
+            int simMapping[] = {0,  1,  19, 20, 21, 22, 6, 7, 13, 14, 15,
+                                16, 18, 8,  9,  10, 11, 2, 3, 4,  5};
+            ::ModelAnimation* anim = _animations["inhabitant_simulation_Push_Ups"];
+            for (int f = 0; f < anim->keyframeCount; f++) {
+                std::vector<Transform> oldPose(anim->keyframePoses[f],
+                                               anim->keyframePoses[f] + anim->boneCount);
+                for (int i = 0; i < 21; i++) {
+                    anim->keyframePoses[f][i] = oldPose[simMapping[i]];
+                }
+            }
+            anim->boneCount = 21;
+        }
+
+        if (_animations.count("inhabitant_special_Skeletons_Awaken_Standing")) {
+            ::ModelAnimation* anim = _animations["inhabitant_special_Skeletons_Awaken_Standing"];
+            for (int f = 0; f < anim->keyframeCount; f++) {
+                std::vector<Transform> oldPose(anim->keyframePoses[f],
+                                               anim->keyframePoses[f] + anim->boneCount);
+                for (int i = 0; i < 21; i++) {
+                    anim->keyframePoses[f][i] = oldPose[animMapping[i]];
+                }
+            }
+            anim->boneCount = 21;
+        }
     } catch (const raylib::RaylibException& e) {
         log_error(ErrorAsset("Failed to load animations: " + std::string(e.what())).what());
     }
@@ -376,6 +476,9 @@ void AssetManager::_loadAudio() {
     try {
         _sounds["egg_layed"] =
             std::make_unique<raylib::Sound>("assets/sounds/effect/egg_layed.mp3");
+        _sounds["incantation_end"] =
+            std::make_unique<raylib::Sound>("assets/sounds/effect/incantation_end.mp3");
+        _sounds["incantation_end"]->SetVolume(5.0f);
         _musicPaths["country"] = "assets/sounds/music/country.mp3";
     } catch (const raylib::RaylibException& e) {
         log_error(ErrorAsset("Failed to load audio: " + std::string(e.what())).what());

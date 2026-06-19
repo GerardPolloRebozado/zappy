@@ -20,7 +20,11 @@ struct ComponentParticleEmitter {
     float emitAccumulator = 0.0f;
 
     // --- Particle Template (Ranges for Randomization) ---
-    raylib::Vector3 offset = {0, 0, 0};
+    raylib::Vector3 offset = {0, 0, 0}; // Base offset
+    raylib::Vector3 spawnVolumeMin = {0, 0, 0};
+    raylib::Vector3 spawnVolumeMax = {0, 0, 0};
+    float spawnRadius =
+        0.0f; // If > 0, particles spawn on a circle with this radius on the XZ plane
     float minLifetime = 0.5f, maxLifetime = 1.0f;
     float minSize = 0.05f, maxSize = 0.15f;
     raylib::Vector3 minVelocity = {-1, 0, -1};
