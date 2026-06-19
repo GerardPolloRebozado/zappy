@@ -11,6 +11,7 @@
 #include "Components/ComponentIncantationEffect.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
+#include "Graphics/AssetManager.hpp"
 #include "Logging/Logger.hpp"
 #include <sstream>
 #include <string>
@@ -37,6 +38,15 @@ class CommandIncantationEnd : public ACommand {
 
         log_info("Protocol: Incantation at (" + std::to_string(x) + ", " + std::to_string(y) +
                  ") ended with result: " + (result ? "Success" : "Failure"));
+
+        try {
+            auto& sound = AssetManager::getInstance().getSound("incantation_end");
+            if (!sound.IsPlaying()) {
+                sound.Play();
+            }
+        } catch (const raylib::RaylibException& e) {
+            log_error("Failed to play incantation_end sound: " + std::string(e.what()));
+        }
 
         auto eventEntity = world.spawn();
         world.add_component(eventEntity, Position{x, y});

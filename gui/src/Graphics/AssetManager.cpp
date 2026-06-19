@@ -476,6 +476,9 @@ void AssetManager::_loadAudio() {
     try {
         _sounds["egg_layed"] =
             std::make_unique<raylib::Sound>("assets/sounds/effect/egg_layed.mp3");
+        _sounds["incantation_end"] =
+            std::make_unique<raylib::Sound>("assets/sounds/effect/incantation_end.mp3");
+        _sounds["incantation_end"]->SetVolume(5.0f);
         _musicPaths["country"] = "assets/sounds/music/country.mp3";
     } catch (const raylib::RaylibException& e) {
         log_error(ErrorAsset("Failed to load audio: " + std::string(e.what())).what());
