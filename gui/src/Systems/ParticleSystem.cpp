@@ -149,24 +149,28 @@ void ParticleSystem::update(World& w, float dt) {
                             ComponentParticleEmitter burst;
                             burst.isPlaying = true;
                             burst.loop = false;
-                            burst.emitRate = 200.0f;
-                            burst.duration = 0.5f;
+                            burst.emitRate = 500.0f;
+                            burst.duration = 0.3f;
                             burst.minLifetime = 0.5f;
-                            burst.maxLifetime = 1.0f;
-                            burst.minSize = 0.1f;
-                            burst.maxSize = 0.3f;
+                            burst.maxLifetime = 1.2f;
+                            burst.minSize = 0.03f;
+                            burst.maxSize = 0.08f;
                             if (result == 1) {
-                                burst.startColor = raylib::Color(50, 255, 50, 255);
-                                burst.endColor = raylib::Color(200, 255, 200, 0);
+                                // Success: Bright cyan/white timey explosion upwards
+                                burst.startColor = raylib::Color(200, 255, 255, 255);
+                                burst.endColor = raylib::Color(150, 200, 255, 0);
+                                burst.minVelocity = raylib::Vector3(-3.0f, 2.0f, -3.0f);
+                                burst.maxVelocity = raylib::Vector3(3.0f, 6.0f, 3.0f);
                             } else {
-                                burst.startColor = raylib::Color(255, 50, 50, 255);
-                                burst.endColor = raylib::Color(255, 200, 200, 0);
+                                // Failure: Darker blue shattered timey fizzle downwards
+                                burst.startColor = raylib::Color(100, 150, 255, 255);
+                                burst.endColor = raylib::Color(50, 50, 150, 0);
+                                burst.minVelocity = raylib::Vector3(-1.0f, -1.0f, -1.0f);
+                                burst.maxVelocity = raylib::Vector3(1.0f, 0.5f, 1.0f);
                             }
                             burst.offset = raylib::Vector3(0.0f, 0.5f, 0.0f);
                             burst.spawnVolumeMin = raylib::Vector3(-0.5f, 0.0f, -0.5f);
                             burst.spawnVolumeMax = raylib::Vector3(0.5f, 1.0f, 0.5f);
-                            burst.minVelocity = raylib::Vector3(-2.0f, 1.0f, -2.0f);
-                            burst.maxVelocity = raylib::Vector3(2.0f, 4.0f, 2.0f);
 
                             w.add_component(burstEntity, burst);
                             w.add_component(burstEntity, Position{x, y});
