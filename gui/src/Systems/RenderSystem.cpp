@@ -12,6 +12,7 @@
 
 #include "Systems/RenderSystem.hpp"
 #include "Color.hpp"
+#include "Components/ComponentIncantationEffect.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
@@ -92,6 +93,13 @@ void RenderSystem::update(World& w, float dt) {
     (void)w;
     _handleInput(dt);
     _updateHoverState();
+
+    auto incantationStorage = w.get_storage<ComponentIncantationEffect>();
+    if (incantationStorage) {
+        for (auto& [entity, effect] : *incantationStorage) {
+            effect->timeElapsed += dt;
+        }
+    }
 }
 
 void RenderSystem::render(World& w) {
@@ -105,6 +113,7 @@ void RenderSystem::render(World& w) {
     _renderInhabitants(w);
     _renderEggs(w);
     _renderPOV(w);
+    _renderIncantations(w);
     _renderParticles(w);
 
     // Hardware Instancing Rendering Phase
@@ -965,6 +974,79 @@ void RenderSystem::_renderPOV(World& w) {
 
     _camera.position = headPos;
     _camera.target = Vector3Add(headPos, lookDir);
+}
+
+void RenderSystem::_renderIncantations(World& w) {
+    auto incantationStorage = w.get_storage<ComponentIncantationEffect>();
+    if (!incantationStorage) {
+        return;
+    }
+
+    ::rlDisableDepthMask();
+
+    for (const auto& [entity, effect] : *incantationStorage) {
+        float x = (float)effect->x;
+        float z = (float)effect->y;
+        float time = effect->timeElapsed;
+
+        // Fade in over 1.5 seconds
+        float fadeIn = std::min(time / 1.5f, 1.0f);
+
+        raylib::Shader& shader = AssetManager::getInstance().getShader("incantation_aura");
+        int timeLoc = ::GetShaderLocation(shader, "time");
+        ::SetShaderValue(shader, timeLoc, &time, SHADER_UNIFORM_FLOAT);
+
+        ::BeginShaderMode(shader);
+
+        unsigned char alpha = (unsigned char)(255.0f * fadeIn);
+        raylib::Color color = raylib::Color(255, 255, 255, alpha);
+
+        ::rlDisableBackfaceCulling();
+        ::rlDisableDepthMask();
+
+        // Draw a flat quad on the ground for the magic circle
+        float yBase = 2.02f; // Slightly above terrain to avoid Z-fighting
+        float size = 0.6f;   // Total diameter 1.2 (radius 0.6)
+
+        ::rlBegin(RL_QUADS);
+        ::rlColor4ub(color.r, color.g, color.b, color.a);
+
+        ::rlTexCoord2f(0.0f, 0.0f);
+        ::rlVertex3f(x - size, yBase, z - size);
+        ::rlTexCoord2f(0.0f, 1.0f);
+        ::rlVertex3f(x - size, yBase, z + size);
+        ::rlTexCoord2f(1.0f, 1.0f);
+        ::rlVertex3f(x + size, yBase, z + size);
+        ::rlTexCoord2f(1.0f, 0.0f);
+        ::rlVertex3f(x + size, yBase, z - size);
+
+        ::rlEnd();
+
+        ::rlEnableDepthMask();
+        ::rlEnableBackfaceCulling();
+
+        ::EndShaderMode();
+
+        ::rlDisableDepthMask();
+        for (Entity player : effect->participants) {
+            auto move = w.get_component<MovementInterpolation>(player);
+            if (move) {
+                float pulse = (std::sin(time * 5.0f) + 1.0f) * 0.5f;
+                unsigned char pAlpha = (unsigned char)((30.0f + 20.0f * pulse) * fadeIn);
+                raylib::Color innerColor = raylib::Color(255, 255, 255, pAlpha);
+                raylib::Color outerColor = raylib::Color(200, 230, 255, pAlpha / 2);
+
+                // Draw layered spheres to create a soft, glowing aura around the body
+                // The center of the mannequin is roughly at y = 2.6
+                ::DrawSphere(raylib::Vector3{move->visualX, 2.6f, move->visualY}, 0.45f,
+                             innerColor);
+                ::DrawSphere(raylib::Vector3{move->visualX, 2.6f, move->visualY}, 0.55f,
+                             outerColor);
+            }
+        }
+    }
+
+    ::rlEnableDepthMask();
 }
 
 } // namespace zappy

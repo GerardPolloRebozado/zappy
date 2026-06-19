@@ -64,7 +64,9 @@ void AnimationSystem::update(World& w) {
                         anim->currentAnim = "inhabitant_movement_Walking_A";
                         anim->speedMultiplier = (freq / 7.0f);
                     } else {
-                        anim->currentAnim = "inhabitant_general_Idle_A";
+                        if (anim->currentAnim != "inhabitant_simulation_Push_Ups") {
+                            anim->currentAnim = "inhabitant_general_Idle_A";
+                        }
                         anim->speedMultiplier = (freq / 50.0f);
                     }
                     if (anim->speedMultiplier < 0.5f) {
