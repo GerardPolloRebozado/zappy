@@ -13,6 +13,18 @@ use crate::{
     utils::date::Date,
 };
 
+/// Notifies every connected client (GUI and AI) that a map event started or ended.
+///
+/// Call this whenever an event is triggered, whether from the random timer or a GUI request.
+pub fn notify_map_event(world: &mut World, phase: &str, name: &str) {
+    broadcast_event(
+        world,
+        ServerEvent::ServerMessage {
+            message: format!("{phase} {name}"),
+        },
+    );
+}
+
 /// Returns a human-readable name for the event, used in `smg` broadcasts.
 fn event_name(event: &MapEvent) -> &'static str {
     match event {
@@ -57,27 +69,12 @@ fn try_trigger_check(world: &mut World, now: u64, freq: u64) {
         // PsionicEcho is run instantly and never stored in world.map_event
         if matches!(event, MapEvent::PsionicEcho) {
             psionic_echo::apply_psionic_echo(world, now);
-            broadcast_event(
-                world,
-                ServerEvent::ServerMessage {
-                    message: format!("event_start {name}"),
-                },
-            );
-            broadcast_event(
-                world,
-                ServerEvent::ServerMessage {
-                    message: format!("event_end {name}"),
-                },
-            );
+            notify_map_event(world, "event_start", name);
+            notify_map_event(world, "event_end", name);
         } else {
             world.map_event = event;
             world.last_event_check = now;
-            broadcast_event(
-                world,
-                ServerEvent::ServerMessage {
-                    message: format!("event_start {name}"),
-                },
-            );
+            notify_map_event(world, "event_start", name);
         }
     }
 }
@@ -112,12 +109,7 @@ fn expire_event(world: &mut World) {
     let name = event_name(&world.map_event);
     info!("Map event expired: {}", name);
     world.map_event = MapEvent::None;
-    broadcast_event(
-        world,
-        ServerEvent::ServerMessage {
-            message: format!("event_end {name}"),
-        },
-    );
+    notify_map_event(world, "event_end", name);
 }
 
 #[cfg(test)]
@@ -139,7 +131,11 @@ mod tests {
     use crate::utils::date::Date;
 
     fn world_with_tiles(width: u32, height: u32) -> World {
-        let mut world = World::new(crate::ecs::map_size::MapSize { width, height }, 100);
+        let mut world = World::new(
+            crate::ecs::map_size::MapSize { width, height },
+            100,
+            Date::now().to_timestamp(),
+        );
         for y in 0..height {
             for x in 0..width {
                 build_tile(Position { x, y }, &mut world, TerrainType::Grass);

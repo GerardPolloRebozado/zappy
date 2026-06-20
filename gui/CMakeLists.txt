@@ -54,6 +54,7 @@ set(CORE_SOURCES
         src/Graphics/VoxelBatcher.cpp
         src/UI/AUIComponent.cpp
         src/UI/UIManager.cpp
+        src/UI/UIChatPanel.cpp
         src/UI/UIButton.cpp
         src/UI/UIInput.cpp
         src/UI/UIPanel.cpp
@@ -71,6 +72,7 @@ set(CORE_SOURCES
         include/UI/UIEvent.hpp
         include/UI/UIManager.hpp
         include/UI/UIButton.hpp
+        include/UI/UIChatPanel.hpp
         include/UI/UIInput.hpp
         include/UI/UIPanel.hpp
         include/UI/UIText.hpp
