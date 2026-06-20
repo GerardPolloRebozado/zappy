@@ -56,6 +56,11 @@ set(CORE_SOURCES
         src/Systems/AnimationSystem.cpp
         src/Systems/MusicSystem.cpp
         src/Graphics/AssetManager.cpp
+        src/Graphics/AssetManagerModels.cpp
+        src/Graphics/AssetManagerTextures.cpp
+        src/Graphics/AssetManagerShaders.cpp
+        src/Graphics/AssetManagerAnimations.cpp
+        src/Graphics/AssetManagerAudio.cpp
         src/Graphics/VoxelBatcher.cpp
         src/UI/AUIComponent.cpp
         src/UI/UIManager.cpp
