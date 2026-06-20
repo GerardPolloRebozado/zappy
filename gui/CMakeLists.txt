@@ -46,12 +46,12 @@ FetchContent_MakeAvailable(raylib raylib-cpp)
 set(CORE_SOURCES
         src/NetworkManager.cpp
         src/Network/TcpSocket.cpp
-        src/Systems/RenderSystem.cpp
-        src/Systems/RenderSystemBatches.cpp
-        src/Systems/RenderSystemTerrain.cpp
-        src/Systems/RenderSystemEntities.cpp
-        src/Systems/RenderSystemResources.cpp
-        src/Systems/RenderSystemEffects.cpp
+        src/Systems/Render/RenderSystem.cpp
+        src/Systems/Render/RenderSystemBatches.cpp
+        src/Systems/Render/RenderSystemTerrain.cpp
+        src/Systems/Render/RenderSystemEntities.cpp
+        src/Systems/Render/RenderSystemResources.cpp
+        src/Systems/Render/RenderSystemEffects.cpp
         src/Systems/Particles/ParticleSystem.cpp
         src/Systems/Particles/ParticleSystemHandleEggs.cpp
         src/Systems/Particles/ParticleSystemHandleDeaths.cpp
