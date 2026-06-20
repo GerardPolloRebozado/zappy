@@ -20,14 +20,13 @@ struct EventEggHatched {};
 struct AnimatedResource {
     int resourceId = 0;
 };
-
 struct EventIncantationStart {
     std::vector<Entity> participants;
 };
-
 struct EventIncantationEnd {
     int result; // 1 for success, 0 for failure
 };
+struct EventDeath {};
 struct TombTag {};
 } // namespace zappy
 

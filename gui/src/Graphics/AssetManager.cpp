@@ -139,7 +139,7 @@ void AssetManager::_loadModels() {
         _models["rock1"] = std::make_unique<raylib::Model>("assets/models/rock1.obj");
         _models["rock2"] = std::make_unique<raylib::Model>("assets/models/rock2.obj");
 
-        _models["skull"] = std::make_unique<raylib::Model>("assets/models/tomb/tomb_asset/Assets/obj/skull_candle.obj");
+        _models["skull"] = std::make_unique<raylib::Model>("assets/models/tomb/skull_candle.obj");
 
         for (int i = 1; i <= 9; ++i) {
             std::string key = "resource_" + std::to_string(i);
@@ -493,6 +493,8 @@ void AssetManager::_loadAudio() {
         _sounds["incantation_end"] =
             std::make_unique<raylib::Sound>("assets/sounds/effect/incantation_end.mp3");
         _sounds["incantation_end"]->SetVolume(5.0f);
+        _sounds["death"] =
+            std::make_unique<raylib::Sound>("assets/sounds/effect/death.mp3");
         _musicPaths["country"] = "assets/sounds/music/country.mp3";
     } catch (const raylib::RaylibException& e) {
         log_error(ErrorAsset("Failed to load audio: " + std::string(e.what())).what());
