@@ -123,6 +123,19 @@ class NetworkManager {
      */
     void requestTileContent(int x, int y);
 
+    /**
+     * @brief Requests the currently active celestial anomaly from the server.
+     * Sends the "gev" command.
+     */
+    void requestMapEvent();
+
+    /**
+     * @brief Manually triggers a celestial anomaly on the server.
+     * Sends the "mev" command.
+     * @param eventName Event identifier (e.g. "solar_flare", "meteor_shower").
+     */
+    void triggerMapEvent(const std::string& eventName);
+
   private:
     TcpSocket _socket;             /**< The underlying TCP socket. */
     bool _isHandshakeDone = false; /**< Flag indicating if the Zappy handshake is complete. */

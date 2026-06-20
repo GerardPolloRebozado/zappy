@@ -6,6 +6,7 @@
 */
 
 #include "Commands/CommandGameEnd.hpp"
+#include "Commands/CommandMapEvent.hpp"
 #include "Commands/CommandPlayerBroadcast.hpp"
 #include "Commands/CommandServerMessage.hpp"
 #include "Commands/CommandTimeUpdate.hpp"
@@ -121,6 +122,56 @@ Test(CommandMiscTest, ServerMessage) {
 
     cmd.execute("Hello world", world);
     cr_assert(true);
+}
+
+Test(CommandMiscTest, MapEventGevNone) {
+    World world;
+    CommandMapEvent cmd;
+
+    cmd.execute("none", world);
+
+    auto storage = world.get_storage<MapEvent>();
+    cr_assert_not_null(storage);
+
+    bool found = false;
+    for (auto const& [ent, mapEvent] : *storage) {
+        cr_assert_eq(mapEvent->name, "none");
+        cr_assert_not(mapEvent->active);
+        found = true;
+    }
+    cr_assert(found);
+}
+
+Test(CommandMiscTest, MapEventGevSolarFlare) {
+    World world;
+    CommandMapEvent cmd;
+
+    cmd.execute("solar_flare", world);
+
+    auto storage = world.get_storage<MapEvent>();
+    cr_assert_not_null(storage);
+
+    for (auto const& [ent, mapEvent] : *storage) {
+        cr_assert_eq(mapEvent->name, "solar_flare");
+        cr_assert(mapEvent->active);
+    }
+}
+
+Test(CommandMiscTest, MapEventGevGravityWell) {
+    World world;
+    CommandMapEvent cmd;
+
+    cmd.execute("gravity_well 3 7", world);
+
+    auto storage = world.get_storage<MapEvent>();
+    cr_assert_not_null(storage);
+
+    for (auto const& [ent, mapEvent] : *storage) {
+        cr_assert_eq(mapEvent->name, "gravity_well");
+        cr_assert_eq(mapEvent->centerX, 3);
+        cr_assert_eq(mapEvent->centerY, 7);
+        cr_assert(mapEvent->active);
+    }
 }
 
 Test(CommandMiscTest, GameEnd) {
