@@ -39,6 +39,10 @@ class CommandPlayerDeath : public ACommand {
             for (auto const& [entity, pos] : *posStorage) {
                 auto serverId = world.get_component<ServerId>(entity);
                 if (serverId && serverId->id == playerId && !world.get_component<TileTag>(entity)) {
+                    world.add_component<EventDeath>(entity, EventDeath{});
+                    Entity tombEntity = world.spawn();
+                    world.add_component<TombTag>(tombEntity, TombTag{});
+                    world.add_component<Position>(tombEntity, pos);
                     std::string teamStr = "";
                     auto teamComp = world.get_component<TeamName>(entity);
                     if (teamComp) {
@@ -50,7 +54,6 @@ class CommandPlayerDeath : public ACommand {
                                               "DEATH", teamStr);
                     }
 
-                    world.despawn(entity);
                     log_info("Protocol: Player #" + std::to_string(playerId) + " died");
                     break;
                 }

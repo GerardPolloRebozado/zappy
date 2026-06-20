@@ -14,6 +14,7 @@ use crate::utils::orientation::RelativeOrientation;
 use log::{error, info};
 
 pub mod ai;
+pub mod gev;
 pub mod gui;
 pub mod gui_sync;
 pub mod ppo;

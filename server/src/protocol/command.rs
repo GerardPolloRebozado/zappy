@@ -23,6 +23,9 @@ pub enum Command {
     Sgt,
     Sst(u32),
 
+    Mev(String),
+    Gev,
+
     Login(String),
     Unknown(String),
 }
@@ -52,6 +55,9 @@ impl std::fmt::Display for Command {
             Command::Pin(id) => write!(f, "pin {}", id),
             Command::Sgt => write!(f, "sgt"),
             Command::Sst(t) => write!(f, "sst {}", t),
+
+            Command::Mev(name) => write!(f, "mev {}", name),
+            Command::Gev => write!(f, "gev"),
 
             Command::Login(name) => write!(f, "{}", name),
             Command::Unknown(cmd) => write!(f, "{}", cmd),

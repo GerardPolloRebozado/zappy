@@ -65,6 +65,8 @@ When a GUI client authenticates with `GRAPHIC`, the server replays the current w
 
 This complements live `broadcast_event` updates that only reach clients already connected at the time of the event. See `server/src/commands/gui_sync.rs` for the implementation.
 
+The GUI can also trigger and query celestial anomalies with `mev` and `gev` commands. See `docs/game/map.md` for details.
+
 Vision range is configurable through the game configuration.
 
 ## Inventory

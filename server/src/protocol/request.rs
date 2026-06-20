@@ -60,9 +60,35 @@ impl FromStr for Request {
                 Command::Sst(t)
             }
 
+            "mev" if args.len() > 1 => Command::Mev(args[1].clone()),
+            "gev" => Command::Gev,
+
             _ => Command::Unknown(cmd_name),
         };
 
         Ok(Request { command })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_mev_with_event_name() {
+        let req: Request = "mev meteor_shower".parse().unwrap();
+        assert_eq!(req.command, Command::Mev("meteor_shower".to_string()));
+    }
+
+    #[test]
+    fn parse_mev_without_name_is_unknown() {
+        let req: Request = "mev".parse().unwrap();
+        assert_eq!(req.command, Command::Unknown("mev".to_string()));
+    }
+
+    #[test]
+    fn parse_gev() {
+        let req: Request = "gev".parse().unwrap();
+        assert_eq!(req.command, Command::Gev);
     }
 }

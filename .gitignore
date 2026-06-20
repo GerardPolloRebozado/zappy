@@ -135,3 +135,5 @@ compile_commands.json
 *.bak
 *.backup
 *.old
+
+*.zip
