@@ -139,8 +139,8 @@ mod tests {
     use crate::ecs::components::network::NetworkData;
     use crate::ecs::components::task::{Task, TaskList, TaskType};
     use crate::ecs::components::terrain_type::TerrainType;
+    use crate::ecs::storage;
     use crate::ecs::systems::task::any_finished_task;
-    use crate::ecs::{self, storage};
     use crate::server::Server;
 
     /// gets an existing resource using tasks
@@ -180,6 +180,7 @@ mod tests {
             .unwrap();
         task_list.vector.push(task.clone());
 
+        server.world.current_time = 10;
         any_finished_task(&mut server.world);
         let task_list = server
             .world
@@ -207,16 +208,17 @@ mod tests {
     #[test]
     fn set_resource() {
         let mut server = Server {
-            listener: std::net::TcpListener::bind("127.0.0.1:0").unwrap(),
+            listener: Some(std::net::TcpListener::bind("127.0.0.1:0").unwrap()),
             _users: std::collections::HashMap::new(),
             _freq: 100,
             game_start: 0,
             world: storage::World::new(
-                ecs::map_size::MapSize {
+                crate::ecs::map_size::MapSize {
                     width: 10,
                     height: 10,
                 },
                 100,
+                0,
             ),
             clients_nb: 1,
             team_names: vec!["existing_team".to_string()],
@@ -254,6 +256,7 @@ mod tests {
             .unwrap();
         task_list.vector.push(task.clone());
 
+        server.world.current_time = 10;
         any_finished_task(&mut server.world);
         let task_list = server
             .world

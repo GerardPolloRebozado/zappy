@@ -8,25 +8,38 @@ pub trait Socket: Read + Write + AsFd + Send {}
 impl Socket for TcpStream {}
 
 pub struct NetworkData {
-    pub socket: Box<dyn Socket>,
+    pub socket: Option<Box<dyn Socket>>,
     pub user: Option<String>,
     buffered_data: Option<String>,
     pub pending_responses: Vec<Response>,
+    pub incoming_commands: Vec<String>,
 }
 
 impl NetworkData {
     pub fn new<S: Socket + 'static>(socket: S) -> NetworkData {
         NetworkData {
-            socket: Box::new(socket),
+            socket: Some(Box::new(socket)),
             user: None,
             buffered_data: None,
             pending_responses: Vec::new(),
+            incoming_commands: Vec::new(),
+        }
+    }
+
+    pub fn new_headless() -> NetworkData {
+        NetworkData {
+            socket: None,
+            user: None,
+            buffered_data: None,
+            pending_responses: Vec::new(),
+            incoming_commands: Vec::new(),
         }
     }
 
     pub fn read_data(&mut self) -> Option<String> {
+        let socket = self.socket.as_mut()?;
         let mut buffer = [0; MAX_BODY_LENGTH];
-        match self.socket.read(&mut buffer) {
+        match socket.read(&mut buffer) {
             Ok(0) => Some(String::from("/disconnect")),
             Ok(n) => {
                 let msg = String::from_utf8_lossy(&buffer[..n]);
@@ -115,7 +128,7 @@ mod tests {
         assert!(msg.is_none());
 
         let (mock_socket, _) = MockSocket::new(b"lo\n".to_vec());
-        nd.socket = Box::new(mock_socket);
+        nd.socket = Some(Box::new(mock_socket));
         let msg = nd.read_data().unwrap();
         assert_eq!(msg, "hello\n");
     }

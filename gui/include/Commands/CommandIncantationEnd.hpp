@@ -36,6 +36,13 @@ class CommandIncantationEnd : public ACommand {
             return;
         }
 
+        if (_chatLogs) {
+            std::string resStr = result ? "succeeded!" : "failed.";
+            _chatLogs->addChatLog("Incantation at (" + std::to_string(x) + "," + std::to_string(y) +
+                                      ") " + resStr,
+                                  "INFO");
+        }
+
         log_info("Protocol: Incantation at (" + std::to_string(x) + ", " + std::to_string(y) +
                  ") ended with result: " + (result ? "Success" : "Failure"));
 

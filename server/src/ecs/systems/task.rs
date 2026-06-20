@@ -55,7 +55,6 @@ use crate::{
         ServerEvent::{self},
         StatusCode::{self},
     },
-    utils::date::Date,
 };
 use log::debug;
 
@@ -77,6 +76,7 @@ pub fn any_finished_task(world: &mut World) {
     let mut started_incantations: Vec<Entity> = Vec::new();
     let mut started_forks: Vec<Entity> = Vec::new();
     let freq = world.freq;
+    let now = world.current_time;
 
     {
         let task_lists = match world.get_storage_mut::<TaskList>() {
@@ -91,8 +91,7 @@ pub fn any_finished_task(world: &mut World) {
             };
 
             if first_task.finish_on == TASK_NOT_STARTED {
-                first_task.finish_on =
-                    Date::now().to_timestamp() + (first_task.task_type.duration() * 1000 / freq);
+                first_task.finish_on = now + (first_task.task_type.duration() * 1000 / freq);
 
                 if matches!(first_task.task_type, TaskType::Incantation) {
                     started_incantations.push(*entity);
@@ -102,7 +101,7 @@ pub fn any_finished_task(world: &mut World) {
                 continue;
             }
 
-            if !first_task.is_finished() {
+            if !first_task.is_finished(now) {
                 continue;
             }
 
@@ -111,8 +110,8 @@ pub fn any_finished_task(world: &mut World) {
             task_list.vector.remove(0);
 
             if let Some(new_first_task) = task_list.vector.first_mut() {
-                new_first_task.finish_on = Date::now().to_timestamp()
-                    + (new_first_task.task_type.duration() * 1000 / freq);
+                new_first_task.finish_on =
+                    now + (new_first_task.task_type.duration() * 1000 / freq);
             }
         }
     }
@@ -131,16 +130,12 @@ pub fn any_finished_task(world: &mut World) {
     for (entity, task_type) in completed {
         let (response, event) = execute_task(world, entity, &task_type);
 
-        if matches!(task_type, TaskType::Death) {
-            if let Some(network_data) = world.get_component_mut::<NetworkData>(entity) {
-                use std::io::Write;
-                let _ = network_data
-                    .socket
-                    .write_all(response.to_string().as_bytes());
-            }
-            world.despawn(entity);
-        } else if let Some(network_data) = world.get_component_mut::<NetworkData>(entity) {
+        if let Some(network_data) = world.get_component_mut::<NetworkData>(entity) {
             network_data.pending_responses.push(response);
+        }
+
+        if matches!(task_type, TaskType::Death) {
+            world.despawn(entity);
         }
 
         if let Some(ev) = event {
@@ -229,13 +224,14 @@ mod tests {
     #[test]
     fn add_task() {
         let mut world = World::default();
+        let now = world.current_time;
         let entity = world.spawn();
         world.add_component(entity, TaskList::default());
 
         let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
         let task = Task {
             task_type: TaskType::Forward,
-            finish_on: TaskType::Forward.duration() * 1000 + Date::now().to_timestamp(),
+            finish_on: TaskType::Forward.duration() * 1000 + now,
         };
         task_list.vector.push(task);
         assert_eq!(task_list.vector.len(), 1);
@@ -249,10 +245,11 @@ mod tests {
 
         // setup task creation
         {
+            let current_time = world.current_time;
             let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
             let task = Task {
                 task_type: TaskType::Forward,
-                finish_on: TaskType::Forward.duration() * 1000 + Date::now().to_timestamp(),
+                finish_on: TaskType::Forward.duration() * 1000 + current_time,
             };
             task_list.vector.push(task);
         }
@@ -260,12 +257,14 @@ mod tests {
         // task should not be finished
         any_finished_task(&mut world);
         {
+            let now = world.current_time;
             let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
             assert_eq!(task_list.vector.len(), 1);
-            task_list.vector[0].finish_on = Date::now().to_timestamp() - 1;
+            task_list.vector[0].finish_on = now + 1000;
         }
 
         // task should be finished
+        world.current_time += 2000;
         any_finished_task(&mut world);
         {
             let task_list = world.get_component_mut::<TaskList>(entity).unwrap();
