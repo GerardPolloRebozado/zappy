@@ -7,6 +7,7 @@
 
 #include "UI/UIChatPanel.hpp"
 #include "Components/ComponentInhabitant.hpp"
+#include <algorithm>
 #include <sstream>
 namespace zappy {
 

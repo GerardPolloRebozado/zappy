@@ -285,8 +285,15 @@ impl ServerEvent {
             | ServerEvent::EggLaid { .. }
             | ServerEvent::EggConnect { .. }
             | ServerEvent::EggDeath { .. }
-            | ServerEvent::EndOfGame { .. }
-            | ServerEvent::ServerMessage { .. } => None,
+            | ServerEvent::EndOfGame { .. } => None,
+            ServerEvent::ServerMessage { message } => {
+                let _ = for_player?;
+                if message.starts_with("event_start ") || message.starts_with("event_end ") {
+                    Some(message.clone())
+                } else {
+                    None
+                }
+            }
             ServerEvent::WinGame { .. } => None,
         }
     }
@@ -497,5 +504,30 @@ mod tests {
             .to_gui_string(),
             Some("smg server info".to_string())
         );
+    }
+
+    #[test]
+    fn test_map_event_server_message_to_ai() {
+        let player = Inhabitant::default().with_id(1);
+        let start = ServerEvent::ServerMessage {
+            message: "event_start meteor_shower".to_string(),
+        };
+        assert_eq!(
+            start.to_ai_string(Some(&player), 10, 10),
+            Some("event_start meteor_shower".to_string())
+        );
+
+        let end = ServerEvent::ServerMessage {
+            message: "event_end solar_flare".to_string(),
+        };
+        assert_eq!(
+            end.to_ai_string(Some(&player), 10, 10),
+            Some("event_end solar_flare".to_string())
+        );
+
+        let other = ServerEvent::ServerMessage {
+            message: "server info".to_string(),
+        };
+        assert_eq!(other.to_ai_string(Some(&player), 10, 10), None);
     }
 }

@@ -39,15 +39,19 @@ impl Inventory {
         *self.items.entry(resource).or_insert(0) += amount;
     }
 
-    ///removes some food to continue being alive till reaching 0
-    pub fn consume_food(&mut self, freq: u64, now: u64) {
+    /// Removes food over elapsed time.
+    ///
+    /// `consumption_rate` scales how fast food is drained (1.0 = normal, 2.0 = double during
+    /// [`MapEvent::SolarFlare`](crate::ecs::map_events::MapEvent::SolarFlare)).
+    pub fn consume_food(&mut self, freq: u64, now: u64, consumption_rate: f32) {
         if now <= self.last_time_consumed {
             return;
         }
         let time_difference = now - self.last_time_consumed;
+        let scaled_time = (time_difference as f32 * consumption_rate) as u64;
 
         let food_to_remove =
-            (time_difference as u128 * freq as u128) / (LIFE_UNIT_IN_TIME_UNITS as u128 * 1000);
+            (scaled_time as u128 * freq as u128) / (LIFE_UNIT_IN_TIME_UNITS as u128 * 1000);
 
         if food_to_remove >= 1 {
             let food_to_remove_u32 = food_to_remove as u32;
@@ -171,7 +175,7 @@ mod tests {
         let mut inv = Inventory::new();
         inv.add_item(Food, 10);
         inv.last_time_consumed = 0;
-        inv.consume_food(1, 2_000_000);
+        inv.consume_food(1, 2_000_000, 1.0);
         assert_eq!(inv.get_item_count(Food), 0);
     }
 
@@ -180,11 +184,20 @@ mod tests {
         let mut inv = Inventory::new();
         inv.add_item(Food, 2);
         inv.last_time_consumed = 1000;
-        inv.consume_food(1, 1000 + LIFE_UNIT_IN_TIME_UNITS * 1000);
+        inv.consume_food(1, 1000 + LIFE_UNIT_IN_TIME_UNITS * 1000, 1.0);
         assert_eq!(inv.get_item_count(Food), 1);
-        inv.consume_food(1, 1000 + LIFE_UNIT_IN_TIME_UNITS * 1000);
+        inv.consume_food(1, 1000 + LIFE_UNIT_IN_TIME_UNITS * 1000, 1.0);
         assert_eq!(inv.get_item_count(Food), 1);
-        inv.consume_food(1, 1000 + LIFE_UNIT_IN_TIME_UNITS * 1000);
+        inv.consume_food(1, 1000 + LIFE_UNIT_IN_TIME_UNITS * 1000, 1.0);
         assert_eq!(inv.get_item_count(Food), 1);
+    }
+
+    #[test]
+    fn test_consume_food_doubles_with_rate() {
+        let mut inv = Inventory::new();
+        inv.add_item(Food, 4);
+        inv.last_time_consumed = 1000;
+        inv.consume_food(1, 1000 + LIFE_UNIT_IN_TIME_UNITS * 1000, 2.0);
+        assert_eq!(inv.get_item_count(Food), 2);
     }
 }
