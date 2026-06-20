@@ -83,7 +83,8 @@ class ZappyLibClient:
         while ticks < max_ticks:
             resp_ptr = self.lib.zappy_get_response(self.server_ptr, self.player_id)
             if resp_ptr:
-                # Decode and strip the trailing newline from Rust
+                # The Rust server uses UTF-8 and passes it via C FFI as a null-terminated byte stream.
+                # Decode as UTF-8 to correctly handle any UTF-8 characters and strip trailing newlines.
                 resp = (
                     ctypes.cast(resp_ptr, ctypes.c_char_p).value.decode("utf-8").strip()
                 )
