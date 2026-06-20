@@ -17,13 +17,13 @@ void AnimationSystem::_update2DMovement(World& w, float freq) {
                 move->visualY = static_cast<float>(pos->y);
             }
 
-            float targetX = static_cast<float>(pos->x);
-            float targetY = static_cast<float>(pos->y);
-            float speed = (freq / 7.0f) * GetFrameTime();
+            const float targetX = static_cast<float>(pos->x);
+            const float targetY = static_cast<float>(pos->y);
+            const float speed = (freq / 7.0f) * GetFrameTime();
 
-            float dx = targetX - move->visualX;
-            float dy = targetY - move->visualY;
-            float dist = std::sqrt(dx * dx + dy * dy);
+            const float dx = targetX - move->visualX;
+            const float dy = targetY - move->visualY;
+            const float dist = std::sqrt(dx * dx + dy * dy);
 
             if (dist > 0.05f) {
                 move->isMoving = true;
