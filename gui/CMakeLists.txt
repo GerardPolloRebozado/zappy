@@ -68,6 +68,8 @@ set(CORE_SOURCES
         src/UI/UIScoreboardPanel.cpp
         src/UI/UISlider.cpp
         src/Core.cpp
+        src/CoreUpdate.cpp
+        src/CoreUI.cpp
         include/Components/ComponentShared.hpp
         include/Components/ComponentInhabitant.hpp
         include/Components/ComponentTile.hpp
