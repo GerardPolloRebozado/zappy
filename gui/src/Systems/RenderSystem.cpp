@@ -37,7 +37,7 @@
 #include <set>
 #include <unordered_set>
 
-#include "RenderSystemBatches.hpp"
+#include "Systems/RenderSystemBatches.hpp"
 
 namespace zappy {
 
