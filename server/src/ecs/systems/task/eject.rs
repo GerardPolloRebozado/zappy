@@ -1,5 +1,3 @@
-use log::error;
-
 use crate::{
     ecs::{
         components::{egg::Egg, inhabitant_tag::InhabitantTag, position::Position},
@@ -12,20 +10,15 @@ use crate::{
 
 pub fn eject(world: &mut World, entity: Entity) -> (Response, Option<ServerEvent>) {
     let executor_position = world.get_component::<Position>(entity).unwrap().clone();
-    let executor_orientation = world.get_component::<RelativeOrientation>(entity).unwrap();
+    let executor_orientation = *world.get_component::<RelativeOrientation>(entity).unwrap();
     let mut inhabitants_in_tile = Vec::new();
-    let mut new_pos = Position {
-        x: executor_position.x,
-        y: executor_position.y,
-    };
+    let mut new_pos = executor_position.clone();
 
-    match executor_orientation {
-        RelativeOrientation::Forward => new_pos.y -= 1,
-        RelativeOrientation::Right => new_pos.x += 1,
-        RelativeOrientation::Back => new_pos.y += 1,
-        RelativeOrientation::Left => new_pos.x -= 1,
-        _ => error!("Orientation on player should never be diagonal"),
-    }
+    new_pos.move_forward(
+        executor_orientation,
+        world.map_size.width,
+        world.map_size.height,
+    );
 
     for (e, _) in world.get_storage::<InhabitantTag>().unwrap().iter() {
         let pos = world.get_component::<Position>(*e).unwrap();
@@ -137,5 +130,37 @@ mod tests {
         eject(&mut world, ejector);
         let pos = world.get_component::<Position>(victim).unwrap();
         assert_eq!(*pos, Position { x: 2, y: 3 });
+    }
+
+    #[test]
+    fn eject_player_on_north_border_wraps() {
+        let mut world = World::default();
+        world.map_size.width = 10;
+        world.map_size.height = 10;
+        let ejector = world.spawn();
+        build_inhabitant_with_entity(ejector, 3, 0, RelativeOrientation::Forward, &mut world);
+        let victim = world.spawn();
+        build_inhabitant_with_entity(victim, 3, 0, RelativeOrientation::Forward, &mut world);
+
+        let (response, _) = eject(&mut world, ejector);
+        assert_eq!(response.code, ResponseCode::Status(Ok));
+        let pos = world.get_component::<Position>(victim).unwrap();
+        assert_eq!(*pos, Position { x: 3, y: 9 });
+    }
+
+    #[test]
+    fn eject_player_on_west_border_wraps() {
+        let mut world = World::default();
+        world.map_size.width = 10;
+        world.map_size.height = 10;
+        let ejector = world.spawn();
+        build_inhabitant_with_entity(ejector, 0, 3, RelativeOrientation::Left, &mut world);
+        let victim = world.spawn();
+        build_inhabitant_with_entity(victim, 0, 3, RelativeOrientation::Forward, &mut world);
+
+        let (response, _) = eject(&mut world, ejector);
+        assert_eq!(response.code, ResponseCode::Status(Ok));
+        let pos = world.get_component::<Position>(victim).unwrap();
+        assert_eq!(*pos, Position { x: 9, y: 3 });
     }
 }
