@@ -19,16 +19,20 @@ pub fn check_dead_inhabitants(world: &mut World) {
         }
     }
 
-    for entity in inhabitants {
-        let freq = world.freq;
-        let now = world.current_time;
+    let freq = world.freq;
+    let now = world.current_time;
+    let consumption_rate = world
+        .map_event
+        .modifiers(world.map_size.width, world.map_size.height)
+        .food_consumption_rate;
 
+    for entity in inhabitants {
         let inv = match world.get_component_mut::<Inventory>(entity) {
             Some(inv) => inv,
             None => continue,
         };
 
-        inv.consume_food(freq, now);
+        inv.consume_food(freq, now, consumption_rate);
 
         if inv.get_item_count(Food) == 0 {
             dead_entities.push(entity);

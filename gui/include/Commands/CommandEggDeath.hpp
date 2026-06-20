@@ -1,9 +1,3 @@
-/*
-** EPITECH PROJECT, 2026
-** zappy
-** File description:
-** CommandEggDeath.hpp
-*/
 #ifndef ZAPPY_COMMANDEGGDEATH_HPP
 #define ZAPPY_COMMANDEGGDEATH_HPP
 
@@ -41,6 +35,15 @@ class CommandEggDeath : public ACommand {
         if (storage) {
             for (auto const& [entity, egg] : *storage) {
                 if (egg->id == eggId) {
+                    std::string teamStr = "";
+                    auto teamComp = world.get_component<TeamName>(entity);
+                    if (teamComp) {
+                        teamStr = teamComp->_team_name;
+                    }
+                    if (_chatLogs) {
+                        _chatLogs->addChatLog("Egg #" + std::to_string(eggId) + " spoiled/died.",
+                                              "DEATH", teamStr);
+                    }
                     world.despawn(entity);
                     log_info("Protocol: Egg #" + std::to_string(eggId) + " died");
                     break;

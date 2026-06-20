@@ -7,6 +7,7 @@
 
 #include "Core.hpp"
 #include "Color.hpp"
+#include "Commands/FactoryCommands.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentMusic.hpp"
 #include "Components/ComponentShared.hpp"
@@ -16,6 +17,7 @@
 #include "Logging/Logger.hpp"
 #include "Network/NetworkErrors.hpp"
 #include "UI/UIButton.hpp"
+#include "UI/UIChatPanel.hpp"
 #include "UI/UIHudPanel.hpp"
 #include "UI/UIInput.hpp"
 #include "UI/UIManager.hpp"
@@ -51,7 +53,8 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
     _world.add_component(backgroundMusic,
                          std::make_shared<ComponentMusic>(
                              AssetManager::getInstance().getMusicPath("country"), true));
-
+    _chatLogs = std::make_shared<ChatLogs>();
+    FactoryCommands::setChatLogs(_chatLogs);
     _uiManager = std::make_shared<UIManager>();
     _appState = AppState::MENU;
     _setupMainMenu();
@@ -369,6 +372,11 @@ void Core::_setupGameUI() {
     _world.add_component(
         backgroundMusic,
         std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
+
+    // Chat Panel
+    float chatY = (float)_window->GetHeight() - 240.0f;
+    _uiManager->addComponent(std::make_shared<UIChatPanel>(
+        raylib::Rectangle{10.0f, chatY, 460.0f, 230.0f}, _chatLogs, _world, 10));
 }
 
 void Core::_setupTestingData() {
