@@ -2,11 +2,15 @@ use crate::commands::{gev, ppo};
 use crate::ecs::components::network::NetworkData;
 use crate::ecs::map_events::map_event_from_name;
 use crate::ecs::map_size;
-use crate::ecs::storage::Entity;
+use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::map_event::activate_map_event;
 use crate::protocol::{Command, Request, Response, ResponseCode, StatusCode};
 use crate::server::Server;
 use crate::utils::date::Date;
+
+pub fn get_network_data(world: &mut World, entity: Entity) -> Option<&mut NetworkData> {
+    world.get_component_mut::<NetworkData>(entity)
+}
 
 pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request) {
     let width = server.world.map_size.width;
@@ -14,11 +18,9 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
 
     match request.command {
         Command::Msz => {
-            let network_data = server.world.get_component_mut::<NetworkData>(entity);
-            if network_data.is_none() {
+            let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
-            }
-            let network_data = network_data.unwrap();
+            };
             network_data.pending_responses.push(Response::new(
                 ResponseCode::Status(StatusCode::Ok),
                 Some(format!("msz {} {}", width, height)),
@@ -31,11 +33,9 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
                 return;
             }
             let data = data.unwrap();
-            let network_data = server.world.get_component_mut::<NetworkData>(entity);
-            if network_data.is_none() {
+            let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
-            }
-            let network_data = network_data.unwrap();
+            };
             network_data.pending_responses.push(Response::new(
                 ResponseCode::Status(StatusCode::Ok),
                 Some(data),
@@ -53,11 +53,9 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
                     }
                 }
             }
-            let network_data = server.world.get_component_mut::<NetworkData>(entity);
-            if network_data.is_none() {
+            let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
-            }
-            let network_data = network_data.unwrap();
+            };
             for r in responses {
                 network_data
                     .pending_responses
@@ -66,11 +64,9 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
         }
 
         Command::Tna => {
-            let network_data = server.world.get_component_mut::<NetworkData>(entity);
-            if network_data.is_none() {
+            let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
-            }
-            let network_data = network_data.unwrap();
+            };
             for team in server.team_names.iter() {
                 network_data.pending_responses.push(Response::new(
                     ResponseCode::Status(StatusCode::Ok),
@@ -83,11 +79,9 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
         // Response: `sgt T` where T is the current frequency.
         Command::Sgt => {
             let freq = server.world.freq;
-            let network_data = server.world.get_component_mut::<NetworkData>(entity);
-            if network_data.is_none() {
+            let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
-            }
-            let network_data = network_data.unwrap();
+            };
             network_data.pending_responses.push(Response::new(
                 ResponseCode::Status(StatusCode::Ok),
                 Some(format!("sgt {}", freq)),
@@ -100,11 +94,9 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
         // Response: `sst T` where T is the newly set frequency.
         Command::Sst(new_freq) => {
             server.world.freq = new_freq as u64;
-            let network_data = server.world.get_component_mut::<NetworkData>(entity);
-            if network_data.is_none() {
+            let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
-            }
-            let network_data = network_data.unwrap();
+            };
             network_data.pending_responses.push(Response::new(
                 ResponseCode::Status(StatusCode::Ok),
                 Some(format!("sst {}", new_freq)),
@@ -120,11 +112,9 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
                 line = ppo::build_ppo_line(&server.world, player_id, player_entity);
             }
 
-            let network_data = server.world.get_component_mut::<NetworkData>(entity);
-            if network_data.is_none() {
+            let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
-            }
-            let network_data = network_data.unwrap();
+            };
 
             if let Some(line) = line {
                 network_data.pending_responses.push(Response::new(
@@ -152,11 +142,9 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
                 None
             };
 
-            let network_data = server.world.get_component_mut::<NetworkData>(entity);
-            if network_data.is_none() {
+            let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
-            }
-            let network_data = network_data.unwrap();
+            };
 
             if let Some(line) = line {
                 network_data.pending_responses.push(Response::new(
@@ -172,11 +160,9 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
 
         Command::Gev => {
             let line = gev::build_gev_line(&server.world);
-            let network_data = server.world.get_component_mut::<NetworkData>(entity);
-            if network_data.is_none() {
+            let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
-            }
-            let network_data = network_data.unwrap();
+            };
             network_data.pending_responses.push(Response::new(
                 ResponseCode::Status(StatusCode::Ok),
                 Some(line),
@@ -184,11 +170,9 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
         }
 
         Command::Unknown(_) => {
-            let network_data = server.world.get_component_mut::<NetworkData>(entity);
-            if network_data.is_none() {
+            let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
-            }
-            let network_data = network_data.unwrap();
+            };
             network_data.pending_responses.push(Response {
                 code: ResponseCode::Status(StatusCode::Ko),
                 data: None,
@@ -196,11 +180,9 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
         }
 
         _ => {
-            let network_data = server.world.get_component_mut::<NetworkData>(entity);
-            if network_data.is_none() {
+            let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
-            }
-            let network_data = network_data.unwrap();
+            };
             network_data
                 .pending_responses
                 .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
