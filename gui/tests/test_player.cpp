@@ -16,6 +16,7 @@
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
 #include "ECS/World.hpp"
+#include "Systems/ParticleSystem.hpp"
 #include <criterion/criterion.h>
 #include <string>
 
@@ -120,6 +121,13 @@ Test(CommandPlayerDeathTest, ValidPlayerDeath) {
 
     CommandPlayerDeath cmd;
     cmd.execute("77", world);
+
+    cr_assert(world.is_alive(player));
+    cr_assert_not_null(world.get_component<EventDeath>(player).get());
+
+    ParticleSystem ps;
+    ps.update(world, 0.1f); // processes EventDeath, adds emitter, plays sound
+    ps.update(world, 2.0f); // exceeds emitter maxLifetime (1.5f)
 
     cr_assert(!world.is_alive(player));
 }

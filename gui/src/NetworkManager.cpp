@@ -77,6 +77,12 @@ void NetworkManager::requestTileContent(int x, int y) {
     sendCommand("bct " + std::to_string(x) + " " + std::to_string(y));
 }
 
+void NetworkManager::requestMapEvent() { sendCommand("gev"); }
+
+void NetworkManager::triggerMapEvent(const std::string& eventName) {
+    sendCommand("mev " + eventName);
+}
+
 void NetworkManager::_processHandshake(const std::string& message) {
     if (message == "WELCOME") {
         log_debug("Received WELCOME, sending GRAPHIC");
@@ -88,6 +94,7 @@ void NetworkManager::_processHandshake(const std::string& message) {
         sendCommand("sgt");
         sendCommand("mct");
         sendCommand("tna");
+        sendCommand("gev");
     }
 }
 

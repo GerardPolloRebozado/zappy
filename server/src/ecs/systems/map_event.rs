@@ -25,14 +25,40 @@ pub fn notify_map_event(world: &mut World, phase: &str, name: &str) {
     );
 }
 
-/// Returns a human-readable name for the event, used in `smg` broadcasts.
-fn event_name(event: &MapEvent) -> &'static str {
+/// Returns a human-readable name for the event, used in `smg` broadcasts
+/// and GUI protocol responses (`mev`, `gev`).
+pub fn event_name(event: &MapEvent) -> &'static str {
     match event {
         MapEvent::None => "none",
         MapEvent::MeteorShower { .. } => "meteor_shower",
         MapEvent::SolarFlare { .. } => "solar_flare",
         MapEvent::GravityWell { .. } => "gravity_well",
         MapEvent::PsionicEcho => "psionic_echo",
+    }
+}
+
+/// Activates a map event, broadcasting `event_start` (and `event_end` for instant
+/// events like [`MapEvent::PsionicEcho`]).
+///
+/// This is the single entry point for both the random trigger system and GUI
+/// manual triggers (`mev`). After activation, the event ticks down normally
+/// via [`map_event_system`] until it expires.
+///
+/// Callers must ensure no other event is active before calling this
+/// (check `world.map_event.is_active()`).
+pub fn activate_map_event(world: &mut World, event: MapEvent, now: u64) {
+    let name = event_name(&event);
+    info!("Map event triggered: {}", name);
+
+    if matches!(event, MapEvent::PsionicEcho) {
+        psionic_echo::apply_psionic_echo(world, now);
+        notify_map_event(world, "event_start", name);
+        notify_map_event(world, "event_end", name);
+        world.last_event_trigger_check = now;
+    } else {
+        world.map_event = event;
+        world.last_event_check = now;
+        notify_map_event(world, "event_start", name);
     }
 }
 
@@ -63,19 +89,7 @@ fn try_trigger_check(world: &mut World, now: u64, freq: u64) {
     let width = world.map_size.width;
     let height = world.map_size.height;
     if let Some(event) = try_trigger_random_event(width, height) {
-        let name = event_name(&event);
-        info!("Map event triggered: {}", name);
-
-        // PsionicEcho is run instantly and never stored in world.map_event
-        if matches!(event, MapEvent::PsionicEcho) {
-            psionic_echo::apply_psionic_echo(world, now);
-            notify_map_event(world, "event_start", name);
-            notify_map_event(world, "event_end", name);
-        } else {
-            world.map_event = event;
-            world.last_event_check = now;
-            notify_map_event(world, "event_start", name);
-        }
+        activate_map_event(world, event, now);
     }
 }
 
@@ -104,12 +118,14 @@ fn tick_active_event(world: &mut World, now: u64, freq: u64) {
     }
 }
 
-/// Sets the active event to `None` and broadcasts an end notification.
+/// Sets the active event to `None`, broadcasts an end notification, and
+/// resets the random trigger timer so the next roll starts from now.
 fn expire_event(world: &mut World) {
     let name = event_name(&world.map_event);
     info!("Map event expired: {}", name);
     world.map_event = MapEvent::None;
     notify_map_event(world, "event_end", name);
+    world.last_event_trigger_check = Date::now().to_timestamp();
 }
 
 #[cfg(test)]
@@ -343,6 +359,48 @@ mod tests {
             }
             _ => panic!("expected SolarFlare to remain active"),
         }
+    }
+
+    #[test]
+    fn expire_event_resets_trigger_timer() {
+        let mut world = World::default();
+        world.map_event = MapEvent::SolarFlare { remaining_ticks: 1 };
+        world.last_event_check = 0;
+        world.last_event_trigger_check = 0;
+
+        map_event_system(&mut world);
+
+        assert_eq!(world.map_event, MapEvent::None);
+        assert!(
+            world.last_event_trigger_check > 0,
+            "trigger timer should be reset after event expires"
+        );
+    }
+
+    #[test]
+    fn activate_map_event_sets_event_and_check_time() {
+        let mut world = World::default();
+        let now = Date::now().to_timestamp();
+
+        activate_map_event(&mut world, MapEvent::new_solar_flare(), now);
+
+        assert!(world.map_event.is_active());
+        assert_eq!(world.last_event_check, now);
+    }
+
+    #[test]
+    fn activate_psionic_echo_resets_trigger_timer() {
+        let mut world = World::default();
+        let now = Date::now().to_timestamp();
+        world.last_event_trigger_check = 0;
+
+        activate_map_event(&mut world, MapEvent::PsionicEcho, now);
+
+        assert!(!world.map_event.is_active(), "psionic echo is instant");
+        assert_eq!(
+            world.last_event_trigger_check, now,
+            "trigger timer should reset after instant event"
+        );
     }
 
     #[test]

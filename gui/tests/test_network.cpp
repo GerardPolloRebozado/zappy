@@ -14,6 +14,8 @@ Test(FactoryCommandsTest, CreateValidCommands) {
     // getCommand throws if invalid, so completing this block means success
     auto& cmdMsz = FactoryCommands::getCommand("msz");
     auto& cmdBct = FactoryCommands::getCommand("bct");
+    auto& cmdGev = FactoryCommands::getCommand("gev");
+    auto& cmdMev = FactoryCommands::getCommand("mev");
 }
 
 Test(FactoryCommandsTest, CreateInvalidCommandThrows) {
