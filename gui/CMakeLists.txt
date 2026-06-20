@@ -47,6 +47,11 @@ set(CORE_SOURCES
         src/NetworkManager.cpp
         src/Network/TcpSocket.cpp
         src/Systems/RenderSystem.cpp
+        src/Systems/RenderSystemBatches.cpp
+        src/Systems/RenderSystemTerrain.cpp
+        src/Systems/RenderSystemEntities.cpp
+        src/Systems/RenderSystemResources.cpp
+        src/Systems/RenderSystemEffects.cpp
         src/Systems/ParticleSystem.cpp
         src/Systems/AnimationSystem.cpp
         src/Systems/MusicSystem.cpp
