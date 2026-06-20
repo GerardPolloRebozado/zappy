@@ -210,7 +210,7 @@ class LibZappyEnv:
         self.env.client = self.client
 
         # Consume initial auth responses ("ok", slots, map size)
-        for _ in range(3):
+        for _ in range(2):
             self.client.wait_for_response()
 
         observation = self.env._get_real_observation()
