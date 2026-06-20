@@ -52,15 +52,23 @@ set(CORE_SOURCES
         src/Systems/RenderSystemEntities.cpp
         src/Systems/RenderSystemResources.cpp
         src/Systems/RenderSystemEffects.cpp
-        src/Systems/ParticleSystem.cpp
-        src/Systems/AnimationSystem.cpp
+        src/Systems/Particles/ParticleSystem.cpp
+        src/Systems/Particles/ParticleSystemHandleEggs.cpp
+        src/Systems/Particles/ParticleSystemHandleDeaths.cpp
+        src/Systems/Particles/ParticleSystemHandleIncantationStart.cpp
+        src/Systems/Particles/ParticleSystemHandleIncantationEnd.cpp
+        src/Systems/Particles/ParticleSystemEmitters.cpp
+        src/Systems/Animations/AnimationSystem.cpp
+        src/Systems/Animations/AnimationSystemMovement2D.cpp
+        src/Systems/Animations/AnimationSystemMovement3D.cpp
+        src/Systems/Animations/AnimationSystemAnimations.cpp
         src/Systems/MusicSystem.cpp
-        src/Graphics/AssetManager.cpp
-        src/Graphics/AssetManagerModels.cpp
-        src/Graphics/AssetManagerTextures.cpp
-        src/Graphics/AssetManagerShaders.cpp
-        src/Graphics/AssetManagerAnimations.cpp
-        src/Graphics/AssetManagerAudio.cpp
+        src/Graphics/AssetManager/AssetManager.cpp
+        src/Graphics/AssetManager/AssetManagerModels.cpp
+        src/Graphics/AssetManager/AssetManagerTextures.cpp
+        src/Graphics/AssetManager/AssetManagerShaders.cpp
+        src/Graphics/AssetManager/AssetManagerAnimations.cpp
+        src/Graphics/AssetManager/AssetManagerAudio.cpp
         src/Graphics/VoxelBatcher.cpp
         src/UI/AUIComponent.cpp
         src/UI/UIManager.cpp
