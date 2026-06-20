@@ -38,6 +38,13 @@ struct TimeUnit {
     int frequency;
 };
 
+struct MapEvent {
+    std::string name = "none";
+    int centerX = -1;
+    int centerY = -1;
+    bool active = false;
+};
+
 struct ServerId {
     int id;
 };
