@@ -18,15 +18,15 @@ void AnimationSystem::_update3DMovement(World& w, float freq) {
                 move->visualY = static_cast<float>(pos->y);
             }
 
-            float targetX = static_cast<float>(pos->x);
-            float targetY = static_cast<float>(pos->y);
-            float targetZ = move->targetZ;
-            float speed = (freq / 7.0f) * GetFrameTime();
+            const float targetX = static_cast<float>(pos->x);
+            const float targetY = static_cast<float>(pos->y);
+            const float targetZ = move->targetZ;
+            const float speed = (freq / 7.0f) * GetFrameTime();
 
-            float dx = targetX - move->visualX;
-            float dy = targetY - move->visualY;
-            float dz = targetZ - move->visualZ;
-            float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+            const float dx = targetX - move->visualX;
+            const float dy = targetY - move->visualY;
+            const float dz = targetZ - move->visualZ;
+            const float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
 
             if (dist > 0.05f) {
                 move->isMoving = true;
