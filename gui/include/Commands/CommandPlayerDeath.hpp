@@ -54,7 +54,6 @@ class CommandPlayerDeath : public ACommand {
                                               "DEATH", teamStr);
                     }
 
-                    world.despawn(entity);
                     log_info("Protocol: Player #" + std::to_string(playerId) + " died");
                     break;
                 }
