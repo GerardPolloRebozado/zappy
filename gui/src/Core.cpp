@@ -368,10 +368,22 @@ void Core::_setupGameUI() {
                                                      (float)_window->GetHeight() - 60, 250, 40},
                                    _world, _network, 10));
 
+    std::filesystem::path dirpath = "assets/sounds/music";
+
+    if (!std::filesystem::exists(dirpath)) {
+        std::filesystem::create_directory(dirpath);
+    }
+    if (std::filesystem::exists(dirpath)) {
+        for (const auto& entry : std::filesystem::directory_iterator(dirpath)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".mp3") {
+                _bckMusic.push_back(entry.path().string());
+            }
+        }
+    }
+
     auto backgroundMusic = _world.spawn();
-    _world.add_component(
-        backgroundMusic,
-        std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
+    _world.add_component(backgroundMusic,
+                         std::make_shared<ComponentMusic>(std::string(_bckMusic[0]), true));
 
     // Chat Panel
     float chatY = (float)_window->GetHeight() - 240.0f;
