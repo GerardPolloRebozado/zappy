@@ -39,6 +39,7 @@ class UIRadio : public AUIComponent {
     std::shared_ptr<UIButton> _openRadio;
     std::shared_ptr<UIButton> _nextSong;
     std::shared_ptr<UIButton> _prevSong;
+    std::shared_ptr<UIButton> _closeRadio;
 };
 } // namespace zappy
 
