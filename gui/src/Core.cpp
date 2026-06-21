@@ -384,10 +384,8 @@ void Core::_setupGameUI() {
 
     // music panel
 
-    float panelY = 40.0f;
-
     _uiManager->addComponent(std::make_shared<UIRadio>(
-        raylib::Rectangle{30.0f, panelY, 150.0f, 100.0f}, _world, 10, _musicIdx));
+        raylib::Rectangle{300.0f, 40.0f, 40.0f, 40.0f}, _world, 10, _musicIdx));
 
     // Chat Panel
     float chatY = (float)_window->GetHeight() - 240.0f;

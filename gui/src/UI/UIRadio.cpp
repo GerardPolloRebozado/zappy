@@ -1,3 +1,9 @@
+/*
+** EPITECH PROJECT, 2026
+** zappy
+** File description:
+** UiRadio.cpp
+*/
 #include "UI/UIRadio.hpp"
 #include "Graphics/AssetManager.hpp"
 
@@ -8,11 +14,18 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
     _isVisible = true;
 
     _menuRadio = std::make_shared<UIPanel>(
-        raylib::Rectangle{bounds.x + 10, bounds.y + 10, _bounds.width, _bounds.height},
-        "input_background", zIndex);
+        raylib::Rectangle{bounds.x + 10, bounds.y + 10, 150.0f, 100.0f}, "input_bg", zIndex);
+
+    _closeRadio = std::make_shared<UIButton>(
+        raylib::Rectangle{bounds.x + 120, bounds.y + 10, 30.0f, 30.0f}, "",
+        [this]() {
+            opened = false;
+            this->setBounds(raylib::Rectangle{_bounds.x, _bounds.y, 40.0f, 40.0f});
+        },
+        "cross", "cross", "cross", zIndex + 1);
 
     _nextSong = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 60, bounds.y + 50, 30, 30}, "",
+        raylib::Rectangle{bounds.x + 60, bounds.y + 50, 30.0f, 30.0f}, "",
         [this]() {
             _songIdxM++;
             if (_songIdxM >= AssetManager::getInstance().getMusicPath("songs").size()) {
@@ -23,7 +36,7 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
         "play", "play", "play", zIndex + 1);
 
     _prevSong = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 20, bounds.y + 50, 30, 30}, "",
+        raylib::Rectangle{bounds.x + 20, bounds.y + 50, 30.0f, 30.0f}, "",
         [this]() {
             if (_songIdxM == 0) {
                 _songIdxM = AssetManager::getInstance().getMusicPath("songs").size() - 1;
@@ -32,22 +45,27 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
             }
             // TODO: change world ind to the song
         },
-        "play", "play", "play", zIndex + 1);
+        "stop", "stop", "stop", zIndex + 1);
 
     _openRadio = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x, bounds.y, bounds.width, bounds.height}, "",
-        [this]() { opened = !opened; }, "laud", "laud", "laud", zIndex + 2);
+        raylib::Rectangle{bounds.x, bounds.y, 40.0f, 40.0f}, "",
+        [this]() {
+            opened = true;
+            this->setBounds(raylib::Rectangle{_bounds.x, _bounds.y, 160.0f, 110.0f});
+        },
+        "laud", "laud", "laud", zIndex + 2);
 }
 
 void UIRadio::update(float dt, raylib::Vector2 mousePos,
                      std::shared_ptr<std::vector<UIEvent>> events) {
-    AUIComponent::update(dt, mousePos, events);
-
-    if (_openRadio) {
-        _openRadio->update(dt, mousePos, events);
-    }
-
-    if (opened) {
+    if (!opened) {
+        if (_openRadio) {
+            _openRadio->update(dt, mousePos, events);
+        }
+    } else {
+        if (_closeRadio) {
+            _closeRadio->update(dt, mousePos, events);
+        }
         if (_nextSong) {
             _nextSong->update(dt, mousePos, events);
         }
@@ -55,6 +73,8 @@ void UIRadio::update(float dt, raylib::Vector2 mousePos,
             _prevSong->update(dt, mousePos, events);
         }
     }
+
+    AUIComponent::update(dt, mousePos, events);
 }
 
 void UIRadio::render() {
@@ -62,13 +82,16 @@ void UIRadio::render() {
         return;
     }
 
-    if (_openRadio) {
-        _openRadio->render();
-    }
-
-    if (opened) {
+    if (!opened) {
+        if (_openRadio) {
+            _openRadio->render();
+        }
+    } else {
         if (_menuRadio) {
             _menuRadio->render();
+        }
+        if (_closeRadio) {
+            _closeRadio->render();
         }
         if (_nextSong) {
             _nextSong->render();
