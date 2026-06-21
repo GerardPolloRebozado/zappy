@@ -36,6 +36,16 @@ void AssetManager::_loadTextures() {
         _textures["input_bg"] =
             std::make_unique<raylib::Texture2D>("assets/ui/input_background.png");
 
+        // Event icon textures
+        _textures["evt_meteor_shower"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/meteor_shower.png");
+        _textures["evt_solar_flare"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/solar_flare.png");
+        _textures["evt_gravity_well"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/gravity_well.png");
+        _textures["evt_psionic_echo"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/psionic_echo.png");
+
         _textures["mannequin"] =
             std::make_unique<raylib::Texture2D>("assets/models/inhabitant/mannequin_texture.png");
 
