@@ -16,6 +16,8 @@
 #include "Systems/ParticleSystem.hpp"
 #include "Systems/RenderSystem.hpp"
 #include "UI/UIManager.hpp"
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <raylib-cpp.hpp>
 #include <string>
@@ -119,6 +121,7 @@ class Core {
     MenuState _menuState = MenuState::MAIN;  ///< Current menu state.
     bool _shouldClose = false;               ///< Flag to request application shutdown.
     std::shared_ptr<ChatLogs> _chatLogs;     ///< Handle the logs of the chat
+    std::vector<std::string> _bckMusic;      ///< List of Bck Music
 };
 
 } // namespace zappy
