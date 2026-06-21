@@ -122,6 +122,7 @@ class Core {
     bool _shouldClose = false;               ///< Flag to request application shutdown.
     std::shared_ptr<ChatLogs> _chatLogs;     ///< Handle the logs of the chat
     std::vector<std::string> _bckMusic;      ///< List of Bck Music
+    int _musicIdx = 0;                       ///< Index of the current music
 };
 
 } // namespace zappy

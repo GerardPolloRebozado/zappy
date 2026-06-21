@@ -29,6 +29,8 @@
 #include "raylib.h"
 #include <memory>
 
+#include "UI/UIRadio.hpp"
+
 namespace zappy {
 
 Core::Core(int port, const std::string& host) : _port(port), _host(host) {
