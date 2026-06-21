@@ -29,6 +29,8 @@
 #include "raylib.h"
 #include <memory>
 
+#include "UI/UIRadio.hpp"
+
 namespace zappy {
 
 Core::Core(int port, const std::string& host) : _port(port), _host(host) {
@@ -379,6 +381,13 @@ void Core::_setupGameUI() {
     auto backgroundMusic = _world.spawn();
     _world.add_component(backgroundMusic,
                          std::make_shared<ComponentMusic>(std::string(_bckMusic[0]), true));
+
+    // music panel
+
+    float panelY = 40.0f;
+
+    _uiManager->addComponent(std::make_shared<UIRadio>(
+        raylib::Rectangle{30.0f, panelY, 150.0f, 100.0f}, _world, 10, _musicIdx));
 
     // Chat Panel
     float chatY = (float)_window->GetHeight() - 240.0f;
