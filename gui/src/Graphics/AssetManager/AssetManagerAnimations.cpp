@@ -94,6 +94,18 @@ void AssetManager::_loadAnimations() {
             anim->boneCount = 21;
         }
 
+        if (_animations.count("inhabitant_movement_Jump_Full_Short")) {
+            ::ModelAnimation* anim = _animations["inhabitant_movement_Jump_Full_Short"];
+            for (int f = 0; f < anim->keyframeCount; f++) {
+                std::vector<Transform> oldPose(anim->keyframePoses[f],
+                                               anim->keyframePoses[f] + anim->boneCount);
+                for (int i = 0; i < 21; i++) {
+                    anim->keyframePoses[f][i] = oldPose[animMapping[i]];
+                }
+            }
+            anim->boneCount = 21;
+        }
+
         if (_animations.count("inhabitant_simulation_Push_Ups")) {
             int simMapping[] = {0,  1,  19, 20, 21, 22, 6, 7, 13, 14, 15,
                                 16, 18, 8,  9,  10, 11, 2, 3, 4,  5};
