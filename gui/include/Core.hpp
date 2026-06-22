@@ -15,6 +15,7 @@
 #include "Systems/MusicSystem.hpp"
 #include "Systems/ParticleSystem.hpp"
 #include "Systems/RenderSystem.hpp"
+#include "Systems/BackgroundSystem.hpp"
 #include "UI/UIManager.hpp"
 #include <memory>
 #include <raylib-cpp.hpp>
@@ -113,6 +114,7 @@ class Core {
     ParticleSystem _particleSystem;          ///< Handles particle system updates.
     AnimationSystem _animationSystem;        ///< Handles entity animations.
     MusicSystem _musicSystem;                ///< Handles music system updates.
+    BackgroundSystem _backgroundSystem;      ///< Handles background system updates
     int _port;                               ///< Server port.
     std::string _host;                       ///< Server host.
     AppState _appState = AppState::MENU;     ///< Current application state.

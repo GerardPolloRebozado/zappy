@@ -83,6 +83,15 @@ struct MovementInterpolation3D {
         false; ///< True if the visual position is currently moving towards the logical position.
     float targetZ = 2.01f;
 };
+
+struct BackgroundParallax {
+    raylib::Texture2D background = LoadTexture("assets/textures/background_1.png");
+    raylib::Texture2D midground = LoadTexture("assets/textures/background_2.png");
+    raylib::Texture2D foreground = LoadTexture("assets/textures/background_3.png");
+    float scrollingBack = 0.0f;
+    float scrollingMid = 0.0f;
+    float scrollingFore = 0.0f;
+};
 } // namespace zappy
 
 #endif // ZAPPY_GUI_COMPONENTSHARED_HPP
