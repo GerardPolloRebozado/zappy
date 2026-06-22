@@ -5,53 +5,84 @@
 ** UiRadio.cpp
 */
 #include "UI/UIRadio.hpp"
-#include "Graphics/AssetManager.hpp"
+#include "Components/ComponentMusic.hpp"
 
 namespace zappy {
 
-UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx)
-    : AUIComponent(bounds, nullptr, zIndex), _songIdxM(songIdx), _world(world) {
+UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx,
+                 std::vector<std::string> playlist)
+    : AUIComponent(bounds, nullptr, zIndex), _songIdxM(songIdx), _world(world),
+      _playlist(playlist) {
+
     _isVisible = true;
 
     _menuRadio = std::make_shared<UIPanel>(
-        raylib::Rectangle{bounds.x + 10, bounds.y + 10, 150.0f, 100.0f}, "input_bg", zIndex);
+        raylib::Rectangle{bounds.x + 10, bounds.y + 10, 250.0f, 100.0f}, "input_bg", zIndex);
 
     _closeRadio = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 120, bounds.y + 10, 30.0f, 30.0f}, "",
+        raylib::Rectangle{bounds.x + 200.0f, bounds.y + 20.0f, 40.0f, 40.0f}, "",
         [this]() {
             opened = false;
-            this->setBounds(raylib::Rectangle{_bounds.x, _bounds.y, 40.0f, 40.0f});
+            this->setBounds(raylib::Rectangle{_bounds.x, _bounds.y, 160.0f, 100.0f});
         },
         "cross", "cross", "cross", zIndex + 1);
 
-    _nextSong = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 60, bounds.y + 50, 30.0f, 30.0f}, "",
-        [this]() {
-            _songIdxM++;
-            if (_songIdxM >= AssetManager::getInstance().getMusicPath("songs").size()) {
-                _songIdxM = 0;
-            }
-            // TODO: change world ind to the song
-        },
-        "play", "play", "play", zIndex + 1);
-
     _prevSong = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 20, bounds.y + 50, 30.0f, 30.0f}, "",
+        raylib::Rectangle{bounds.x + 50.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
         [this]() {
+            if (_playlist.empty()) {
+                return;
+            }
+
             if (_songIdxM == 0) {
-                _songIdxM = AssetManager::getInstance().getMusicPath("songs").size() - 1;
+                _songIdxM = _playlist.size() - 1;
             } else {
                 _songIdxM--;
             }
-            // TODO: change world ind to the song
+
+            auto storage = _world.get_storage<ComponentMusic>();
+            if (storage) {
+                for (auto& [ent, comp] : *storage) {
+                    _world.despawn(ent);
+                    break;
+                }
+            }
+            auto newMusicEnt = _world.spawn();
+            _world.add_component(newMusicEnt,
+                                 std::make_shared<ComponentMusic>(_playlist[_songIdxM], true));
         },
         "stop", "stop", "stop", zIndex + 1);
 
+    _nextSong = std::make_shared<UIButton>(
+        raylib::Rectangle{bounds.x + 110.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
+        [this]() {
+            if (_playlist.empty()) {
+                return;
+            }
+
+            _songIdxM++;
+            if (_songIdxM >= _playlist.size()) {
+                _songIdxM = 0;
+            }
+
+            auto storage = _world.get_storage<ComponentMusic>();
+            if (storage) {
+                for (auto& [ent, comp] : *storage) {
+                    _world.despawn(ent);
+                    break;
+                }
+            }
+            auto newMusicEnt = _world.spawn();
+            _world.add_component(newMusicEnt,
+                                 std::make_shared<ComponentMusic>(_playlist[_songIdxM], true));
+        },
+        "play", "play", "play", zIndex + 1);
+
     _openRadio = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x, bounds.y, 40.0f, 40.0f}, "",
+        raylib::Rectangle{bounds.x, bounds.y, 160.0f, 100.0f}, "",
         [this]() {
             opened = true;
-            this->setBounds(raylib::Rectangle{_bounds.x, _bounds.y, 160.0f, 110.0f});
+            this->setBounds(raylib::Rectangle{_bounds.x, _bounds.y, 270.0f, 120.0f});
         },
         "laud", "laud", "laud", zIndex + 2);
 }
