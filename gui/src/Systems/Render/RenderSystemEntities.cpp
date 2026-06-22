@@ -224,6 +224,7 @@ void RenderSystem::_renderBackground(World& w) {
         DrawTextureEx(background.background, (Vector2){background.background.width*6 + background.scrollingBack, 0}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.background, (Vector2){background.background.width*8 + background.scrollingBack, 0}, 0.0f, 2.0f, WHITE);
 
+<<<<<<< HEAD
         DrawTextureEx(background.background, (Vector2){background.scrollingBack, background.background.height * 2.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.background, (Vector2){background.background.width*2 + background.scrollingBack, background.background.height * 2.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.background, (Vector2){background.background.width*4 + background.scrollingBack, background.background.height * 2.0f}, 0.0f, 2.0f, WHITE);
@@ -235,6 +236,19 @@ void RenderSystem::_renderBackground(World& w) {
         DrawTextureEx(background.background, (Vector2){background.background.width*4 + background.scrollingBack, background.background.height * 4.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.background, (Vector2){background.background.width*6 + background.scrollingBack, background.background.height * 4.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.background, (Vector2){background.background.width*8 + background.scrollingBack, background.background.height * 4.0f}, 0.0f, 2.0f, WHITE);
+=======
+        DrawTextureEx(background.background, (Vector2){background.scrollingBack, background.background.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.background, (Vector2){background.background.width*2 + background.scrollingBack, background.background.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.background, (Vector2){background.background.width*4 + background.scrollingBack, background.background.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.background, (Vector2){background.background.width*6 + background.scrollingBack, background.background.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.background, (Vector2){background.background.width*8 + background.scrollingBack, background.background.height * 2}, 0.0f, 2.0f, WHITE);
+
+        DrawTextureEx(background.background, (Vector2){background.scrollingBack, background.background.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.background, (Vector2){background.background.width*2 + background.scrollingBack, background.background.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.background, (Vector2){background.background.width*4 + background.scrollingBack, background.background.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.background, (Vector2){background.background.width*6 + background.scrollingBack, background.background.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.background, (Vector2){background.background.width*8 + background.scrollingBack, background.background.height * 4}, 0.0f, 2.0f, WHITE);
+>>>>>>> e13407e (feat: added space parallax background)
 
 
         // Midground
@@ -244,6 +258,7 @@ void RenderSystem::_renderBackground(World& w) {
         DrawTextureEx(background.midground, (Vector2){background.midground.width*6 + background.scrollingMid, 0}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.midground, (Vector2){background.midground.width*8 + background.scrollingMid, 0}, 0.0f, 2.0f, WHITE);
 
+<<<<<<< HEAD
         DrawTextureEx(background.midground, (Vector2){background.scrollingMid, background.midground.height * 2.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.midground, (Vector2){background.midground.width*2 + background.scrollingMid, background.midground.height * 2.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.midground, (Vector2){background.midground.width*4 + background.scrollingMid, background.midground.height * 2.0f}, 0.0f, 2.0f, WHITE);
@@ -255,6 +270,19 @@ void RenderSystem::_renderBackground(World& w) {
         DrawTextureEx(background.midground, (Vector2){background.midground.width*4 + background.scrollingMid, background.midground.height * 4.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.midground, (Vector2){background.midground.width*6 + background.scrollingMid, background.midground.height * 4.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.midground, (Vector2){background.midground.width*8 + background.scrollingMid, background.midground.height * 4.0f}, 0.0f, 2.0f, WHITE);
+=======
+        DrawTextureEx(background.midground, (Vector2){background.scrollingMid, background.midground.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.midground, (Vector2){background.midground.width*2 + background.scrollingMid, background.midground.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.midground, (Vector2){background.midground.width*4 + background.scrollingMid, background.midground.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.midground, (Vector2){background.midground.width*6 + background.scrollingMid, background.midground.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.midground, (Vector2){background.midground.width*8 + background.scrollingMid, background.midground.height * 2}, 0.0f, 2.0f, WHITE);
+
+        DrawTextureEx(background.midground, (Vector2){background.scrollingMid, background.midground.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.midground, (Vector2){background.midground.width*2 + background.scrollingMid, background.midground.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.midground, (Vector2){background.midground.width*4 + background.scrollingMid, background.midground.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.midground, (Vector2){background.midground.width*6 + background.scrollingMid, background.midground.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.midground, (Vector2){background.midground.width*8 + background.scrollingMid, background.midground.height * 4}, 0.0f, 2.0f, WHITE);
+>>>>>>> e13407e (feat: added space parallax background)
 
 
         // Foreground
@@ -264,6 +292,7 @@ void RenderSystem::_renderBackground(World& w) {
         DrawTextureEx(background.foreground, (Vector2){background.foreground.width*6 + background.scrollingFore, 0}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.foreground, (Vector2){background.foreground.width*8 + background.scrollingFore, 0}, 0.0f, 2.0f, WHITE);
 
+<<<<<<< HEAD
         DrawTextureEx(background.foreground, (Vector2){background.scrollingFore, background.foreground.height * 2.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.foreground, (Vector2){background.foreground.width*2 + background.scrollingFore, background.foreground.height * 2.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.foreground, (Vector2){background.foreground.width*4 + background.scrollingFore, background.foreground.height * 2.0f}, 0.0f, 2.0f, WHITE);
@@ -275,6 +304,19 @@ void RenderSystem::_renderBackground(World& w) {
         DrawTextureEx(background.foreground, (Vector2){background.foreground.width*4 + background.scrollingFore, background.foreground.height * 4.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.foreground, (Vector2){background.foreground.width*6 + background.scrollingFore, background.foreground.height * 4.0f}, 0.0f, 2.0f, WHITE);
         DrawTextureEx(background.foreground, (Vector2){background.foreground.width*8 + background.scrollingFore, background.foreground.height * 4.0f}, 0.0f, 2.0f, WHITE);
+=======
+        DrawTextureEx(background.foreground, (Vector2){background.scrollingFore, background.foreground.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.foreground, (Vector2){background.foreground.width*2 + background.scrollingFore, background.foreground.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.foreground, (Vector2){background.foreground.width*4 + background.scrollingFore, background.foreground.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.foreground, (Vector2){background.foreground.width*6 + background.scrollingFore, background.foreground.height * 2}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.foreground, (Vector2){background.foreground.width*8 + background.scrollingFore, background.foreground.height * 2}, 0.0f, 2.0f, WHITE);
+
+        DrawTextureEx(background.foreground, (Vector2){background.scrollingFore, background.foreground.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.foreground, (Vector2){background.foreground.width*2 + background.scrollingFore, background.foreground.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.foreground, (Vector2){background.foreground.width*4 + background.scrollingFore, background.foreground.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.foreground, (Vector2){background.foreground.width*6 + background.scrollingFore, background.foreground.height * 4}, 0.0f, 2.0f, WHITE);
+        DrawTextureEx(background.foreground, (Vector2){background.foreground.width*8 + background.scrollingFore, background.foreground.height * 4}, 0.0f, 2.0f, WHITE);
+>>>>>>> e13407e (feat: added space parallax background)
     }
 }
 
