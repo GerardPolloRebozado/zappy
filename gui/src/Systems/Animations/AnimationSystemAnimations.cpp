@@ -20,7 +20,15 @@ void AnimationSystem::_updateAnimations(World& w) {
                     if (anim->loop) {
                         anim->currentFrame = 0.0f;
                     } else {
+                        anim->finished = true;
                         anim->currentFrame = static_cast<float>(modelAnim.keyframeCount - 1);
+                    }
+                } else if (anim->currentFrame < 0.0f) {
+                    if (anim->loop) {
+                        anim->currentFrame = static_cast<float>(modelAnim.keyframeCount - 1);
+                    } else {
+                        anim->finished = true;
+                        anim->currentFrame = 0.0f;
                     }
                 }
             } catch (const std::exception& e) {

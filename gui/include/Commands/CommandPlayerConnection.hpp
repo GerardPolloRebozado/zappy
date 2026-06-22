@@ -61,6 +61,7 @@ class CommandPlayerConnection : public ACommand {
                                        {"inhabitant_general_Idle_A", 0.0f, 60.0f, 1.0f, true});
         world.add_component<MovementInterpolation2D>(
             player, {static_cast<float>(x), static_cast<float>(y), false});
+        world.add_component<EventJump>(player, EventJump{});
 
         log_info("Protocol: New player #" + std::to_string(playerId) +
                  " connected (Team: " + teamName + ")");

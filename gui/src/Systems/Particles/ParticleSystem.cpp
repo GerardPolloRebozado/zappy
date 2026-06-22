@@ -13,6 +13,7 @@ namespace zappy {
 void ParticleSystem::update(World& w, float dt) {
     _handleEggs(w);
     _handleDeaths(w);
+    _handleJumps(w);
     _handleIncantationStart(w);
     _handleIncantationEnd(w);
     _handleBroadcast(w);
