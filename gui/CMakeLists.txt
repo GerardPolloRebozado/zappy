@@ -80,6 +80,7 @@ set(CORE_SOURCES
         src/UI/UIHudPanel.cpp
         src/UI/UIScoreboardPanel.cpp
         src/UI/UISlider.cpp
+        src/UI/UIEventMenu.cpp
         src/Core.cpp
         src/CoreUpdate.cpp
         src/CoreUI.cpp
@@ -99,6 +100,7 @@ set(CORE_SOURCES
         include/UI/UIHudPanel.hpp
         include/UI/UIScoreboardPanel.hpp
         include/UI/UISlider.hpp
+        include/UI/UIEventMenu.hpp
         include/Systems/RenderSystem.hpp
         include/Graphics/AssetManager.hpp
         include/Core.hpp
