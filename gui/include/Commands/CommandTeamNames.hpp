@@ -44,24 +44,37 @@ class CommandTeamNames : public ACommand {
             return;
         }
 
-        auto storage = world.get_storage<TeamName>();
-        if (storage) {
-            for (auto const& [ent, name] : *storage) {
+        auto teamStorage = world.get_storage<TeamTag>();
+        auto nameStorage = world.get_storage<TeamName>();
+        bool teamFound = false;
+        if (teamStorage && nameStorage) {
+            for (auto const& [ent, tag] : *teamStorage) {
+                auto name = world.get_component<TeamName>(ent);
                 if (name && name->_team_name == teamName) {
-                    return; // Team already exists
+                    teamFound = true;
+                    break;
                 }
             }
         }
+        if (teamFound) {
+            return;
+        }
 
         Entity teamEntity = world.spawn();
-        auto team_storage = world.get_storage<TeamTag>();
-        int n_teams = 0;
-        if (team_storage != nullptr) {
-            n_teams = team_storage->size();
-        }
-        TeamName team(teamName, TEAM_COLORS[n_teams % TEAM_COLORS.size()]);
+        int n_teams = teamStorage ? teamStorage->size() : 0;
+        raylib::Color color = TEAM_COLORS[n_teams % TEAM_COLORS.size()];
+        TeamName team(teamName, color);
         world.add_component<TeamName>(teamEntity, team);
         world.add_component<TeamTag>(teamEntity, TeamTag{});
+
+        // apply the color to any players that were spawned before this team was registered
+        if (nameStorage) {
+            for (auto& [ent, name] : *nameStorage) {
+                if (name && name->_team_name == teamName) {
+                    name->_color = color;
+                }
+            }
+        }
         log_info("Protocol: Team added: " + teamName);
     };
 };

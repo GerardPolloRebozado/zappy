@@ -33,6 +33,19 @@ void AssetManager::_loadTextures() {
             std::make_unique<raylib::Texture2D>("assets/ui/button_active.png");
         _textures["panel_bg"] =
             std::make_unique<raylib::Texture2D>("assets/ui/panel_background.png");
+
+        _textures["hud_bg"] = std::make_unique<raylib::Texture2D>("assets/ui/hud_bg.png");
+        _textures["hud_icon_food"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/hud_icon_food.png");
+        _textures["hud_icon_level"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/hud_icon_level.png");
+        _textures["hud_icon_team"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/hud_icon_team.png");
+        _textures["hud_bar_bg"] = std::make_unique<raylib::Texture2D>("assets/ui/hud_bar_bg.png");
+        _textures["hud_bar_fill"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/hud_bar_fill.png");
+        _textures["hud_icon_resource"] =
+            std::make_unique<raylib::Texture2D>("assets/ui/hud_icon_resource.png");
         _textures["input_bg"] =
             std::make_unique<raylib::Texture2D>("assets/ui/input_background.png");
 
@@ -48,6 +61,13 @@ void AssetManager::_loadTextures() {
 
         _textures["mannequin"] =
             std::make_unique<raylib::Texture2D>("assets/models/inhabitant/mannequin_texture.png");
+
+        _textures["laud"] = std::make_unique<raylib::Texture2D>("assets/ui/laud.png");
+        _textures["play"] = std::make_unique<raylib::Texture2D>("assets/ui/play.png");
+        _textures["stop"] = std::make_unique<raylib::Texture2D>("assets/ui/stop.png");
+        _textures["cross"] = std::make_unique<raylib::Texture2D>("assets/ui/close.png");
+        _textures["next"] = std::make_unique<raylib::Texture2D>("assets/ui/step_front.png");
+        _textures["prev"] = std::make_unique<raylib::Texture2D>("assets/ui/step_back.png");
 
         // Apply custom tintable texture to all materials of the mannequin model
         if (_models.find("robot") != _models.end() &&

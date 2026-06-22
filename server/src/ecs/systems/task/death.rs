@@ -1,4 +1,7 @@
-use crate::{ecs::storage::Entity, protocol::{Response, ResponseCode, ServerEvent, StatusCode}};
+use crate::{
+    ecs::storage::Entity,
+    protocol::{Response, ResponseCode, ServerEvent, StatusCode},
+};
 
 /// Runs the AI `Death` task for an entity.
 ///
@@ -10,6 +13,8 @@ pub fn execute_death(entity: Entity) -> (Response, Option<ServerEvent>) {
             ResponseCode::Status(StatusCode::Ok),
             Some("dead".to_string()),
         ),
-        Some(ServerEvent::Dead { player_id: entity.id() })
+        Some(ServerEvent::Dead {
+            player_id: entity.id(),
+        }),
     )
 }

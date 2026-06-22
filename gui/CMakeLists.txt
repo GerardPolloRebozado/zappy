@@ -57,6 +57,8 @@ set(CORE_SOURCES
         src/Systems/Particles/ParticleSystemHandleDeaths.cpp
         src/Systems/Particles/ParticleSystemHandleIncantationStart.cpp
         src/Systems/Particles/ParticleSystemHandleIncantationEnd.cpp
+        src/Systems/Particles/ParticleSystemHandleJump.cpp
+        src/Systems/Particles/ParticleSystemHandleBroadcast.cpp
         src/Systems/Particles/ParticleSystemEmitters.cpp
         src/Systems/Animations/AnimationSystem.cpp
         src/Systems/Animations/AnimationSystemMovement2D.cpp
@@ -77,6 +79,7 @@ set(CORE_SOURCES
         src/UI/UIInput.cpp
         src/UI/UIPanel.cpp
         src/UI/UIText.cpp
+        src/UI/UIRadio.cpp
         src/UI/UIHudPanel.cpp
         src/UI/UIScoreboardPanel.cpp
         src/UI/UISlider.cpp
@@ -97,6 +100,7 @@ set(CORE_SOURCES
         include/UI/UIInput.hpp
         include/UI/UIPanel.hpp
         include/UI/UIText.hpp
+        include/UI/UIRadio.hpp
         include/UI/UIHudPanel.hpp
         include/UI/UIScoreboardPanel.hpp
         include/UI/UISlider.hpp

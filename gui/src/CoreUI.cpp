@@ -23,6 +23,7 @@
 #include "UI/UIInput.hpp"
 #include "UI/UIManager.hpp"
 #include "UI/UIPanel.hpp"
+#include "UI/UIRadio.hpp"
 #include "UI/UIScoreboardPanel.hpp"
 #include "UI/UISlider.hpp"
 #include "UI/UIText.hpp"
@@ -240,11 +241,27 @@ void Core::_setupGameUI() {
                                                         (float)_window->GetHeight() - 60, 150, 50},
                                       _world, _network, _chatLogs, 10));
 
-    auto backgroundMusic = _world.spawn();
-    _world.add_component(
-        backgroundMusic,
-        std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
+    std::filesystem::path dirpath = "assets/sounds/music";
 
+    if (!std::filesystem::exists(dirpath)) {
+        std::filesystem::create_directory(dirpath);
+    }
+    if (std::filesystem::exists(dirpath)) {
+        for (const auto& entry : std::filesystem::directory_iterator(dirpath)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".mp3") {
+                _bckMusic.push_back(entry.path().string());
+            }
+        }
+    }
+
+    auto backgroundMusic = _world.spawn();
+    _world.add_component(backgroundMusic,
+                         std::make_shared<ComponentMusic>(std::string(_bckMusic[0]), true));
+
+    // music panel
+    _uiManager->addComponent(std::make_shared<UIRadio>(
+        raylib::Rectangle{40.0f, 40.0f, 160.0f, 100.0f}, _world, 15, 0, _bckMusic));
+    // Chat Panel
     // Chat Panel
     float chatY = (float)_window->GetHeight() - 240.0f;
     _uiManager->addComponent(std::make_shared<UIChatPanel>(

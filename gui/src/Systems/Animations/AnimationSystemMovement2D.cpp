@@ -25,7 +25,13 @@ void AnimationSystem::_update2DMovement(World& w, float freq) {
             const float dy = targetY - move->visualY;
             const float dist = std::sqrt(dx * dx + dy * dy);
 
-            if (dist > 0.05f) {
+            if (dist > 1.5f) {
+                // If the distance is more than 1.5 tiles, the player must have teleported
+                // (e.g., crossing the map boundaries and wrapping around).
+                move->isMoving = false;
+                move->visualX = targetX;
+                move->visualY = targetY;
+            } else if (dist > 0.05f) {
                 move->isMoving = true;
                 float moveX = (dx / dist) * speed;
                 float moveY = (dy / dist) * speed;
@@ -48,18 +54,32 @@ void AnimationSystem::_update2DMovement(World& w, float freq) {
             if (w.get_component<InhabitantTag>(entity)) {
                 auto anim = w.get_component<Animation>(entity);
                 if (anim) {
+                    if (anim->finished) {
+                        anim->finished = false;
+                        anim->currentFrame = 0.0f;
+                        anim->loop = true;
+                        anim->currentAnim = "inhabitant_general_Idle_A";
+                    }
                     if (move->isMoving) {
                         anim->currentAnim = "inhabitant_movement_Walking_A";
                         anim->speedMultiplier = (freq / 7.0f);
                     } else {
                         if (anim->currentAnim != "inhabitant_simulation_Push_Ups" &&
-                            anim->currentAnim != "inhabitant_general_Death_A") {
+                            anim->currentAnim != "inhabitant_general_Death_A" &&
+                            anim->currentAnim != "inhabitant_movement_Jump_Full_Short") {
                             anim->currentAnim = "inhabitant_general_Idle_A";
                         }
-                        anim->speedMultiplier = (freq / 50.0f);
-                    }
-                    if (anim->speedMultiplier < 0.5f) {
-                        anim->speedMultiplier = 0.5f;
+                        if (anim->currentAnim == "inhabitant_movement_Jump_Full_Short") {
+                            anim->speedMultiplier = -(freq / 30.0f);
+                            if (anim->speedMultiplier > -0.5f) {
+                                anim->speedMultiplier = -0.5f;
+                            }
+                        } else {
+                            anim->speedMultiplier = (freq / 50.0f);
+                            if (anim->speedMultiplier < 0.5f) {
+                                anim->speedMultiplier = 0.5f;
+                            }
+                        }
                     }
                 }
             }

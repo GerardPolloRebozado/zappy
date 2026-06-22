@@ -10,6 +10,7 @@
 #include "ACommand.hpp"
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
+#include "Components/ComponentTags.hpp"
 #include "Logging/Logger.hpp"
 #include <algorithm>
 #include <sstream>
@@ -46,6 +47,7 @@ class CommandPlayerBroadcast : public ACommand {
             for (auto const& [entity, pos] : *posStorage) {
                 auto serverId = world.get_component<ServerId>(entity);
                 if (serverId && serverId->id == playerId) {
+                    world.add_component<EventBroadcast>(entity, EventBroadcast{});
                     auto teamComp = world.get_component<TeamName>(entity);
                     if (teamComp) {
                         teamStr = teamComp->_team_name;

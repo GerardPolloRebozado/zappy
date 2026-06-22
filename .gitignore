@@ -5,6 +5,7 @@
 Thumbs.db
 desktop.ini
 
+.zed
 
 .idea/
 .vscode/
@@ -137,3 +138,13 @@ compile_commands.json
 *.old
 
 *.zip
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
