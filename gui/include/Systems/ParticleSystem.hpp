@@ -14,6 +14,7 @@ class ParticleSystem {
     void _handleDeaths(World& w);
     void _handleIncantationStart(World& w);
     void _handleIncantationEnd(World& w);
+    void _handleBroadcast(World& w);
     void _updateEmitters(World& w, float dt);
 };
 
