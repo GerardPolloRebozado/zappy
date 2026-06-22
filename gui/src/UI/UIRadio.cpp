@@ -6,6 +6,7 @@
 */
 #include "UI/UIRadio.hpp"
 #include "Components/ComponentMusic.hpp"
+#include <raylib.h>
 
 namespace zappy {
 
@@ -20,7 +21,7 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
         raylib::Rectangle{bounds.x + 10, bounds.y + 10, 250.0f, 100.0f}, "input_bg", zIndex);
 
     _closeRadio = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 200.0f, bounds.y + 20.0f, 40.0f, 40.0f}, "",
+        raylib::Rectangle{bounds.x + 210.0f, bounds.y + 20.0f, 40.0f, 40.0f}, "",
         [this]() {
             opened = false;
             this->setBounds(raylib::Rectangle{_bounds.x, _bounds.y, 160.0f, 100.0f});
@@ -28,7 +29,7 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
         "cross", "cross", "cross", zIndex + 1);
 
     _prevSong = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 50.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
+        raylib::Rectangle{bounds.x + 10.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
         [this]() {
             if (_playlist.empty()) {
                 return;
@@ -51,10 +52,42 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
             _world.add_component(newMusicEnt,
                                  std::make_shared<ComponentMusic>(_playlist[_songIdxM], true));
         },
+        "prev", "prev", "prev", zIndex + 1);
+
+    _playBtn = std::make_shared<UIButton>(
+        raylib::Rectangle{bounds.x + 60.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
+        [this]() {
+            auto storage = _world.get_storage<ComponentMusic>();
+            if (storage) {
+                for (auto& [ent, comp] : *storage) {
+                    if (!comp->isPlaying && comp->isStarted) {
+                        comp->isPlaying = true;
+                        ResumeMusicStream(comp->song.music);
+                    }
+                    break;
+                }
+            }
+        },
+        "play", "play", "play", zIndex + 1);
+
+    _stopBtn = std::make_shared<UIButton>(
+        raylib::Rectangle{bounds.x + 110.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
+        [this]() {
+            auto storage = _world.get_storage<ComponentMusic>();
+            if (storage) {
+                for (auto& [ent, comp] : *storage) {
+                    if (comp->isPlaying) {
+                        comp->isPlaying = false;
+                        PauseMusicStream(comp->song.music);
+                    }
+                    break;
+                }
+            }
+        },
         "stop", "stop", "stop", zIndex + 1);
 
     _nextSong = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 110.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
+        raylib::Rectangle{bounds.x + 160.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
         [this]() {
             if (_playlist.empty()) {
                 return;
@@ -76,7 +109,7 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
             _world.add_component(newMusicEnt,
                                  std::make_shared<ComponentMusic>(_playlist[_songIdxM], true));
         },
-        "play", "play", "play", zIndex + 1);
+        "next", "next", "next", zIndex + 1);
 
     _openRadio = std::make_shared<UIButton>(
         raylib::Rectangle{bounds.x, bounds.y, 160.0f, 100.0f}, "",
@@ -97,11 +130,17 @@ void UIRadio::update(float dt, raylib::Vector2 mousePos,
         if (_closeRadio) {
             _closeRadio->update(dt, mousePos, events);
         }
-        if (_nextSong) {
-            _nextSong->update(dt, mousePos, events);
-        }
         if (_prevSong) {
             _prevSong->update(dt, mousePos, events);
+        }
+        if (_playBtn) {
+            _playBtn->update(dt, mousePos, events);
+        }
+        if (_stopBtn) {
+            _stopBtn->update(dt, mousePos, events);
+        }
+        if (_nextSong) {
+            _nextSong->update(dt, mousePos, events);
         }
     }
 
@@ -124,11 +163,17 @@ void UIRadio::render() {
         if (_closeRadio) {
             _closeRadio->render();
         }
-        if (_nextSong) {
-            _nextSong->render();
-        }
         if (_prevSong) {
             _prevSong->render();
+        }
+        if (_playBtn) {
+            _playBtn->render();
+        }
+        if (_stopBtn) {
+            _stopBtn->render();
+        }
+        if (_nextSong) {
+            _nextSong->render();
         }
     }
 }
