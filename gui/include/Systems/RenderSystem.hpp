@@ -115,6 +115,7 @@ class RenderSystem {
     void _renderTombs(World& w);
     void _renderParticles(World& w);
     void _renderIncantations(World& w);
+    void _renderBackground(World& w);
 
     /**
      * @brief Renders the inhabitants in the world.
