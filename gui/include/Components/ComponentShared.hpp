@@ -27,6 +27,8 @@ struct Inventory {
     int mendiane;
     int phiras;
     int thystame;
+    float exactHp = -1.0f;
+    float maxHp = 1260.0f;
 };
 
 struct Renderable3D {
@@ -69,7 +71,8 @@ struct Animation {
 struct MovementInterpolation2D {
     float visualX = -1.0f; ///< The smooth visual X coordinate of the entity.
     float visualY = -1.0f; ///< The smooth visual Y coordinate of the entity.
-    bool isMoving = false; ///< True if the visual position is currently moving towards the logical position.
+    bool isMoving =
+        false; ///< True if the visual position is currently moving towards the logical position.
 };
 
 /**
