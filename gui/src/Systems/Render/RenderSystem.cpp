@@ -56,14 +56,32 @@ void RenderSystem::centerCamera(int width, int height) {
 }
 
 void RenderSystem::update(World& w, float dt) {
-    (void)w;
-    _handleInput(dt);
+    _handleInput(w, dt);
     _updateHoverState();
 
     auto incantationStorage = w.get_storage<ComponentIncantationEffect>();
     if (incantationStorage) {
         for (auto& [entity, effect] : *incantationStorage) {
             effect->timeElapsed += dt;
+        }
+    }
+
+    // Update player HP based on server frequency
+    float freq = 100.0f;
+    auto timeStorage = w.get_storage<TimeUnit>();
+    if (timeStorage && timeStorage->begin() != timeStorage->end()) {
+        freq = (float)timeStorage->begin()->second->frequency;
+    }
+
+    auto invStorage = w.get_storage<Inventory>();
+    if (invStorage) {
+        for (auto& [entity, inv] : *invStorage) {
+            if (inv->exactHp > 0.0f) {
+                inv->exactHp -= freq * dt;
+                if (inv->exactHp < 0.0f) {
+                    inv->exactHp = 0.0f;
+                }
+            }
         }
     }
 }
@@ -132,7 +150,7 @@ void RenderSystem::_lazyLoadAssets() {
     }
 }
 
-void RenderSystem::_handleInput(float dt) {
+void RenderSystem::_handleInput(World& w, float dt) {
     float moveSpeed = 20.0f * dt;
     float rotateSpeed = 2.0f * dt;
 
@@ -207,6 +225,41 @@ void RenderSystem::_handleInput(float dt) {
     if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT)) {
         _selectedX = _hoveredX;
         _selectedZ = _hoveredZ;
+        _selectedPlayer = std::nullopt;
+
+        // Player Selection Raycast
+        raylib::Ray ray = _camera.GetMouseRay(raylib::Mouse::GetPosition());
+        auto moveStorage = w.get_storage<MovementInterpolation2D>();
+        if (moveStorage) {
+            float closestDist = 999999.0f;
+            for (auto const& [entity, move] : *moveStorage) {
+                if (w.get_component<InhabitantTag>(entity)) {
+                    ::BoundingBox bbox;
+                    bbox.min = (::Vector3){move->visualX - 0.6f, 1.0f, move->visualY - 0.6f};
+                    bbox.max = (::Vector3){move->visualX + 0.6f, 4.5f, move->visualY + 0.6f};
+                    ::RayCollision collision = ::GetRayCollisionBox(ray, bbox);
+                    if (collision.hit && collision.distance < closestDist) {
+                        closestDist = collision.distance;
+                        _selectedPlayer = entity;
+                    }
+                }
+            }
+        }
+
+        // Fallback: if we didn't hit the 3D model precisely, but clicked on a tile with a player
+        if (!_selectedPlayer.has_value() && _selectedX != InvalidTileCoord &&
+            _selectedZ != InvalidTileCoord) {
+            auto posStorage = w.get_storage<Position>();
+            if (posStorage) {
+                for (auto const& [entity, pos] : *posStorage) {
+                    if (pos && pos->x == _selectedX && pos->y == _selectedZ &&
+                        w.get_component<InhabitantTag>(entity)) {
+                        _selectedPlayer = entity;
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     _showDebugHud =

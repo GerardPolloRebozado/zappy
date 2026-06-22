@@ -45,6 +45,10 @@ class AResourceCommand : public ACommand {
         switch (resourceId) {
             case 0:
                 inv->food += delta;
+                inv->exactHp += delta * 126.0f;
+                if (inv->exactHp > inv->maxHp) {
+                    inv->maxHp = inv->exactHp;
+                }
                 break;
             case 1:
                 inv->linemate += delta;

@@ -88,6 +88,11 @@ class RenderSystem {
      */
     std::pair<int, int> getSelectedTile() const { return {_selectedX, _selectedZ}; }
 
+    /**
+     * @brief Returns the ID of the currently selected player, or nullopt if none.
+     */
+    std::optional<Entity> getSelectedPlayer() const { return _selectedPlayer; }
+
   private:
     /**
      * @brief Lazily loads textures and models once the OpenGL context is ready.
@@ -96,9 +101,10 @@ class RenderSystem {
 
     /**
      * @brief Processes user input for camera movement (WASD), rotation (QE/RF), and zoom.
+     * @param w The ECS world
      * @param dt delta time
      */
-    void _handleInput(float dt);
+    void _handleInput(World& w, float dt);
 
     /**
      * @brief Renders the terrain tiles based on their types and positions.
@@ -155,6 +161,7 @@ class RenderSystem {
     int _hoveredZ = InvalidTileCoord;
     int _selectedX = InvalidTileCoord;
     int _selectedZ = InvalidTileCoord;
+    std::optional<Entity> _selectedPlayer = std::nullopt;
 
     bool _showDebugHud = false;
     void _renderDebugHud(World& w);
