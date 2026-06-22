@@ -58,6 +58,10 @@ class CommandPlayerInventory : public ACommand {
                     inv->mendiane = q4;
                     inv->phiras = q5;
                     inv->thystame = q6;
+                    inv->exactHp = (float)q0 * 126.0f;
+                    if (inv->exactHp > inv->maxHp) {
+                        inv->maxHp = inv->exactHp;
+                    }
                 }
                 log_info("Protocol: Player #" + std::to_string(playerId) + " inventory updated");
                 break;

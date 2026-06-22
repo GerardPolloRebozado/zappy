@@ -1,5 +1,6 @@
 use crate::commands::{gev, ppo};
 use crate::ecs::components::network::NetworkData;
+use crate::ecs::components::tile::Tile;
 use crate::ecs::map_events::map_event_from_name;
 use crate::ecs::map_size;
 use crate::ecs::storage::{Entity, World};
@@ -44,18 +45,19 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
 
         Command::Mct => {
             let mut responses = Vec::new();
-            let width = server.world.map_size.width;
-            let height = server.world.map_size.height;
-            for y in 0..height {
-                for x in 0..width {
-                    if let Some(data) = map_size::get_tile_content(&server.world, x, y) {
-                        responses.push(data);
-                    }
-                }
+            let tile_storage = server.world.get_storage::<Tile>();
+            if tile_storage.is_none() {
+                return;
+            }
+            let tile_storage = tile_storage.unwrap();
+
+            for (e, _) in tile_storage.iter() {
+                responses.push(map_size::get_tile_content_by_entity(&server.world, *e));
             }
             let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;
             };
+
             for r in responses {
                 network_data
                     .pending_responses

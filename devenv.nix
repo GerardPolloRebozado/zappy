@@ -48,6 +48,7 @@
     pkgs.libxinerama
     pkgs.python312
     pkgs.pre-commit
+    pkgs.criterion
   ];
 
   # https://devenv.sh/languages/
@@ -65,6 +66,7 @@
 
   # https://devenv.sh/scripts/
   scripts.hello.exec = ''
+    export NIX_CFLAGS_COMPILE="-fno-omit-frame-pointer $NIX_CFLAGS_COMPILE"
     echo "hello from $GREET (with Rust, CMake, and Valgrind ready!)"
   '';
 
