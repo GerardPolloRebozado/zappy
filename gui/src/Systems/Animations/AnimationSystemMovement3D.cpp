@@ -1,3 +1,4 @@
+#include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentTags.hpp"
 #include "Systems/AnimationSystem.hpp"
 
@@ -56,6 +57,8 @@ void AnimationSystem::_update3DMovement(World& w, float freq) {
 
                 if (w.get_component<AnimatedResource>(entity)) {
                     entitiesToDespawn.push_back(entity);
+                } else if (auto emitter = w.get_component<ComponentParticleEmitter>(entity)) {
+                    emitter->isPlaying = false;
                 }
             }
         }
