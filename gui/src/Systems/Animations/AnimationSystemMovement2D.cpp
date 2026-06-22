@@ -48,12 +48,19 @@ void AnimationSystem::_update2DMovement(World& w, float freq) {
             if (w.get_component<InhabitantTag>(entity)) {
                 auto anim = w.get_component<Animation>(entity);
                 if (anim) {
+                    if (anim->finished) {
+                        anim->finished = false;
+                        anim->currentFrame = 0.0f;
+                        anim->loop = true;
+                        anim->currentAnim = "inhabitant_general_Idle_A";
+                    }
                     if (move->isMoving) {
                         anim->currentAnim = "inhabitant_movement_Walking_A";
                         anim->speedMultiplier = (freq / 7.0f);
                     } else {
                         if (anim->currentAnim != "inhabitant_simulation_Push_Ups" &&
-                            anim->currentAnim != "inhabitant_general_Death_A") {
+                            anim->currentAnim != "inhabitant_general_Death_A" &&
+                            anim->currentAnim != "inhabitant_movement_Jump_Full_Short") {
                             anim->currentAnim = "inhabitant_general_Idle_A";
                         }
                         anim->speedMultiplier = (freq / 50.0f);

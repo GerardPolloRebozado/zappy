@@ -59,6 +59,7 @@ struct Animation {
     float speedMultiplier =
         1.0f;         ///< Multiplier to adjust animation speed based on game time frequency.
     bool loop = true; ///< Whether the animation should restart when reaching the end.
+    bool finished = false;
 };
 
 /**

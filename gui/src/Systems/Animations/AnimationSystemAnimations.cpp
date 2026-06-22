@@ -20,6 +20,7 @@ void AnimationSystem::_updateAnimations(World& w) {
                     if (anim->loop) {
                         anim->currentFrame = 0.0f;
                     } else {
+                        anim->finished = true;
                         anim->currentFrame = static_cast<float>(modelAnim.keyframeCount - 1);
                     }
                 }

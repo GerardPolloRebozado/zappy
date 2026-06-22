@@ -29,5 +29,6 @@ struct EventIncantationEnd {
 struct EventDeath {};
 struct TombTag {};
 } // namespace zappy
+struct EventJump {};
 
 #endif // ZAPPY_GUI_COMPONENTTAGS_HPP
