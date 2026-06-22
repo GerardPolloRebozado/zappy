@@ -25,7 +25,13 @@ void AnimationSystem::_update2DMovement(World& w, float freq) {
             const float dy = targetY - move->visualY;
             const float dist = std::sqrt(dx * dx + dy * dy);
 
-            if (dist > 0.05f) {
+            if (dist > 1.5f) {
+                // If the distance is more than 1.5 tiles, the player must have teleported
+                // (e.g., crossing the map boundaries and wrapping around).
+                move->isMoving = false;
+                move->visualX = targetX;
+                move->visualY = targetY;
+            } else if (dist > 0.05f) {
                 move->isMoving = true;
                 float moveX = (dx / dist) * speed;
                 float moveY = (dy / dist) * speed;

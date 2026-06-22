@@ -34,10 +34,13 @@ class CommandPlayerConnection : public ACommand {
         std::istringstream iss(cleanArgs);
         int playerId, x, y, orientation, level;
         std::string teamName;
-        if (!(iss >> playerId >> x >> y >> orientation >> level >> teamName)) {
+        if (!(iss >> playerId >> x >> y >> orientation >> level)) {
             log_error("Protocol: failed to parse player connection args: " + args);
             return;
         }
+        std::getline(iss, teamName);
+        teamName.erase(0, teamName.find_first_not_of(" \t\n\r"));
+        teamName.erase(teamName.find_last_not_of(" \t\n\r") + 1);
         if (_chatLogs) {
             _chatLogs->addChatLog("Player #" + std::to_string(playerId) +
                                       " connected (Team: " + teamName + ")",

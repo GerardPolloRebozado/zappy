@@ -26,10 +26,15 @@ void ParticleSystem::_updateEmitters(World& w, float dt) {
         auto& emitter = *emitterPtr;
 
         raylib::Vector3 basePos(0.0f, 0.0f, 0.0f);
-        auto posComponent = w.get_component<Position>(entity);
-        if (posComponent) {
-            basePos = raylib::Vector3(static_cast<float>(posComponent->x), 2.0f,
-                                      static_cast<float>(posComponent->y));
+        auto move3d = w.get_component<MovementInterpolation3D>(entity);
+        if (move3d && move3d->visualX >= 0.0f) {
+            basePos = raylib::Vector3(move3d->visualX, move3d->visualZ, move3d->visualY);
+        } else {
+            auto posComponent = w.get_component<Position>(entity);
+            if (posComponent) {
+                basePos = raylib::Vector3(static_cast<float>(posComponent->x), 2.0f,
+                                          static_cast<float>(posComponent->y));
+            }
         }
 
         if (emitter.isPlaying) {
