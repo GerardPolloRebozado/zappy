@@ -18,10 +18,10 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
     _isVisible = true;
 
     _menuRadio = std::make_shared<UIPanel>(
-        raylib::Rectangle{bounds.x + 10, bounds.y + 10, 250.0f, 100.0f}, "input_bg", zIndex);
+        raylib::Rectangle{bounds.x + 10, bounds.y + 10, 250.0f, 125.0f}, "input_bg", zIndex);
 
     _closeRadio = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 210.0f, bounds.y + 20.0f, 40.0f, 40.0f}, "",
+        raylib::Rectangle{bounds.x + 205.0f, bounds.y + 15.0f, 40.0f, 40.0f}, "",
         [this]() {
             opened = false;
             this->setBounds(raylib::Rectangle{_bounds.x, _bounds.y, 160.0f, 100.0f});
@@ -29,7 +29,7 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
         "cross", "cross", "cross", zIndex + 1);
 
     _prevSong = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 10.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
+        raylib::Rectangle{bounds.x + 40.0f, bounds.y + 65.0f, 40.0f, 40.0f}, "",
         [this]() {
             if (_playlist.empty()) {
                 return;
@@ -55,7 +55,7 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
         "prev", "prev", "prev", zIndex + 1);
 
     _playBtn = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 60.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
+        raylib::Rectangle{bounds.x + 90.0f, bounds.y + 65.0f, 40.0f, 40.0f}, "",
         [this]() {
             auto storage = _world.get_storage<ComponentMusic>();
             if (storage) {
@@ -71,7 +71,7 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
         "play", "play", "play", zIndex + 1);
 
     _stopBtn = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 110.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
+        raylib::Rectangle{bounds.x + 140.0f, bounds.y + 65.0f, 40.0f, 40.0f}, "",
         [this]() {
             auto storage = _world.get_storage<ComponentMusic>();
             if (storage) {
@@ -87,17 +87,15 @@ UIRadio::UIRadio(raylib::Rectangle bounds, World& world, int zIndex, int songIdx
         "stop", "stop", "stop", zIndex + 1);
 
     _nextSong = std::make_shared<UIButton>(
-        raylib::Rectangle{bounds.x + 160.0f, bounds.y + 40.0f, 40.0f, 40.0f}, "",
+        raylib::Rectangle{bounds.x + 190.0f, bounds.y + 65.0f, 40.0f, 40.0f}, "",
         [this]() {
             if (_playlist.empty()) {
                 return;
             }
-
             _songIdxM++;
             if (_songIdxM >= _playlist.size()) {
                 _songIdxM = 0;
             }
-
             auto storage = _world.get_storage<ComponentMusic>();
             if (storage) {
                 for (auto& [ent, comp] : *storage) {
