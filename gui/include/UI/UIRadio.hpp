@@ -10,7 +10,6 @@
 #include "AUIComponent.hpp"
 #include "ECS/World.hpp"
 #include "Graphics/AssetManager.hpp"
-#include "Logging/ChatLogs.hpp"
 #include "UI/UIButton.hpp"
 #include "UIPanel.hpp"
 #include <memory>
@@ -46,9 +45,12 @@ class UIRadio : public AUIComponent {
 
     std::shared_ptr<UIPanel> _menuRadio;
     std::shared_ptr<UIButton> _openRadio;
-    std::shared_ptr<UIButton> _nextSong;
-    std::shared_ptr<UIButton> _prevSong;
     std::shared_ptr<UIButton> _closeRadio;
+
+    std::shared_ptr<UIButton> _prevSong;
+    std::shared_ptr<UIButton> _playBtn;
+    std::shared_ptr<UIButton> _stopBtn;
+    std::shared_ptr<UIButton> _nextSong;
 };
 } // namespace zappy
 

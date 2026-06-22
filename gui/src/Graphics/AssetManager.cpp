@@ -191,6 +191,8 @@ void AssetManager::_loadTextures() {
         _textures["play"] = std::make_unique<raylib::Texture2D>("assets/ui/play.png");
         _textures["stop"] = std::make_unique<raylib::Texture2D>("assets/ui/stop.png");
         _textures["cross"] = std::make_unique<raylib::Texture2D>("assets/ui/close.png");
+        _textures["next"] = std::make_unique<raylib::Texture2D>("assets/ui/step_front.png");
+        _textures["prev"] = std::make_unique<raylib::Texture2D>("assets/ui/step_back.png");
 
         // Apply custom tintable texture to all materials of the mannequin model
         if (_models.find("robot") != _models.end() &&
