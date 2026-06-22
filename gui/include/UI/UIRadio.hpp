@@ -1,3 +1,9 @@
+/*
+** EPITECH PROJECT, 2026
+** zappy
+** File description:
+** UiRadio.cpp
+*/
 #ifndef ZAPPY_UIRADIO_HPP
 #define ZAPPY_UIRADIO_HPP
 
@@ -8,12 +14,14 @@
 #include "UI/UIButton.hpp"
 #include "UIPanel.hpp"
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace zappy {
 class UIRadio : public AUIComponent {
   public:
-    UIRadio(raylib::Rectangle bounds, World& world, int zIndex = 0, int songIdx = 0);
+    UIRadio(raylib::Rectangle bounds, World& world, int zIndex = 0, int songIdx = 0,
+            std::vector<std::string> playlist = {});
     ~UIRadio() override = default;
 
     void update(float dt, raylib::Vector2 mousePos,
@@ -32,6 +40,7 @@ class UIRadio : public AUIComponent {
   private:
     bool opened = false;
     uint _songIdxM;
+    std::vector<std::string> _playlist;
 
     World& _world;
 
