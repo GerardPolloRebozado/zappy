@@ -190,7 +190,8 @@ impl Server {
         for entity in requests_to_write {
             let mut responses = Vec::new();
             if let Some(c) = self.world.get_component_mut::<NetworkData>(entity) {
-                responses = c.pending_responses.clone();
+                let limit = std::cmp::min(c.pending_responses.len(), 300);
+                responses = c.pending_responses.drain(..limit).collect();
             }
             for response in responses {
                 self.handle_response(entity, response);
