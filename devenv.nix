@@ -35,7 +35,6 @@
     pkgs.clang-analyzer
     pkgs.doxygen
     pkgs.pkg-config
-    pkgs.python3
     pkgs.wayland
     pkgs.wayland-protocols
     pkgs.libxkbcommon
@@ -46,22 +45,33 @@
     pkgs.libxi
     pkgs.libxrandr
     pkgs.libxinerama
-    pkgs.python312
     pkgs.pre-commit
     pkgs.criterion
+    pkgs.ruff
+    pkgs.clang-tools
   ];
 
   # https://devenv.sh/languages/
-  languages.rust = {
-    enable = true;
-    # Enables the rust-analyzer component for IDE support
-    components = [
-      "rustc"
-      "cargo"
-      "clippy"
-      "rustfmt"
-      "rust-analyzer"
-    ];
+  languages = {
+    rust = {
+      enable = true;
+      # Enables the rust-analyzer component for IDE support
+      components = [
+        "rustc"
+        "cargo"
+        "clippy"
+        "rustfmt"
+        "rust-analyzer"
+      ];
+    };
+
+    python = {
+      enable = true;
+      venv = {
+        enable = true;
+      };
+    };
+    cplusplus.enable = true;
   };
 
   # https://devenv.sh/scripts/

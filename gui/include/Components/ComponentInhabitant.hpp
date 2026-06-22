@@ -51,5 +51,8 @@ struct Race {
 struct Egg {
     int id;
 };
+
+struct RequestPlayerLevel {};
+struct RequestPlayerInventory {};
 } // namespace zappy
 #endif // ZAPPY_GUI_COMPONENTINHABITANT_HPP

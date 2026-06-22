@@ -1,4 +1,5 @@
 use crate::commands::{gev, ppo};
+use crate::ecs::components::level::Level;
 use crate::ecs::components::network::NetworkData;
 use crate::ecs::components::tile::Tile;
 use crate::ecs::map_events::map_event_from_name;
@@ -11,6 +12,15 @@ use crate::utils::date::Date;
 
 pub fn get_network_data(world: &mut World, entity: Entity) -> Option<&mut NetworkData> {
     world.get_component_mut::<NetworkData>(entity)
+}
+
+fn return_ko(server: &mut Server, entity: Entity) {
+    if let Some(network_data) = get_network_data(&mut server.world, entity) {
+        network_data.pending_responses.push(Response {
+            code: ResponseCode::Status(StatusCode::Ko),
+            data: None,
+        });
+    }
 }
 
 pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request) {
@@ -171,6 +181,32 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
             ));
         }
 
+        Command::Plv(id) => {
+            let id_as_num = id.as_str().parse::<u32>();
+            if id_as_num.is_err() {
+                return_ko(server, entity);
+                return;
+            }
+            let id_as_num = id_as_num.unwrap();
+            let player_entity = Entity::from_id(id_as_num, &server.world);
+            if player_entity.is_none() {
+                return_ko(server, entity);
+                return;
+            }
+            let player_entity = player_entity.unwrap();
+            let level = server.world.get_component::<Level>(player_entity);
+            if level.is_none() {
+                return_ko(server, entity);
+                return;
+            }
+            let level = level.unwrap().value;
+            if let Some(network_data) = get_network_data(&mut server.world, entity) {
+                network_data.pending_responses.push(Response {
+                    code: ResponseCode::Status(StatusCode::Ok),
+                    data: Some(format!("plv {}", level)),
+                });
+            };
+        }
         Command::Unknown(_) => {
             let Some(network_data) = get_network_data(&mut server.world, entity) else {
                 return;

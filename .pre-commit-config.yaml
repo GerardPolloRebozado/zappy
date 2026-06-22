@@ -2,13 +2,18 @@
 #  python: python3.12
 
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.14
+  - repo: local
     hooks:
       - id: ruff
+        name: ruff
+        entry: ruff check
+        language: system
         files: ^ai/.*\.py$
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
+        name: ruff-format
+        entry: ruff format
+        language: system
         files: ^ai/.*\.py$
 
   - repo: https://github.com/doublify/pre-commit-rust
@@ -24,8 +29,10 @@ repos:
         files: ^server/.*\.rs$
         args: ["--manifest-path", "server/Cargo.toml", "--", "-D", "warnings"]
 
-  - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v22.1.5
+  - repo: local
     hooks:
       - id: clang-format
+        name: clang-format
+        entry: clang-format -i
+        language: system
         files: ^gui/.*\.(c|h|cpp|hpp)$
