@@ -168,6 +168,9 @@ pub fn execute_incantation(world: &mut World, entity: Entity) -> (Response, Opti
     for participant in &participants {
         if let Some(lvl) = world.get_component_mut::<Level>(*participant) {
             lvl.value = new_level;
+        } else {
+            println!("No level");
+            panic!("No level");
         }
 
         // Push response to other participants. The initiator's response is returned.

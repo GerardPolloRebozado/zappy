@@ -260,6 +260,11 @@ void RenderSystem::_handleInput(World& w, float dt) {
                 }
             }
         }
+
+        if (_selectedPlayer.has_value()) {
+            w.add_component<RequestPlayerLevel>(_selectedPlayer.value(), {});
+            w.add_component<RequestPlayerInventory>(_selectedPlayer.value(), {});
+        }
     }
 
     _showDebugHud =
