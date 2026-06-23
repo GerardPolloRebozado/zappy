@@ -67,25 +67,25 @@ void AnimationSystem::_update3DMovement(World& w, float freq) {
                                 if (tPos && tPos->x == pos->x && tPos->y == pos->y) {
                                     if (auto tInv = w.get_component<Inventory>(tEnt)) {
                                         switch (animRes->resourceId) {
-                                            case 0:
+                                            case ResourceType::FOOD:
                                                 tInv->food++;
                                                 break;
-                                            case 1:
+                                            case ResourceType::LINEMATE:
                                                 tInv->linemate++;
                                                 break;
-                                            case 2:
+                                            case ResourceType::DERAUMERE:
                                                 tInv->deraumere++;
                                                 break;
-                                            case 3:
+                                            case ResourceType::SIBUR:
                                                 tInv->sibur++;
                                                 break;
-                                            case 4:
+                                            case ResourceType::MENDIANE:
                                                 tInv->mendiane++;
                                                 break;
-                                            case 5:
+                                            case ResourceType::PHIRAS:
                                                 tInv->phiras++;
                                                 break;
-                                            case 6:
+                                            case ResourceType::THYSTAME:
                                                 tInv->thystame++;
                                                 break;
                                         }
