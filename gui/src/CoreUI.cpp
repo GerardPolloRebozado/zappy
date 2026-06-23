@@ -244,6 +244,17 @@ void Core::_setupGameUI() {
         backgroundMusic,
         std::make_shared<ComponentMusic>(std::string("assets/sounds/music/country.mp3"), true));
 
+    // Spawn Background parallax
+    auto backgroundParallaxEntity = _world.spawn();
+    _world.add_component(backgroundParallaxEntity, std::make_shared<BackgroundParallax>());
+
+    // Spawn Moon & Sun
+    auto moon = _world.spawn();
+    _world.add_component(moon, std::make_shared<CelestialObject>(0.0f, 0.01f, "moon"));
+    auto sun = _world.spawn();
+    _world.add_component(sun, std::make_shared<CelestialObject>(3.0f, 0.0015f, "sun"));
+
+
     // Chat Panel
     float chatY = (float)_window->GetHeight() - 240.0f;
     _uiManager->addComponent(std::make_shared<UIChatPanel>(

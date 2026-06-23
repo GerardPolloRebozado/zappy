@@ -47,15 +47,12 @@ Core::Core(int port, const std::string& host) : _port(port), _host(host) {
     // Load assets and hide default cursor so our custom cursor renders immediately
     AssetManager::getInstance().loadAll();
     raylib::Window::HideCursor();
-
     // Add the background music
     auto backgroundMusic = _world.spawn();
     _world.add_component(backgroundMusic,
                          std::make_shared<ComponentMusic>(
                              AssetManager::getInstance().getMusicPath("country"), true));
-    // Add the background texture
-    auto backgroundParallaxEntity = _world.spawn();
-    _world.add_component(backgroundParallaxEntity, std::make_shared<BackgroundParallax>());
+
     _chatLogs = std::make_shared<ChatLogs>();
     FactoryCommands::setChatLogs(_chatLogs);
     _uiManager = std::make_shared<UIManager>();
