@@ -18,6 +18,7 @@
 #include "Network/NetworkErrors.hpp"
 #include "UI/UIButton.hpp"
 #include "UI/UIChatPanel.hpp"
+#include "UI/UIEventMenu.hpp"
 #include "UI/UIHudPanel.hpp"
 #include "UI/UIInput.hpp"
 #include "UI/UIManager.hpp"
@@ -234,11 +235,11 @@ void Core::_setupGameUI() {
         raylib::Rectangle{(float)_window->GetWidth() - 220, 50, 200, 400}, _world, _renderSystem,
         nullptr, 10));
 
-    // Time frequency slider
+    // Event menu (contains frequency slider + map event buttons)
     _uiManager->addComponent(
-        std::make_shared<UISlider>(raylib::Rectangle{(float)_window->GetWidth() - 270,
-                                                     (float)_window->GetHeight() - 60, 250, 40},
-                                   _world, _network, 10));
+        std::make_shared<UIEventMenu>(raylib::Rectangle{(float)_window->GetWidth() - 170,
+                                                        (float)_window->GetHeight() - 60, 150, 50},
+                                      _world, _network, _chatLogs, 10));
 
     std::filesystem::path dirpath = "assets/sounds/music";
 
