@@ -28,12 +28,18 @@ pub fn eject(world: &mut World, entity: Entity) -> (Response, Option<ServerEvent
         inhabitants_in_tile.push(*e);
     }
 
-    for i in inhabitants_in_tile {
+    for &i in &inhabitants_in_tile {
         if i == entity {
             continue;
         }
         let pos = world.get_component_mut::<Position>(i).unwrap();
         *pos = new_pos.clone();
+    }
+
+    for &i in &inhabitants_in_tile {
+        if i != entity {
+            crate::ecs::components::tile::Tile::trigger_wormhole_if_any(world, i);
+        }
     }
 
     let mut dead_eggs = Vec::new();
