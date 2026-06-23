@@ -174,13 +174,18 @@ void RenderSystem::_renderTerrain(World& w) {
             checkDecal(pos->x - 1, pos->y + 1, DecalDirection::SOUTH_WEST); // SW
             checkDecal(pos->x + 1, pos->y + 1, DecalDirection::SOUTH_EAST); // SE
 
-            if (type->current_type == TerrainType::FOREST) {
+            if (type->current_type == TerrainType::FOREST ||
+                type->current_type == TerrainType::MAGNETIC_TUNDRA) {
                 std::string treeNames[] = {"tree_1", "tree_2", "tree_group_1", "tree_group_2"};
+                std::string alienTreeNames[] = {"alien_tree_1", "alien_tree_2",
+                                                "alien_tree_group_1", "alien_tree_group_2"};
                 int treeIdx = (pos->x * 12345 + pos->y * 67890) % 4;
                 if (treeIdx < 0) {
                     treeIdx += 4;
                 }
-                std::string treeKey = treeNames[treeIdx];
+                std::string treeKey = (type->current_type == TerrainType::FOREST)
+                                          ? treeNames[treeIdx]
+                                          : alienTreeNames[treeIdx];
 
                 raylib::Model& treeModel = AssetManager::getInstance().getModel(treeKey);
                 auto& am = AssetManager::getInstance();
