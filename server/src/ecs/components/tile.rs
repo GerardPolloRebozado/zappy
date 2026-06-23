@@ -60,6 +60,55 @@ impl Tile {
         }
         None
     }
+
+    pub fn trigger_wormhole_if_any(world: &mut World, entity: Entity) {
+        use crate::ecs::components::terrain_type::TerrainType;
+        use rand::RngExt;
+
+        let pos = match world.get_component::<Position>(entity) {
+            Some(p) => p.clone(),
+            None => return,
+        };
+
+        let tile_ent = match Self::find_tile_by_pos(&pos, world) {
+            Some(e) => e,
+            None => return,
+        };
+
+        let terrain = match world.get_component::<TerrainType>(tile_ent) {
+            Some(t) => *t,
+            None => return,
+        };
+
+        if terrain == TerrainType::Wormhole {
+            let mut other_wormholes = Vec::new();
+            if let Some(tiles) = world.get_storage::<Tile>() {
+                let mut temp_entities = Vec::new();
+                for (t_ent, _) in tiles.iter() {
+                    if *t_ent != tile_ent {
+                        temp_entities.push(*t_ent);
+                    }
+                }
+                for t_ent in temp_entities {
+                    if let Some(t) = world.get_component::<TerrainType>(t_ent)
+                        && *t == TerrainType::Wormhole
+                        && let Some(p) = world.get_component::<Position>(t_ent)
+                    {
+                        other_wormholes.push(p.clone());
+                    }
+                }
+            }
+            if !other_wormholes.is_empty() {
+                let mut rng = rand::rng();
+                let idx = rng.random_range(0..other_wormholes.len());
+                let new_pos = other_wormholes[idx].clone();
+                if let Some(mut_pos) = world.get_component_mut::<Position>(entity) {
+                    mut_pos.x = new_pos.x;
+                    mut_pos.y = new_pos.y;
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]

@@ -19,37 +19,59 @@ pub fn setup_map(world: &mut World, width: u32, height: u32) {
     let perlin_elevation = Perlin::new(seed);
     let perlin_moisture = Perlin::new(seed.wrapping_add(1));
 
+    let mut wormholes_count = 0;
+    let groups_of_100 = (width * height) / 100;
+    for _ in 0..groups_of_100 {
+        wormholes_count += rng.random_range(2..=3);
+    }
+    if wormholes_count < 2 {
+        wormholes_count = 2;
+    }
+    // Prevent infinite loops on very small maps
+    wormholes_count = std::cmp::min(wormholes_count, width * height);
+
+    let mut wormhole_positions = std::collections::HashSet::new();
+    while wormhole_positions.len() < wormholes_count as usize {
+        let wx = rng.random_range(0..width);
+        let wy = rng.random_range(0..height);
+        wormhole_positions.insert((wx, wy));
+    }
+
     let scale = 0.08; // Increased scale for more varied biomes
 
     for y in 0..height {
         for x in 0..width {
-            let nx = x as f64 * scale;
-            let ny = y as f64 * scale;
-
-            // Get noise values and normalize roughly to [0, 1]
-            let elev = (perlin_elevation.get([nx, ny]) + 1.0) / 2.0;
-            let moist = (perlin_moisture.get([nx, ny]) + 1.0) / 2.0;
-
-            let terrain = if elev < 0.25 {
-                TerrainType::Water
-            } else if elev > 0.85 {
-                TerrainType::Mountain
-            } else if elev > 0.75 {
-                TerrainType::ObsidianBarrens
+            let terrain = if wormhole_positions.contains(&(x, y)) {
+                TerrainType::Wormhole
             } else {
-                // Mid-elevation biomes based on moisture
-                if moist < 0.2 {
-                    TerrainType::Sand
-                } else if moist < 0.4 {
-                    TerrainType::Grass
-                } else if moist < 0.6 {
-                    TerrainType::Forest
-                } else if moist < 0.75 {
-                    TerrainType::MagneticTundra
-                } else if moist < 0.9 {
-                    TerrainType::LuminousOrchards
+                let nx = x as f64 * scale;
+                let ny = y as f64 * scale;
+
+                // Get noise values and normalize roughly to [0, 1]
+                let elev = (perlin_elevation.get([nx, ny]) + 1.0) / 2.0;
+                let moist = (perlin_moisture.get([nx, ny]) + 1.0) / 2.0;
+
+                if elev < 0.25 {
+                    TerrainType::Water
+                } else if elev > 0.85 {
+                    TerrainType::Mountain
+                } else if elev > 0.75 {
+                    TerrainType::ObsidianBarrens
                 } else {
-                    TerrainType::CrystalCanyons
+                    // Mid-elevation biomes based on moisture
+                    if moist < 0.2 {
+                        TerrainType::Sand
+                    } else if moist < 0.4 {
+                        TerrainType::Grass
+                    } else if moist < 0.6 {
+                        TerrainType::Forest
+                    } else if moist < 0.75 {
+                        TerrainType::MagneticTundra
+                    } else if moist < 0.9 {
+                        TerrainType::LuminousOrchards
+                    } else {
+                        TerrainType::CrystalCanyons
+                    }
                 }
             };
 
