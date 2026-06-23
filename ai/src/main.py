@@ -10,7 +10,7 @@ sys.path.insert(
 )
 
 from src.client import ZappyAiClient
-from src.strategy import run_client, run_manual
+from src.strategy import run_client, run_manual, run_llm
 
 
 def main():
@@ -26,6 +26,9 @@ def main():
     parser.add_argument(
         "-m", "--manual", action="store_true", help="starts the game in manual mode"
     )
+    parser.add_argument(
+        "-llm", "--llm", action="store_true", help="starts the game in LLM mode"
+    )
 
     try:
         args = parser.parse_args()
@@ -35,7 +38,9 @@ def main():
 
         client = ZappyAiClient(args.port, args.name, args.ip)
         if client.connect() == 0:
-            if args.manual:
+            if args.llm:
+                run_llm(client)
+            elif args.manual:
                 run_manual(client)
             else:
                 run_client(client)
