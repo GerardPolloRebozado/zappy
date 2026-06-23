@@ -87,7 +87,10 @@ class Tiletextures {
           raylib::Color(225, 135, 245)}},
         {TerrainType::MAGNETIC_TUNDRA,
          {raylib::Color(145, 205, 235), raylib::Color(190, 230, 250), raylib::Color(115, 175, 205),
-          raylib::Color(240, 250, 255)}}};
+          raylib::Color(240, 250, 255)}},
+        {TerrainType::WORMHOLE,
+         {raylib::Color(50, 0, 100), raylib::Color(75, 0, 150), raylib::Color(25, 0, 50),
+          raylib::Color(100, 0, 200)}}};
     std::shared_ptr<raylib::Texture2D> _atlas;
 
     void generateAtlas() {
@@ -95,7 +98,7 @@ class Tiletextures {
             return;
         }
         constexpr int size = 32;
-        constexpr int biomes = 9;
+        constexpr int biomes = 10;
         constexpr int variations = 4;
         constexpr int cols = 9; // 0: Solid, 1: N, 2: S, 3: E, 4: W, 5: NW, 6: NE, 7: SW, 8: SE
 
@@ -246,6 +249,8 @@ class Tiletextures {
 
     int getPriority(TerrainType::Type t) const {
         switch (t) {
+            case TerrainType::WORMHOLE:
+                return 100;
             case TerrainType::WATER:
                 return 90;
             case TerrainType::MOUNTAIN:
@@ -274,15 +279,15 @@ class Tiletextures {
         int b = static_cast<int>(type);
         int row = b * 4 + variation;
 
-        // cols = 9, rows = 36
+        // cols = 9, rows = 40
         // Small inset to prevent texture bleeding from neighboring atlas cells
         float eX = 0.1f / 288.0f;
-        float eY = 0.1f / 1152.0f;
+        float eY = 0.1f / 1280.0f;
 
         u = (static_cast<float>(col) / 9.0f) + eX;
-        v = (static_cast<float>(row) / 36.0f) + eY;
+        v = (static_cast<float>(row) / 40.0f) + eY;
         uw = (1.0f / 9.0f) - 2.0f * eX;
-        vh = (1.0f / 36.0f) - 2.0f * eY;
+        vh = (1.0f / 40.0f) - 2.0f * eY;
     }
 
     Tiletextures() = default;

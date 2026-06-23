@@ -26,7 +26,9 @@ struct TerrainType {
         OBSIDIAN_BARRENS,
         LUMINOUS_ORCHARDS,
         CRYSTAL_CANYONS,
-        MAGNETIC_TUNDRA
+        MAGNETIC_TUNDRA,
+        // Mechanics
+        WORMHOLE
     };
     Type current_type;
 };
