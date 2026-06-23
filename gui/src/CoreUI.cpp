@@ -261,17 +261,6 @@ void Core::_setupGameUI() {
     // music panel
     _uiManager->addComponent(std::make_shared<UIRadio>(
         raylib::Rectangle{40.0f, 40.0f, 160.0f, 100.0f}, _world, 15, 0, _bckMusic));
-    // Chat Panel
-    // Spawn Background parallax
-    auto backgroundParallaxEntity = _world.spawn();
-    _world.add_component(backgroundParallaxEntity, std::make_shared<BackgroundParallax>());
-
-    // Spawn Moon & Sun
-    auto moon = _world.spawn();
-    _world.add_component(moon, std::make_shared<CelestialObject>(0.0f, 0.01f, "moon"));
-    auto sun = _world.spawn();
-    _world.add_component(sun, std::make_shared<CelestialObject>(3.0f, 0.0015f, "sun"));
-
 
     // Spawn Background parallax
     auto backgroundParallaxEntity = _world.spawn();
