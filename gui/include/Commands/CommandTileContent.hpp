@@ -7,6 +7,7 @@
 #ifndef ZAPPY_COMMANDTILECONTENT_HPP
 #define ZAPPY_COMMANDTILECONTENT_HPP
 #include "ACommand.hpp"
+#include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
 #include "Components/ComponentTile.hpp"
@@ -106,7 +107,40 @@ class CommandTileContent : public ACommand {
         // terrain type
         int t_type;
         if (iss >> t_type) {
-            world.add_component<TerrainType>(tileEntity, {static_cast<TerrainType::Type>(t_type)});
+            auto newType = static_cast<TerrainType::Type>(t_type);
+            world.add_component<TerrainType>(tileEntity, {newType});
+
+            if (newType == TerrainType::OBSIDIAN_BARRENS) {
+                if (!world.get_component<ComponentParticleEmitter>(tileEntity)) {
+                    ComponentParticleEmitter emitter;
+                    emitter.loop = true;
+                    emitter.isPlaying = true;
+                    emitter.emitRate = 8.0f;                       // Subtle simmer
+                    emitter.offset = raylib::Vector3(0, 0.05f, 0); // just above the floor
+                    emitter.spawnVolumeMin =
+                        raylib::Vector3(-0.45f, 0.0f, -0.45f); // Spread over the tile
+                    emitter.spawnVolumeMax = raylib::Vector3(0.45f, 0.1f, 0.45f);
+                    emitter.minLifetime = 1.0f;
+                    emitter.maxLifetime = 2.5f;
+                    emitter.minSize = 0.03f;
+                    emitter.maxSize = 0.08f;
+                    emitter.minVelocity = raylib::Vector3(-0.15f, 0.3f, -0.15f);
+                    emitter.maxVelocity =
+                        raylib::Vector3(0.15f, 0.8f, 0.15f); // rising smoke/embers
+                    // Mix between smoke and fire particles
+                    emitter.colorPalette = {
+                        raylib::Color{255, 100, 0, 200}, // fire orange
+                        raylib::Color{255, 50, 0, 200},  // red-hot
+                        raylib::Color{50, 50, 50, 150},  // dark smoke
+                        raylib::Color{20, 20, 20, 150}   // obsidian ash
+                    };
+                    world.add_component<ComponentParticleEmitter>(tileEntity, emitter);
+                }
+            } else {
+                if (world.get_component<ComponentParticleEmitter>(tileEntity)) {
+                    world.remove_component<ComponentParticleEmitter>(tileEntity);
+                }
+            }
         }
 
         log_info("Protocol: Tile (" + std::to_string(x) + ", " + std::to_string(y) +
