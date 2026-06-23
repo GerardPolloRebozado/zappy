@@ -281,6 +281,77 @@ void RenderSystem::_renderTerrain(World& w) {
                 }
             }
 
+            if (type->current_type == TerrainType::SAND) {
+                bool playerOnTile = inhabitantPositions.count(hashPos(pos->x, pos->y)) > 0;
+                bool hasRock = ((pos->x * 123456 + pos->y * 654321) % 5) == 0;
+                bool hasTree = ((pos->x * 987654 + pos->y * 456789) % 10) == 0;
+
+                if (hasTree && !playerOnTile) {
+                    std::string treeNames[] = {"desert_tree_1", "desert_tree_2", "desert_tree_3"};
+                    int treeIdx = (pos->x * 557 + pos->y * 661) % 3;
+                    if (treeIdx < 0) {
+                        treeIdx += 3;
+                    }
+
+                    raylib::Model& model = AssetManager::getInstance().getModel(treeNames[treeIdx]);
+                    std::shared_ptr<BoundingBox> box =
+                        AssetManager::getInstance().getBoundingBox(treeNames[treeIdx], model);
+
+                    float sizeX = box->max.x - box->min.x;
+                    if (sizeX > 0) {
+                        float scale = 0.39f; // 60% of previous 0.65f
+                        raylib::Vector3 centerOffset((box->max.x + box->min.x) / 2.0f * scale,
+                                                     box->min.y * scale,
+                                                     (box->max.z + box->min.z) / 2.0f * scale);
+
+                        float rX = ((std::abs(pos->x * 21 + pos->y * 39)) % 41) / 100.0f - 0.2f;
+                        float rZ = ((std::abs(pos->x * 47 + pos->y * 73)) % 41) / 100.0f - 0.2f;
+                        float rotationAngle =
+                            static_cast<float>((std::abs(pos->x * 321 + pos->y * 654)) % 360);
+
+                        raylib::Vector3 drawPos(vpos.x - centerOffset.x + rX,
+                                                2.0f - centerOffset.y -
+                                                    0.15f, // Sink slightly below tile
+                                                vpos.z - centerOffset.z + rZ);
+
+                        // Default white tint means original colors
+                        render::addInstance(treeNames[treeIdx], drawPos, {0, 1, 0}, rotationAngle,
+                                            {scale, scale, scale}, WHITE, model.transform);
+                    }
+                } else if (hasRock && !playerOnTile) {
+                    std::string rockNames[] = {"desert_rock_1", "desert_rock_2", "desert_rock_3"};
+                    int rockIdx = (pos->x * 331 + pos->y * 443) % 3;
+                    if (rockIdx < 0) {
+                        rockIdx += 3;
+                    }
+
+                    raylib::Model& model = AssetManager::getInstance().getModel(rockNames[rockIdx]);
+                    std::shared_ptr<BoundingBox> box =
+                        AssetManager::getInstance().getBoundingBox(rockNames[rockIdx], model);
+
+                    float sizeX = box->max.x - box->min.x;
+                    if (sizeX > 0) {
+                        float scale = 0.55f;
+                        raylib::Vector3 centerOffset((box->max.x + box->min.x) / 2.0f * scale,
+                                                     box->min.y * scale,
+                                                     (box->max.z + box->min.z) / 2.0f * scale);
+
+                        float rX = ((std::abs(pos->x * 53 + pos->y * 97)) % 41) / 100.0f - 0.2f;
+                        float rZ = ((std::abs(pos->x * 11 + pos->y * 89)) % 41) / 100.0f - 0.2f;
+                        float rotationAngle =
+                            static_cast<float>((std::abs(pos->x * 745 + pos->y * 821)) % 360);
+
+                        raylib::Vector3 drawPos(vpos.x - centerOffset.x + rX, 2.0f - centerOffset.y,
+                                                vpos.z - centerOffset.z + rZ);
+
+                        // Sandstone tint for desert rocks
+                        raylib::Color desertTint = {230, 205, 145, 255};
+                        render::addInstance(rockNames[rockIdx], drawPos, {0, 1, 0}, rotationAngle,
+                                            {scale, scale, scale}, desertTint, model.transform);
+                    }
+                }
+            }
+
             if (pos->x == _hoveredX && pos->y == _hoveredZ) {
                 _renderHoverEffect(pos->x, pos->y);
             }

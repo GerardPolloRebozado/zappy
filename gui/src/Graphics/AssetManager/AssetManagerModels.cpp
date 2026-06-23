@@ -54,6 +54,20 @@ void AssetManager::_loadModels() {
         _models["grass_item_1"] = std::make_unique<raylib::Model>("assets/models/grass_item_1.obj");
         _models["grass_item_2"] = std::make_unique<raylib::Model>("assets/models/grass_item_2.obj");
 
+        _models["desert_rock_1"] =
+            std::make_unique<raylib::Model>("assets/models/desert_rock_1.obj");
+        _models["desert_rock_2"] =
+            std::make_unique<raylib::Model>("assets/models/desert_rock_2.obj");
+        _models["desert_rock_3"] =
+            std::make_unique<raylib::Model>("assets/models/desert_rock_3.obj");
+
+        _models["desert_tree_1"] =
+            std::make_unique<raylib::Model>("assets/models/desert_tree_1.obj");
+        _models["desert_tree_2"] =
+            std::make_unique<raylib::Model>("assets/models/desert_tree_2.obj");
+        _models["desert_tree_3"] =
+            std::make_unique<raylib::Model>("assets/models/desert_tree_3.obj");
+
         _models["rock1"] = std::make_unique<raylib::Model>("assets/models/rock1.obj");
         _models["rock2"] = std::make_unique<raylib::Model>("assets/models/rock2.obj");
 
