@@ -71,6 +71,14 @@ class ZappyLibClient:
         self.level = 1
         self.messages = []
 
+    def get_unread_messages(self):
+        """
+        Return unread messages
+        """
+        unread = self.messages.copy()
+        self.messages.clear()
+        return unread
+
     def _tick(self, ms):
         self.lib.zappy_tick(self.server_ptr, ms)
 
