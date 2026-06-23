@@ -1,13 +1,15 @@
 use log::error;
 
 use crate::{
+    ecs::map_size::get_tile_content_by_entity,
+    ecs::systems::task::broadcast_event,
     ecs::{
         components::{inventory::Inventory, position::Position, resource::Resource, tile::Tile},
         storage::{Entity, World},
     },
     protocol::{
         Response, ResponseCode,
-        ServerEvent::{self, ResourceCollect},
+        ServerEvent::{self, ResourceCollect, ResourceDrop},
         StatusCode,
     },
 };
@@ -34,27 +36,11 @@ pub fn set_task(
         );
     }
     let tile_entity = tile_entity.unwrap();
-    let tile_component = world.get_component_mut::<Inventory>(tile_entity);
-    if tile_component.is_none() {
-        error!("Could not get inventory of tile {}", tile_entity);
-        return (
-            Response::new(ResponseCode::Status(StatusCode::Ko), None),
-            None,
-        );
-    }
-    let tile_component = tile_component.unwrap();
-    tile_component.add_item(*resource, 1);
-    let player_inventory = world.get_component_mut::<Inventory>(entity);
-    if player_inventory.is_none() {
-        error!("Could not get inventory of player {}", entity);
-        return (
-            Response::new(ResponseCode::Status(StatusCode::Ko), None),
-            None,
-        );
-    }
-    let player_invetory = player_inventory.unwrap();
-    let removed_resource = player_invetory.remove_item(*resource, 1);
-    if !removed_resource {
+    if world
+        .get_component::<Inventory>(entity)
+        .map_or(0, |inv| inv.get_item_count(*resource))
+        == 0
+    {
         error!(
             "Could not remove resource {} from player {}",
             resource, entity
@@ -64,9 +50,14 @@ pub fn set_task(
             None,
         );
     }
+
+    Tile::drop_resource_on_tile(tile_entity, world, *resource, entity);
+    let content = get_tile_content_by_entity(world, tile_entity);
+    broadcast_event(world, ServerEvent::TileContent { content });
+
     (
         ok,
-        Some(ResourceCollect {
+        Some(ResourceDrop {
             player_id: entity.id(),
             resource: *resource as u8,
         }),
@@ -95,33 +86,22 @@ pub fn take_task(
         );
     }
     let tile_entity = tile_entity.unwrap();
-    let tile_component = world.get_component_mut::<Inventory>(tile_entity);
-    if tile_component.is_none() {
-        error!("Could not get inventory of tile {}", tile_entity);
-        return (
-            Response::new(ResponseCode::Status(StatusCode::Ko), None),
-            None,
-        );
-    }
-    let tile_component = tile_component.unwrap();
-    let extracted_resource = tile_component.remove_item(*resource, 1);
-    if !extracted_resource {
+    if world
+        .get_component::<Inventory>(tile_entity)
+        .map_or(0, |inv| inv.get_item_count(*resource))
+        == 0
+    {
         error!("Could not get resource {}", resource);
         return (
             Response::new(ResponseCode::Status(StatusCode::Ko), None),
             None,
         );
     }
-    let player_inventory = world.get_component_mut::<Inventory>(entity);
-    if player_inventory.is_none() {
-        error!("Could not get inventory of player {}", entity);
-        return (
-            Response::new(ResponseCode::Status(StatusCode::Ko), None),
-            None,
-        );
-    }
-    let player_invetory = player_inventory.unwrap();
-    player_invetory.add_item(*resource, 1);
+
+    Tile::take_resource_from_tile(tile_entity, world, *resource, entity);
+    let content = get_tile_content_by_entity(world, tile_entity);
+    broadcast_event(world, ServerEvent::TileContent { content });
+
     (
         ok,
         Some(ResourceCollect {

@@ -22,7 +22,10 @@ void AnimationSystem::_update3DMovement(World& w, float freq) {
             const float targetX = static_cast<float>(pos->x);
             const float targetY = static_cast<float>(pos->y);
             const float targetZ = move->targetZ;
-            const float speed = (freq / 7.0f) * GetFrameTime();
+            float speed = (freq / 7.0f) * GetFrameTime();
+            if (w.get_component<AnimatedResource>(entity)) {
+                speed = 25.0f * GetFrameTime();
+            }
 
             const float dx = targetX - move->visualX;
             const float dy = targetY - move->visualY;
@@ -55,7 +58,43 @@ void AnimationSystem::_update3DMovement(World& w, float freq) {
                 move->visualY = targetY;
                 move->visualZ = targetZ;
 
-                if (w.get_component<AnimatedResource>(entity)) {
+                if (auto animRes = w.get_component<AnimatedResource>(entity)) {
+                    if (animRes->addToTileOnLand) {
+                        auto tileStorage = w.get_storage<TileTag>();
+                        if (tileStorage) {
+                            for (auto const& [tEnt, tag] : *tileStorage) {
+                                auto tPos = w.get_component<Position>(tEnt);
+                                if (tPos && tPos->x == pos->x && tPos->y == pos->y) {
+                                    if (auto tInv = w.get_component<Inventory>(tEnt)) {
+                                        switch (animRes->resourceId) {
+                                            case 0:
+                                                tInv->food++;
+                                                break;
+                                            case 1:
+                                                tInv->linemate++;
+                                                break;
+                                            case 2:
+                                                tInv->deraumere++;
+                                                break;
+                                            case 3:
+                                                tInv->sibur++;
+                                                break;
+                                            case 4:
+                                                tInv->mendiane++;
+                                                break;
+                                            case 5:
+                                                tInv->phiras++;
+                                                break;
+                                            case 6:
+                                                tInv->thystame++;
+                                                break;
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
                     entitiesToDespawn.push_back(entity);
                 } else if (auto emitter = w.get_component<ComponentParticleEmitter>(entity)) {
                     emitter->isPlaying = false;

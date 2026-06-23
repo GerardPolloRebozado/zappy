@@ -54,7 +54,54 @@ class CommandTileContent : public ACommand {
             world.add_component<TileTag>(tileEntity, TileTag{});
         }
 
-        world.add_component<Inventory>(tileEntity, {q0, q1, q2, q3, q4, q5, q6});
+        auto oldInv = world.get_component<Inventory>(tileEntity);
+        int old_q0 = oldInv ? oldInv->food : 0;
+        int old_q1 = oldInv ? oldInv->linemate : 0;
+        int old_q2 = oldInv ? oldInv->deraumere : 0;
+        int old_q3 = oldInv ? oldInv->sibur : 0;
+        int old_q4 = oldInv ? oldInv->mendiane : 0;
+        int old_q5 = oldInv ? oldInv->phiras : 0;
+        int old_q6 = oldInv ? oldInv->thystame : 0;
+
+        world.add_component<Inventory>(tileEntity, {std::min(old_q0, q0), std::min(old_q1, q1),
+                                                    std::min(old_q2, q2), std::min(old_q3, q3),
+                                                    std::min(old_q4, q4), std::min(old_q5, q5),
+                                                    std::min(old_q6, q6)});
+
+        auto spawnFallingResource = [&](int resId, int delta) {
+            for (int i = 0; i < delta; ++i) {
+                Entity res = world.spawn();
+                world.add_component<AnimatedResource>(res, {resId, true});
+                world.add_component<Position>(res, {x, y});
+                world.add_component<Animation>(res, {"", 0.0f, 60.0f, 1.0f, true});
+                world.add_component<MovementInterpolation3D>(
+                    res, {static_cast<float>(x), static_cast<float>(y),
+                          20.0f + (i * 2.0f), // Start high in the sky
+                          true, 2.01f});
+            }
+        };
+
+        if (q0 > old_q0) {
+            spawnFallingResource(0, q0 - old_q0);
+        }
+        if (q1 > old_q1) {
+            spawnFallingResource(1, q1 - old_q1);
+        }
+        if (q2 > old_q2) {
+            spawnFallingResource(2, q2 - old_q2);
+        }
+        if (q3 > old_q3) {
+            spawnFallingResource(3, q3 - old_q3);
+        }
+        if (q4 > old_q4) {
+            spawnFallingResource(4, q4 - old_q4);
+        }
+        if (q5 > old_q5) {
+            spawnFallingResource(5, q5 - old_q5);
+        }
+        if (q6 > old_q6) {
+            spawnFallingResource(6, q6 - old_q6);
+        }
 
         // terrain type
         int t_type;
