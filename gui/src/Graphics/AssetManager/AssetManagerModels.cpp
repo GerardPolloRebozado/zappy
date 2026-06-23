@@ -49,6 +49,11 @@ void AssetManager::_loadModels() {
         _models["alien_tree_group_2"] =
             std::make_unique<raylib::Model>("assets/models/alien_tree_group_2.obj");
 
+        _models["bush_1"] = std::make_unique<raylib::Model>("assets/models/bush_1.obj");
+        _models["bush_2"] = std::make_unique<raylib::Model>("assets/models/bush_2.obj");
+        _models["grass_item_1"] = std::make_unique<raylib::Model>("assets/models/grass_item_1.obj");
+        _models["grass_item_2"] = std::make_unique<raylib::Model>("assets/models/grass_item_2.obj");
+
         _models["rock1"] = std::make_unique<raylib::Model>("assets/models/rock1.obj");
         _models["rock2"] = std::make_unique<raylib::Model>("assets/models/rock2.obj");
 

@@ -96,6 +96,7 @@ void RenderSystem::_renderTerrain(World& w) {
     struct TopFaceData {
         raylib::Vector3 pos;
         float u, v, uw, vh;
+        raylib::Color color;
     };
     std::vector<TopFaceData> topFaceBatches;
     std::vector<TopFaceData> decalBatches;
@@ -144,7 +145,10 @@ void RenderSystem::_renderTerrain(World& w) {
 
             float u, v, uw, vh;
             textures.getTileUVs(type->current_type, variation, 0, u, v, uw, vh); // Col 0 is Base
-            topFaceBatches.push_back({planePos, u, v, uw, vh});
+            raylib::Color tileColor = (type->current_type == TerrainType::GRASS)
+                                          ? raylib::Color{210, 210, 210, 255}
+                                          : WHITE;
+            topFaceBatches.push_back({planePos, u, v, uw, vh, tileColor});
 
             // Now calculate decals
             int currentPriority = textures.getPriority(type->current_type);
@@ -160,7 +164,9 @@ void RenderSystem::_renderTerrain(World& w) {
                     float du, dv, duw, dvh;
                     textures.getTileUVs(nType, variation, static_cast<int>(col), du, dv, duw, dvh);
                     raylib::Vector3 decalPos = planePos;
-                    decalBatches.push_back({decalPos, du, dv, duw, dvh});
+                    raylib::Color decalColor =
+                        (nType == TerrainType::GRASS) ? raylib::Color{210, 210, 210, 255} : WHITE;
+                    decalBatches.push_back({decalPos, du, dv, duw, dvh, decalColor});
                 }
             };
 
@@ -220,6 +226,61 @@ void RenderSystem::_renderTerrain(World& w) {
                 }
             }
 
+            if (type->current_type == TerrainType::GRASS) {
+                bool playerOnTile = inhabitantPositions.count(hashPos(pos->x, pos->y)) > 0;
+                bool hasBush = ((pos->x * 314159 + pos->y * 271828) % 7) == 0;
+
+                std::string grassNames[] = {"grass_item_1", "grass_item_2"};
+                std::string bushNames[] = {"bush_1", "bush_2"};
+
+                int grassIdx = (pos->x * 777 + pos->y * 888) % 2;
+                if (grassIdx < 0) {
+                    grassIdx += 2;
+                }
+                int bushIdx = (pos->x * 999 + pos->y * 111) % 2;
+                if (bushIdx < 0) {
+                    bushIdx += 2;
+                }
+
+                auto renderProp = [&](const std::string& key, float scale, float offsetY, float rX,
+                                      float rZ, float rotationAngle) {
+                    raylib::Model& model = AssetManager::getInstance().getModel(key);
+                    std::shared_ptr<BoundingBox> box =
+                        AssetManager::getInstance().getBoundingBox(key, model);
+
+                    float sizeX = box->max.x - box->min.x;
+                    if (sizeX <= 0) {
+                        return;
+                    }
+
+                    raylib::Vector3 centerOffset((box->max.x + box->min.x) / 2.0f * scale,
+                                                 box->min.y * scale,
+                                                 (box->max.z + box->min.z) / 2.0f * scale);
+                    raylib::Vector3 drawPos(vpos.x - centerOffset.x + rX,
+                                            2.0f - centerOffset.y + offsetY,
+                                            vpos.z - centerOffset.z + rZ);
+                    render::addInstance(key, drawPos, {0, 1, 0}, rotationAngle,
+                                        {scale, scale, scale}, WHITE, model.transform);
+                };
+
+                // Deterministic random offset within the tile for grass
+                float rXG = ((std::abs(pos->x * 137 + pos->y * 31)) % 41) / 100.0f - 0.2f;
+                float rZG = ((std::abs(pos->x * 19 + pos->y * 101)) % 41) / 100.0f - 0.2f;
+                float rotG = static_cast<float>((std::abs(pos->x * 9283 + pos->y * 1234)) % 360);
+
+                // Draw grass on all
+                renderProp(grassNames[grassIdx], 0.65f, 0.0f, rXG, rZG, rotG);
+
+                if (hasBush && !playerOnTile) {
+                    // Different offset for bush
+                    float rXB = ((std::abs(pos->x * 83 + pos->y * 47)) % 41) / 100.0f - 0.2f;
+                    float rZB = ((std::abs(pos->x * 71 + pos->y * 59)) % 41) / 100.0f - 0.2f;
+                    float rotB =
+                        static_cast<float>((std::abs(pos->x * 5678 + pos->y * 4321)) % 360);
+                    renderProp(bushNames[bushIdx], 0.65f, 0.0f, rXB, rZB, rotB);
+                }
+            }
+
             if (pos->x == _hoveredX && pos->y == _hoveredZ) {
                 _renderHoverEffect(pos->x, pos->y);
             }
@@ -240,7 +301,8 @@ void RenderSystem::_renderTerrain(World& w) {
 
         batcher.beginBatch(atlas->id);
         for (const auto& face : topFaceBatches) {
-            batcher.addTopFaceUV(face.pos, 1.0f, 0.0f, 1.0f, face.u, face.v, face.uw, face.vh);
+            batcher.addTopFaceUV(face.pos, 1.0f, 0.0f, 1.0f, face.u, face.v, face.uw, face.vh,
+                                 face.color);
         }
         batcher.endBatch();
 
@@ -250,7 +312,8 @@ void RenderSystem::_renderTerrain(World& w) {
         ::rlDisableDepthMask();
         batcher.beginBatch(atlas->id);
         for (const auto& decal : decalBatches) {
-            batcher.addTopFaceUV(decal.pos, 1.0f, 0.0f, 1.0f, decal.u, decal.v, decal.uw, decal.vh);
+            batcher.addTopFaceUV(decal.pos, 1.0f, 0.0f, 1.0f, decal.u, decal.v, decal.uw, decal.vh,
+                                 decal.color);
         }
         batcher.endBatch();
         ::rlEnableDepthMask();
