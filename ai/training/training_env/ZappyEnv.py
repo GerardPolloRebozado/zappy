@@ -60,6 +60,53 @@ class ControllerAction(IntEnum):
     INCANTATION = 23
 
 
+class BroadcastDict(Enum):
+    COME = "COME"
+    FIND = "FIND"
+    DONT_COME = "DCOME"
+    INCANT = "INCANT"
+
+
+class BroadcastHandler:
+    def __init__(self, team_name, secret_key):
+        self.team_name = team_name
+        self.secret_key = secret_key
+
+    def build_message(self, intent: BroadcastDict, params: str = "") -> str:
+        """Build a safe message"""
+        return f"{self.team_name}|{self.secret_key}|{intent.value}|{params}"
+
+    def parse_message(self, raw_message: str):
+        """Decypher the message"""
+        parts = raw_message.split("|")
+        if (
+            len(parts) >= 3
+            and parts[0] == self.team_name
+            and parts[1] == self.secret_key
+        ):
+            return parts[2], parts[3] if len(parts) > 3 else ""
+        return None, None
+
+    def calculate_heuristic(self, direction: int, raw_message: str) -> dict:
+        """Heuristic calculations"""
+        action, params = self.parse_message(raw_message)
+
+        if not action:
+            return {"score": 0, "task": "IGNORE"}
+
+        match action:
+            case BroadcastDict.INCANT.value:
+                return {"score": 100, "task": "MOVE_TO_DIR", "dir": direction}
+            case BroadcastDict.COME.value:
+                return {"score": 70, "task": "MOVE_TO_DIR", "dir": direction}
+            case BroadcastDict.DONT_COME.value:
+                return {"score": 50, "task": "FLEE_FROM_DIR", "dir": direction}
+            case BroadcastDict.FIND.value:
+                return {"score": 30, "task": "SEARCH_RESOURCE", "target": params}
+
+        return {"score": 0, "task": "IGNORE"}
+
+
 class ZappyAction(Enum):
     """
     Enum mapping actions to their corresponding Zappy commands logic.
@@ -245,6 +292,10 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             low=0, high=10000, shape=(657,), dtype=np.int32
         )
 
+        self.broadcast_handler = BroadcastHandler(
+            team_name=team_name, secret_key="ZAPPY_SEC"
+        )
+
     def reset(self, seed=None, options=None):
         obs, info = self.mode.reset(seed=seed, options=options)
         self.client = self.mode.client
@@ -263,6 +314,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         response = None
         zappy_action = None
         item_target = None
+        heuristics_override_active = False
 
         ZAPPY_ITEMS = [
             "food",
@@ -279,6 +331,40 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         except ValueError:
             bot_action = None
 
+        pending_messages = []
+        if hasattr(self.client, "get_unread_messages"):
+            pending_messages = self.client.get_unread_messages()
+
+        best_heuristic = {"score": 0, "task": "IGNORE", "dir": 0}
+
+        for msg in pending_messages:
+            direction = msg.get("dir", 0)
+            text = msg.get("text", "")
+            heuristic = self.broadcast_handler.calculate_heuristic(direction, text)
+            if heuristic["score"] > best_heuristic["score"]:
+                best_heuristic = heuristic
+                best_heuristic["dir"] = direction
+
+        if best_heuristic["score"] >= 70:
+            target_dir = best_heuristic["dir"]
+
+            if target_dir == 0:
+                pass
+            elif target_dir in [1, 2, 8]:
+                bot_action = ControllerAction.FORWARD
+                heuristics_override_active = True
+            elif target_dir in [3, 4, 5]:
+                bot_action = ControllerAction.LEFT
+                heuristics_override_active = True
+            elif target_dir in [6, 7]:
+                bot_action = ControllerAction.RIGHT
+                heuristics_override_active = True
+
+        elif (
+            best_heuristic["score"] == 50 and best_heuristic["task"] == "FLEE_FROM_DIR"
+        ):
+            bot_action = ControllerAction.RIGHT
+            heuristics_override_active = True
         match bot_action:
             case ControllerAction.FORWARD:
                 response = self.client.forward()
@@ -296,8 +382,23 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 response = self.client.inventory()
                 zappy_action = ZappyAction.INVENTORY
             case ControllerAction.BROADCAST:
-                response = self.client.broadcast("Hola")
+                inv = self.client.inventory()
+                if self.client.level >= 2 and hasattr(inv, "food") and inv.food > 15:
+                    msg_to_send = self.broadcast_handler.build_message(
+                        BroadcastDict.INCANT
+                    )
+                elif hasattr(inv, "food") and inv.food < 5:
+                    msg_to_send = self.broadcast_handler.build_message(
+                        BroadcastDict.FIND, "food"
+                    )
+                else:
+                    msg_to_send = self.broadcast_handler.build_message(
+                        BroadcastDict.COME
+                    )
+
+                response = self.client.broadcast(msg_to_send)
                 zappy_action = ZappyAction.BROADCAST
+
             case ControllerAction.CONNECT_NBR:
                 response = self.client.connect_nbr()
                 zappy_action = ZappyAction.CONNECT_NBR
@@ -332,20 +433,23 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             reward = -100.0
         elif response == "ok":
             base_rewards = {
-                ZappyAction.FORWARD: 0.0,
-                ZappyAction.LEFT: 0.0,
-                ZappyAction.RIGHT: 0.0,
+                ZappyAction.FORWARD: 0.5,
+                ZappyAction.LEFT: 0.1,
+                ZappyAction.RIGHT: 0.1,
                 ZappyAction.LOOK: 0.0,
                 ZappyAction.INVENTORY: 0.0,
                 ZappyAction.BROADCAST: 0.0,
                 ZappyAction.CONNECT_NBR: 0.0,
-                ZappyAction.FORK: 50.0,
-                ZappyAction.EJECT: 10.0,
-                ZappyAction.SET: 5.0,
-                ZappyAction.INCANTATION: 0.0,
+                ZappyAction.FORK: -5.0,
+                ZappyAction.EJECT: 1.0,
+                ZappyAction.SET: -2.0,
+                ZappyAction.INCANTATION: 5.0,
             }
             reward += base_rewards.get(zappy_action, 0.0)
 
+            # rewards to use broadcast
+            if heuristics_override_active:
+                reward += 2.0
             if zappy_action == ZappyAction.TAKE:
                 inv = self.client.inventory()
                 if item_target == "food":
