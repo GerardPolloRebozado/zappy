@@ -7,6 +7,7 @@
 #ifndef ZAPPY_GUI_COMPONENTTAGS_HPP
 #define ZAPPY_GUI_COMPONENTTAGS_HPP
 
+#include "Components/ComponentShared.hpp"
 #include "ECS/Entity.hpp"
 #include <vector>
 
@@ -18,7 +19,7 @@ struct MapTag {};
 struct TeamTag {};
 struct EventEggHatched {};
 struct AnimatedResource {
-    int resourceId = 0;
+    ResourceType resourceId = ResourceType::FOOD;
     bool addToTileOnLand = false;
 };
 struct EventIncantationStart {

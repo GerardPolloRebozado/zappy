@@ -68,7 +68,7 @@ class CommandTileContent : public ACommand {
                                                     std::min(old_q4, q4), std::min(old_q5, q5),
                                                     std::min(old_q6, q6)});
 
-        auto spawnFallingResource = [&](int resId, int delta) {
+        auto spawnFallingResource = [&](ResourceType resId, int delta) {
             for (int i = 0; i < delta; ++i) {
                 Entity res = world.spawn();
                 world.add_component<AnimatedResource>(res, {resId, true});
@@ -82,25 +82,25 @@ class CommandTileContent : public ACommand {
         };
 
         if (q0 > old_q0) {
-            spawnFallingResource(0, q0 - old_q0);
+            spawnFallingResource(ResourceType::FOOD, q0 - old_q0);
         }
         if (q1 > old_q1) {
-            spawnFallingResource(1, q1 - old_q1);
+            spawnFallingResource(ResourceType::LINEMATE, q1 - old_q1);
         }
         if (q2 > old_q2) {
-            spawnFallingResource(2, q2 - old_q2);
+            spawnFallingResource(ResourceType::DERAUMERE, q2 - old_q2);
         }
         if (q3 > old_q3) {
-            spawnFallingResource(3, q3 - old_q3);
+            spawnFallingResource(ResourceType::SIBUR, q3 - old_q3);
         }
         if (q4 > old_q4) {
-            spawnFallingResource(4, q4 - old_q4);
+            spawnFallingResource(ResourceType::MENDIANE, q4 - old_q4);
         }
         if (q5 > old_q5) {
-            spawnFallingResource(5, q5 - old_q5);
+            spawnFallingResource(ResourceType::PHIRAS, q5 - old_q5);
         }
         if (q6 > old_q6) {
-            spawnFallingResource(6, q6 - old_q6);
+            spawnFallingResource(ResourceType::THYSTAME, q6 - old_q6);
         }
 
         // terrain type
