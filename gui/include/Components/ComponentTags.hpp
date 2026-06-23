@@ -19,6 +19,7 @@ struct TeamTag {};
 struct EventEggHatched {};
 struct AnimatedResource {
     int resourceId = 0;
+    bool addToTileOnLand = false;
 };
 struct EventIncantationStart {
     std::vector<Entity> participants;

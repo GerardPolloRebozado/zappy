@@ -104,17 +104,12 @@ class AResourceCommand : public ACommand {
             auto tPos = world.get_component<Position>(ent);
             if (tPos && tPos->x == playerPos.x && tPos->y == playerPos.y) {
                 Entity food = world.spawn();
-                world.add_component<AnimatedResource>(food, {resourceId});
+                world.add_component<AnimatedResource>(food, {resourceId, true});
                 world.add_component<Position>(food, tPos);
                 world.add_component<Animation>(food, {"", 0.0f, 60.0f, 1.0f, true});
                 world.add_component<MovementInterpolation3D>(food, {static_cast<float>(playerPos.x),
                                                                     static_cast<float>(playerPos.y),
                                                                     0.0f, false, 2.0f});
-
-                auto tileInv = world.get_component<Inventory>(ent);
-                if (tileInv) {
-                    updateInventory(tileInv.get(), resourceId, delta);
-                }
                 break;
             }
         }
