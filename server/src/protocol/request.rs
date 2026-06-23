@@ -62,6 +62,7 @@ impl FromStr for Request {
 
             "mev" if args.len() > 1 => Command::Mev(args[1].clone()),
             "gev" => Command::Gev,
+            "plv" if args.len() > 1 => Command::Plv(args[1].clone()),
 
             _ => Command::Unknown(cmd_name),
         };

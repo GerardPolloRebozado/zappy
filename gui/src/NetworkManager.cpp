@@ -7,6 +7,8 @@
 
 #include "NetworkManager.hpp"
 #include "Commands/FactoryCommands.hpp"
+#include "Components/ComponentInhabitant.hpp"
+#include "Components/ComponentShared.hpp"
 #include "Logging/Logger.hpp"
 #include "errors/IError.hpp"
 #include <sstream>
@@ -47,6 +49,38 @@ void NetworkManager::update(World& world) {
         }
         if (_socket.canWrite()) {
             _socket.flush();
+        }
+    }
+
+    // request player lvl
+    auto levelReqStorage = world.get_storage<RequestPlayerLevel>();
+    if (levelReqStorage) {
+        std::vector<Entity> toRemove;
+        for (const auto& [entity, req] : *levelReqStorage) {
+            auto serverId = world.get_component<ServerId>(entity);
+            if (serverId) {
+                requestPlayerLevel(serverId->id);
+            }
+            toRemove.push_back(entity);
+        }
+        for (Entity e : toRemove) {
+            world.remove_component<RequestPlayerLevel>(e);
+        }
+    }
+
+    // request player inventories
+    auto invReqStorage = world.get_storage<RequestPlayerInventory>();
+    if (invReqStorage) {
+        std::vector<Entity> toRemove;
+        for (const auto& [entity, req] : *invReqStorage) {
+            auto serverId = world.get_component<ServerId>(entity);
+            if (serverId) {
+                requestPlayerInventory(serverId->id);
+            }
+            toRemove.push_back(entity);
+        }
+        for (Entity e : toRemove) {
+            world.remove_component<RequestPlayerInventory>(e);
         }
     }
 }

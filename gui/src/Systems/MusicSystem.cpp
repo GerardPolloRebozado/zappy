@@ -2,8 +2,8 @@
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentMusic.hpp"
 #include "Components/ComponentShared.hpp"
-#include <cstdlib>
 #include "Logging/Logger.hpp"
+#include <cstdlib>
 
 namespace zappy {
 
@@ -37,7 +37,8 @@ void MusicSystem::update(World& w, float dt) {
         }
 
         // Check if the song is at his end, if it is stop the stream and set isFinished as true
-        if (song.isPlaying && GetMusicTimePlayed(song.song.music) >= GetMusicTimeLength(song.song.music)) {
+        if (song.isPlaying &&
+            GetMusicTimePlayed(song.song.music) >= GetMusicTimeLength(song.song.music)) {
             StopMusicStream(song.song.music);
             song.isFinished = true;
             song.isPlaying = false;
@@ -60,24 +61,22 @@ void MusicSystem::update(World& w, float dt) {
     }
 }
 
-float MusicSystem::getVolume() {
-    return _volume;
-}
+float MusicSystem::getVolume() { return _volume; }
 
-void MusicSystem::setVolume(float volume) {
-    _volume = volume;
-}
+void MusicSystem::setVolume(float volume) { _volume = volume; }
 
 void MusicSystem::volumeUp() {
     _volume += 0.1;
-    if (_volume > 1.0)
+    if (_volume > 1.0) {
         _volume = 1.0;
+    }
 }
 
 void MusicSystem::volumeDown() {
     _volume -= 0.1;
-    if (_volume < 0.0)
+    if (_volume < 0.0) {
         _volume = 0.0;
+    }
 }
 
 } // namespace zappy

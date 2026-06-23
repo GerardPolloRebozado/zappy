@@ -7,7 +7,10 @@
 
 #include "Commands/CommandIncantationEnd.hpp"
 #include "Commands/CommandIncantationStart.hpp"
+#include "Components/ComponentInhabitant.hpp"
+#include "Components/ComponentShared.hpp"
 #include "ECS/World.hpp"
+#include "Systems/ParticleSystem.hpp"
 #include <criterion/criterion.h>
 
 using namespace zappy;
