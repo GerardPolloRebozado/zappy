@@ -102,6 +102,7 @@ void RenderSystem::render(World& w) {
     _renderIncantations(w);
     _renderParticles(w);
     _renderTombs(w);
+    _renderCelestials(w);
     _renderDebugHud(w);
 
     // Hardware Instancing Rendering Phase
