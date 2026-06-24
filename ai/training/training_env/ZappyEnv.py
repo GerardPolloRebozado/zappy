@@ -226,8 +226,8 @@ class LibZappyEnv:
         width=20,
         height=20,
         freq=100,
-        teams=["TeamAI", "TeamEnemigo1", "TeamEnemigo2"],
-        clients_nb=20,
+        teams=["TeamAI", "TeamEnemigo1"],
+        clients_nb=10,
     ):
         self.env = env
         self.width = width
@@ -253,17 +253,16 @@ class LibZappyEnv:
         )
 
         # Add training player
-        for _ in range(5):
+        for _ in range(4):
             self.zappy_lib.lib.zappy_add_player(
                 self.server_ptr, self.teams[0].encode("utf-8")
             )
 
         # enemy teams
-        for i in range(1, len(self.teams)):
-            for _ in range(3):
-                self.zappy_lib.lib.zappy_add_player(
-                    self.server_ptr, self.teams[i].encode("utf-8")
-                )
+        for _ in range(5):
+            self.zappy_lib.lib.zappy_add_player(
+                self.server_ptr, self.teams[1].encode("utf-8")
+            )
         player_id = self.zappy_lib.lib.zappy_add_player(
             self.server_ptr, self.teams[0].encode("utf-8")
         )
@@ -367,15 +366,16 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
 
             if target_dir == 0:
                 pass
-            elif target_dir in [1, 2, 8]:
-                bot_action = ControllerAction.FORWARD
-                heuristics_override_active = True
-            elif target_dir in [3, 4, 5]:
-                bot_action = ControllerAction.LEFT
-                heuristics_override_active = True
-            elif target_dir in [6, 7]:
-                bot_action = ControllerAction.RIGHT
-                heuristics_override_active = True
+            else:
+                if target_dir in [1, 2, 8]:
+                    bot_action = ControllerAction.FORWARD
+                    heuristics_override_active = True
+                elif target_dir in [3, 4, 5]:
+                    bot_action = ControllerAction.LEFT
+                    heuristics_override_active = True
+                elif target_dir in [6, 7]:
+                    bot_action = ControllerAction.RIGHT
+                    heuristics_override_active = True
 
         elif (
             best_heuristic["score"] == 50 and best_heuristic["task"] == "FLEE_FROM_DIR"
@@ -457,10 +457,10 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 ZappyAction.INVENTORY: 0.0,
                 ZappyAction.BROADCAST: 0.0,
                 ZappyAction.CONNECT_NBR: 0.0,
-                ZappyAction.FORK: -5.0,  # hate the eggs with out players
-                ZappyAction.EJECT: 0.0,  # dont try to kick the air
-                ZappyAction.SET: -1.0,  # dont waste time seting without thinking
-                ZappyAction.INCANTATION: 0.0,  # everything is bad so, evolving is good :D
+                ZappyAction.FORK: -5.0,  # Hate the eggs without players
+                ZappyAction.EJECT: 0.0,  # Don't try to kick the air
+                ZappyAction.SET: -1.0,  # Don't waste time setting without thinking
+                ZappyAction.INCANTATION: 0.0,  # Everything is bad so, evolving is good :D
             }
             reward += base_rewards.get(zappy_action, 0.0)
 
@@ -481,7 +481,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                     elif stone_quantity == 1:
                         reward += 1.0
                     else:
-                        reward -= 1.0  # solve diogenes
+                        reward -= 1.0  # Solve diogenes
         elif response == "ko":
             reward = -1.0
         elif isinstance(response, str) and response.startswith("Current level:"):
