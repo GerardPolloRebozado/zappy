@@ -221,7 +221,13 @@ class NetworkZappyEnv:
 
 class LibZappyEnv:
     def __init__(
-        self, env, width=10, height=10, freq=100, teams=["TeamAI"], clients_nb=10
+        self,
+        env,
+        width=20,
+        height=20,
+        freq=100,
+        teams=["TeamAI", "TeamEnemigo1", "TeamEnemigo2"],
+        clients_nb=20,
     ):
         self.env = env
         self.width = width
@@ -247,6 +253,17 @@ class LibZappyEnv:
         )
 
         # Add training player
+        for _ in range(5):
+            self.zappy_lib.lib.zappy_add_player(
+                self.server_ptr, self.teams[0].encode("utf-8")
+            )
+
+        # enemy teams
+        for i in range(1, len(self.teams)):
+            for _ in range(3):
+                self.zappy_lib.lib.zappy_add_player(
+                    self.server_ptr, self.teams[i].encode("utf-8")
+                )
         player_id = self.zappy_lib.lib.zappy_add_player(
             self.server_ptr, self.teams[0].encode("utf-8")
         )
