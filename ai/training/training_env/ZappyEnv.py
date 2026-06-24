@@ -433,35 +433,38 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             reward = -100.0
         elif response == "ok":
             base_rewards = {
-                ZappyAction.FORWARD: 0.5,
-                ZappyAction.LEFT: 0.1,
-                ZappyAction.RIGHT: 0.1,
+                ZappyAction.FORWARD: 0.0,
+                ZappyAction.LEFT: 0.0,
+                ZappyAction.RIGHT: 0.0,
                 ZappyAction.LOOK: 0.0,
                 ZappyAction.INVENTORY: 0.0,
                 ZappyAction.BROADCAST: 0.0,
                 ZappyAction.CONNECT_NBR: 0.0,
-                ZappyAction.FORK: -5.0,
-                ZappyAction.EJECT: 1.0,
-                ZappyAction.SET: -2.0,
-                ZappyAction.INCANTATION: 5.0,
+                ZappyAction.FORK: -5.0,  # hate the eggs with out players
+                ZappyAction.EJECT: 0.0,  # dont try to kick the air
+                ZappyAction.SET: -1.0,  # dont waste time seting without thinking
+                ZappyAction.INCANTATION: 0.0,  # everything is bad so, evolving is good :D
             }
             reward += base_rewards.get(zappy_action, 0.0)
 
-            # rewards to use broadcast
             if heuristics_override_active:
                 reward += 2.0
+
             if zappy_action == ZappyAction.TAKE:
                 inv = self.client.inventory()
                 if item_target == "food":
-                    if hasattr(inv, "food") and inv.food >= 15:
-                        reward += 0.0
-                    else:
-                        reward += 4.0
-                else:
-                    if getattr(inv, item_target, 0) >= 1:
-                        reward += 10.0
+                    if hasattr(inv, "food") and inv.food >= 20:
+                        reward -= 1.0
                     else:
                         reward += 2.0
+                else:
+                    stone_quantity = getattr(inv, item_target, 0)
+                    if stone_quantity == 0:
+                        reward += 4.0
+                    elif stone_quantity == 1:
+                        reward += 1.0
+                    else:
+                        reward -= 1.0  # solve diogenes
         elif response == "ko":
             reward = -1.0
         elif isinstance(response, str) and response.startswith("Current level:"):
