@@ -108,6 +108,62 @@ void main()
     _shaders["alphaCutout"] =
         std::make_unique<raylib::Shader>(::LoadShaderFromMemory(nullptr, alphaFS));
 
+    // Water Shader
+    // Applies a subtle wavy effect to the UV coordinates or colors based on time
+    const char* waterFS = R"(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+uniform sampler2D texture0;
+uniform float time;
+out vec4 finalColor;
+void main()
+{
+    // Subtle wave on UVs
+    vec2 uv = fragTexCoord;
+    uv.x += sin(uv.y * 50.0 + time * 2.0) * 0.0015;
+    uv.y += cos(uv.x * 50.0 + time * 1.5) * 0.0015;
+
+    vec4 texelColor = texture(texture0, uv);
+    if (texelColor.a < 0.1) discard;
+
+    // Subtle color pulsation
+    float wave = sin(time * 3.0 + uv.x * 20.0 + uv.y * 20.0) * 0.05;
+    vec4 waveColor = vec4(1.0 + wave, 1.0 + wave, 1.0 + wave*1.5, 1.0);
+    
+    finalColor = texelColor * fragColor * waveColor;
+}
+)";
+
+    _shaders["water"] = std::make_unique<raylib::Shader>(::LoadShaderFromMemory(nullptr, waterFS));
+
+    // Obsidian Shader
+    // Adds a glowing molten lava effect to the cracks of the texture
+    const char* obsidianFS = R"(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+uniform sampler2D texture0;
+uniform float time;
+out vec4 finalColor;
+void main()
+{
+    vec4 texelColor = texture(texture0, fragTexCoord);
+    if (texelColor.a < 0.1) discard;
+
+    // Glowing molten cracks based on UVs and time
+    float glow = sin(time * 1.5 + fragTexCoord.x * 30.0 + fragTexCoord.y * 30.0) * 0.5 + 0.5;
+    vec3 lavaColor = vec3(1.0, 0.3, 0.0) * glow * 0.8;
+    
+    // Add glow mostly to the darker areas of the texture
+    float isDark = 1.0 - smoothstep(0.05, 0.25, length(texelColor.rgb));
+    vec3 finalRGB = texelColor.rgb + (lavaColor * isDark);
+    
+    finalColor = vec4(finalRGB, texelColor.a) * fragColor;
+}
+)";
+
+    _shaders["obsidian"] =
+        std::make_unique<raylib::Shader>(::LoadShaderFromMemory(nullptr, obsidianFS));
+
     const char* incantationFS = R"(#version 330
 in vec2 fragTexCoord;
 in vec4 fragColor;

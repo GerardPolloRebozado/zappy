@@ -71,6 +71,10 @@ void AssetManager::_loadModels() {
         _models["rock1"] = std::make_unique<raylib::Model>("assets/models/rock1.obj");
         _models["rock2"] = std::make_unique<raylib::Model>("assets/models/rock2.obj");
 
+        _models["mountain_1"] = std::make_unique<raylib::Model>("assets/models/mountain_1.obj");
+        _models["mountain_2"] = std::make_unique<raylib::Model>("assets/models/mountain_2.obj");
+        _models["mountain_3"] = std::make_unique<raylib::Model>("assets/models/mountain_3.obj");
+
         _models["skull"] = std::make_unique<raylib::Model>("assets/models/tomb/skull_candle.obj");
 
         for (int i = 1; i <= 9; ++i) {

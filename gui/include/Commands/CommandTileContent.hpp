@@ -110,29 +110,56 @@ class CommandTileContent : public ACommand {
             auto newType = static_cast<TerrainType::Type>(t_type);
             world.add_component<TerrainType>(tileEntity, {newType});
 
-            if (newType == TerrainType::OBSIDIAN_BARRENS) {
+            if (newType == TerrainType::WORMHOLE) {
                 if (!world.get_component<ComponentParticleEmitter>(tileEntity)) {
                     ComponentParticleEmitter emitter;
                     emitter.loop = true;
                     emitter.isPlaying = true;
-                    emitter.emitRate = 8.0f;                       // Subtle simmer
-                    emitter.offset = raylib::Vector3(0, 0.05f, 0); // just above the floor
-                    emitter.spawnVolumeMin =
-                        raylib::Vector3(-0.45f, 0.0f, -0.45f); // Spread over the tile
-                    emitter.spawnVolumeMax = raylib::Vector3(0.45f, 0.1f, 0.45f);
-                    emitter.minLifetime = 1.0f;
-                    emitter.maxLifetime = 2.5f;
-                    emitter.minSize = 0.03f;
-                    emitter.maxSize = 0.08f;
-                    emitter.minVelocity = raylib::Vector3(-0.15f, 0.3f, -0.15f);
-                    emitter.maxVelocity =
-                        raylib::Vector3(0.15f, 0.8f, 0.15f); // rising smoke/embers
-                    // Mix between smoke and fire particles
+                    emitter.emitRate = 100.0f;                     // Dense portal ring
+                    emitter.offset = raylib::Vector3(0, 0.02f, 0); // Flat on the floor
+                    emitter.spawnRadius = 0.4f; // Circle on the edges of the tile
+                    emitter.spawnVolumeMin = raylib::Vector3(0.0f, 0.0f, 0.0f);
+                    emitter.spawnVolumeMax = raylib::Vector3(0.0f, 0.05f, 0.0f); // Slight thickness
+                    emitter.minLifetime = 0.5f;
+                    emitter.maxLifetime = 1.2f;
+                    emitter.minSize = 0.04f;
+                    emitter.maxSize = 0.09f;
+                    emitter.minVelocity = raylib::Vector3(-0.2f, 0.1f, -0.2f);
+                    emitter.maxVelocity = raylib::Vector3(0.2f, 0.6f, 0.2f); // Swirling up slightly
+
                     emitter.colorPalette = {
-                        raylib::Color{255, 100, 0, 200}, // fire orange
-                        raylib::Color{255, 50, 0, 200},  // red-hot
-                        raylib::Color{50, 50, 50, 150},  // dark smoke
-                        raylib::Color{20, 20, 20, 150}   // obsidian ash
+                        raylib::Color{138, 43, 226, 255}, // Blue Violet
+                        raylib::Color{148, 0, 211, 255},  // Dark Violet
+                        raylib::Color{186, 85, 211, 200}, // Medium Orchid
+                        raylib::Color{75, 0, 130, 255},   // Indigo
+                        raylib::Color{0, 255, 255, 150}   // Subtle cyan highlight
+                    };
+                    world.add_component<ComponentParticleEmitter>(tileEntity, emitter);
+                }
+            } else if (newType == TerrainType::OBSIDIAN_BARRENS) {
+                if (!world.get_component<ComponentParticleEmitter>(tileEntity)) {
+                    ComponentParticleEmitter emitter;
+                    emitter.loop = true;
+                    emitter.isPlaying = true;
+                    emitter.emitRate = 15.0f; // Slower spawn rate for fewer embers
+                    emitter.offset = raylib::Vector3(0, 0.05f, 0);
+                    emitter.spawnRadius = 0.5f; // Across the tile
+                    emitter.spawnVolumeMin = raylib::Vector3(-0.2f, 0.0f, -0.2f);
+                    emitter.spawnVolumeMax = raylib::Vector3(0.2f, 0.1f, 0.2f);
+                    emitter.minLifetime = 1.5f;
+                    emitter.maxLifetime =
+                        3.5f; // Increased lifetime so they linger longer even if slower
+                    emitter.minSize = 0.02f;
+                    emitter.maxSize = 0.06f;
+                    emitter.minVelocity =
+                        raylib::Vector3(-0.05f, 0.1f, -0.05f); // Reduced upward speed
+                    emitter.maxVelocity = raylib::Vector3(0.05f, 0.25f, 0.05f);
+
+                    emitter.colorPalette = {
+                        raylib::Color{255, 69, 0, 255},  // Orange Red
+                        raylib::Color{255, 140, 0, 255}, // Dark Orange
+                        raylib::Color{139, 0, 0, 200},   // Dark Red
+                        raylib::Color{50, 50, 50, 255}   // Ash / Smoke
                     };
                     world.add_component<ComponentParticleEmitter>(tileEntity, emitter);
                 }

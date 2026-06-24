@@ -99,8 +99,16 @@ void RenderSystem::_renderTerrain(World& w) {
         raylib::Color color;
     };
     std::vector<TopFaceData> topFaceBatches;
+    std::vector<TopFaceData> waterBatches;
+    std::vector<TopFaceData> obsidianBatches;
     std::vector<TopFaceData> decalBatches;
-    std::vector<raylib::Vector3> sideFaceBatches;
+    std::vector<TopFaceData> waterDecalBatches;
+    std::vector<TopFaceData> obsidianDecalBatches;
+    struct SideFaceData {
+        raylib::Vector3 pos;
+        float height;
+    };
+    std::vector<SideFaceData> sideFaceBatches;
 
     auto getMapType = [&](int nx, int ny) -> TerrainType::Type {
         uint64_t key = hashPos(nx, ny);
@@ -133,7 +141,7 @@ void RenderSystem::_renderTerrain(World& w) {
 
             raylib::Vector3 sidePos = vpos;
             sidePos.y -= 0.02f; // Shift down slightly
-            sideFaceBatches.push_back(sidePos);
+            sideFaceBatches.push_back({sidePos, 0.96f});
 
             raylib::Vector3 planePos = vpos;
             planePos.y += 0.5f; // Plane rests exactly on top of the original cube height
@@ -145,10 +153,19 @@ void RenderSystem::_renderTerrain(World& w) {
 
             float u, v, uw, vh;
             textures.getTileUVs(type->current_type, variation, 0, u, v, uw, vh); // Col 0 is Base
-            raylib::Color tileColor = (type->current_type == TerrainType::GRASS)
-                                          ? raylib::Color{210, 210, 210, 255}
-                                          : WHITE;
-            topFaceBatches.push_back({planePos, u, v, uw, vh, tileColor});
+            raylib::Color tileColor = WHITE;
+            if (type->current_type == TerrainType::GRASS) {
+                tileColor = raylib::Color{210, 210, 210, 255};
+            } else if (type->current_type == TerrainType::MOUNTAIN) {
+                tileColor = raylib::Color{170, 184, 190, 255};
+            }
+            if (type->current_type == TerrainType::WATER) {
+                waterBatches.push_back({planePos, u, v, uw, vh, tileColor});
+            } else if (type->current_type == TerrainType::OBSIDIAN_BARRENS) {
+                obsidianBatches.push_back({planePos, u, v, uw, vh, tileColor});
+            } else {
+                topFaceBatches.push_back({planePos, u, v, uw, vh, tileColor});
+            }
 
             // Now calculate decals
             int currentPriority = textures.getPriority(type->current_type);
@@ -166,7 +183,13 @@ void RenderSystem::_renderTerrain(World& w) {
                     raylib::Vector3 decalPos = planePos;
                     raylib::Color decalColor =
                         (nType == TerrainType::GRASS) ? raylib::Color{210, 210, 210, 255} : WHITE;
-                    decalBatches.push_back({decalPos, du, dv, duw, dvh, decalColor});
+                    if (nType == TerrainType::WATER) {
+                        waterDecalBatches.push_back({decalPos, du, dv, duw, dvh, decalColor});
+                    } else if (nType == TerrainType::OBSIDIAN_BARRENS) {
+                        obsidianDecalBatches.push_back({decalPos, du, dv, duw, dvh, decalColor});
+                    } else {
+                        decalBatches.push_back({decalPos, du, dv, duw, dvh, decalColor});
+                    }
                 }
             };
 
@@ -352,6 +375,47 @@ void RenderSystem::_renderTerrain(World& w) {
                 }
             }
 
+            if (type->current_type == TerrainType::MOUNTAIN) {
+                bool playerOnTile = inhabitantPositions.count(hashPos(pos->x, pos->y)) > 0;
+                bool spawnMountain =
+                    ((std::abs(pos->x) * 73 + std::abs(pos->y) * 19) % 2) == 0; // ~50% chance
+
+                if (spawnMountain && !playerOnTile) {
+                    std::string mountainNames[] = {"mountain_1", "mountain_2", "mountain_3"};
+                    int mountainIdx = (pos->x * 837 + pos->y * 392) % 3;
+                    if (mountainIdx < 0) {
+                        mountainIdx += 3;
+                    }
+
+                    raylib::Model& model =
+                        AssetManager::getInstance().getModel(mountainNames[mountainIdx]);
+                    std::shared_ptr<BoundingBox> box = AssetManager::getInstance().getBoundingBox(
+                        mountainNames[mountainIdx], model);
+
+                    float sizeX = box->max.x - box->min.x;
+                    if (sizeX > 0) {
+                        float scale = 0.4f; // Fit inside the tile
+                        raylib::Vector3 centerOffset((box->max.x + box->min.x) / 2.0f * scale,
+                                                     box->min.y * scale,
+                                                     (box->max.z + box->min.z) / 2.0f * scale);
+
+                        // Add a tiny random offset and rotation so they don't look perfectly tiled
+                        float rX = ((std::abs(pos->x * 17 + pos->y * 31)) % 41) / 100.0f - 0.2f;
+                        float rZ = ((std::abs(pos->x * 73 + pos->y * 19)) % 41) / 100.0f - 0.2f;
+                        float rotationAngle =
+                            static_cast<float>((std::abs(pos->x * 555 + pos->y * 222)) % 360);
+
+                        // The models are quite tall, anchor them properly on top of the tile plane
+                        raylib::Vector3 drawPos(vpos.x - centerOffset.x + rX, 2.0f - centerOffset.y,
+                                                vpos.z - centerOffset.z + rZ);
+
+                        render::addInstance(mountainNames[mountainIdx], drawPos, {0, 1, 0},
+                                            rotationAngle, {scale, scale, scale}, WHITE,
+                                            model.transform);
+                    }
+                }
+            }
+
             if (pos->x == _hoveredX && pos->y == _hoveredZ) {
                 _renderHoverEffect(pos->x, pos->y);
             }
@@ -360,9 +424,9 @@ void RenderSystem::_renderTerrain(World& w) {
 
     // Render batches
     batcher.beginSolidBatch();
-    for (const auto& sidePos : sideFaceBatches) {
-        batcher.addSideFaces(sidePos, 1.0f, 0.96f, 1.0f, raylib::Color(110, 110, 110, 255), true,
-                             true, true, true);
+    for (const auto& sideData : sideFaceBatches) {
+        batcher.addSideFaces(sideData.pos, 1.0f, sideData.height, 1.0f,
+                             raylib::Color(110, 110, 110, 255), true, true, true, true);
     }
     batcher.endBatch();
 
@@ -390,6 +454,70 @@ void RenderSystem::_renderTerrain(World& w) {
         ::rlEnableDepthMask();
 
         ::EndShaderMode();
+
+        // Render water with water shader
+        if (!waterBatches.empty() || !waterDecalBatches.empty()) {
+            raylib::Shader& waterShader = AssetManager::getInstance().getShader("water");
+            int timeLoc = ::GetShaderLocation(waterShader, "time");
+            float time = static_cast<float>(::GetTime());
+            ::SetShaderValue(waterShader, timeLoc, &time, SHADER_UNIFORM_FLOAT);
+
+            ::BeginShaderMode(waterShader);
+
+            if (!waterBatches.empty()) {
+                batcher.beginBatch(atlas->id);
+                for (const auto& face : waterBatches) {
+                    batcher.addTopFaceUV(face.pos, 1.0f, 0.0f, 1.0f, face.u, face.v, face.uw,
+                                         face.vh, face.color);
+                }
+                batcher.endBatch();
+            }
+
+            if (!waterDecalBatches.empty()) {
+                ::rlDisableDepthMask();
+                batcher.beginBatch(atlas->id);
+                for (const auto& decal : waterDecalBatches) {
+                    batcher.addTopFaceUV(decal.pos, 1.0f, 0.0f, 1.0f, decal.u, decal.v, decal.uw,
+                                         decal.vh, decal.color);
+                }
+                batcher.endBatch();
+                ::rlEnableDepthMask();
+            }
+
+            ::EndShaderMode();
+        }
+
+        // Render obsidian with obsidian shader
+        if (!obsidianBatches.empty() || !obsidianDecalBatches.empty()) {
+            raylib::Shader& obsidianShader = AssetManager::getInstance().getShader("obsidian");
+            int timeLoc = ::GetShaderLocation(obsidianShader, "time");
+            float time = static_cast<float>(::GetTime());
+            ::SetShaderValue(obsidianShader, timeLoc, &time, SHADER_UNIFORM_FLOAT);
+
+            ::BeginShaderMode(obsidianShader);
+
+            if (!obsidianBatches.empty()) {
+                batcher.beginBatch(atlas->id);
+                for (const auto& face : obsidianBatches) {
+                    batcher.addTopFaceUV(face.pos, 1.0f, 0.0f, 1.0f, face.u, face.v, face.uw,
+                                         face.vh, face.color);
+                }
+                batcher.endBatch();
+            }
+
+            if (!obsidianDecalBatches.empty()) {
+                ::rlDisableDepthMask();
+                batcher.beginBatch(atlas->id);
+                for (const auto& decal : obsidianDecalBatches) {
+                    batcher.addTopFaceUV(decal.pos, 1.0f, 0.0f, 1.0f, decal.u, decal.v, decal.uw,
+                                         decal.vh, decal.color);
+                }
+                batcher.endBatch();
+                ::rlEnableDepthMask();
+            }
+
+            ::EndShaderMode();
+        }
     }
 }
 
