@@ -323,4 +323,53 @@ void RenderSystem::_renderDebugHud(World& w) {
     drawText("Eggs on Map: " + std::to_string(eggStorage ? eggStorage->size() : 0));
 }
 
+void RenderSystem::_renderWormholes(World& w) {
+    auto terrainStorage = w.get_storage<TerrainType>();
+    if (!terrainStorage) {
+        return;
+    }
+
+    raylib::Shader& shader = AssetManager::getInstance().getShader("wormhole_portal");
+    int timeLoc = ::GetShaderLocation(shader, "time");
+    float time = (float)GetTime();
+    ::SetShaderValue(shader, timeLoc, &time, SHADER_UNIFORM_FLOAT);
+
+    ::rlDisableBackfaceCulling();
+    ::rlDisableDepthMask();
+    ::BeginShaderMode(shader);
+
+    ::rlBegin(RL_QUADS);
+    ::rlColor4ub(255, 255, 255, 255);
+
+    for (const auto& [entity, type] : *terrainStorage) {
+        if (type->current_type != TerrainType::WORMHOLE) {
+            continue;
+        }
+
+        auto pos = w.get_component<Position>(entity);
+        if (!pos) {
+            continue;
+        }
+
+        float x = (float)pos->x;
+        float z = (float)pos->y;
+        float yBase = 2.01f; // Slightly above tile
+        float size = 0.5f;   // 1.0x1.0 square
+
+        ::rlTexCoord2f(0.0f, 0.0f);
+        ::rlVertex3f(x - size, yBase, z - size);
+        ::rlTexCoord2f(0.0f, 1.0f);
+        ::rlVertex3f(x - size, yBase, z + size);
+        ::rlTexCoord2f(1.0f, 1.0f);
+        ::rlVertex3f(x + size, yBase, z + size);
+        ::rlTexCoord2f(1.0f, 0.0f);
+        ::rlVertex3f(x + size, yBase, z - size);
+    }
+
+    ::rlEnd();
+    ::EndShaderMode();
+    ::rlEnableDepthMask();
+    ::rlEnableBackfaceCulling();
+}
+
 } // namespace zappy

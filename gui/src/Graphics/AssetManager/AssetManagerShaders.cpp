@@ -165,6 +165,48 @@ void main()
     _shaders["incantation_aura"] =
         std::make_unique<raylib::Shader>(::LoadShaderFromMemory(nullptr, incantationFS));
 
+    const char* wormholeFS = R"(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+
+uniform float time;
+
+out vec4 finalColor;
+
+void main()
+{
+    vec2 p = fragTexCoord - 0.5;
+    float r = length(p);
+    
+    if (r > 0.5) discard;
+    
+    float a = atan(p.y, p.x);
+    
+    float spiral = sin(a * 5.0 + r * 20.0 - time * 5.0);
+    float spiral2 = sin(a * 3.0 + r * 15.0 - time * 3.0);
+    
+    float wobble = sin(r * 30.0 - time * 8.0) * 0.5 + 0.5;
+    float intensity = (spiral * 0.5 + 0.5) * (spiral2 * 0.5 + 0.5) + wobble * 0.5;
+    
+    vec3 colDark = vec3(0.2, 0.0, 0.4);   // Dark purple
+    vec3 colMid = vec3(0.6, 0.1, 0.8);    // Neon purple
+    vec3 colLight = vec3(0.0, 1.0, 0.8);  // Cyan/green
+    
+    float edge = smoothstep(0.5, 0.4, r);
+    float core = smoothstep(0.2, 0.0, r);
+    
+    vec3 finalRGB = mix(colDark, colMid, intensity);
+    finalRGB = mix(finalRGB, colLight, core + intensity * 0.3 * (1.0 - edge));
+    
+    float finalAlpha = edge * (0.5 + intensity * 0.5) * fragColor.a;
+    
+    finalColor = vec4(finalRGB, finalAlpha);
+    if (finalColor.a < 0.05) discard;
+}
+)";
+    _shaders["wormhole_portal"] =
+        std::make_unique<raylib::Shader>(::LoadShaderFromMemory(nullptr, wormholeFS));
+
     auto& shader = *_shaders["instancing"];
     for (auto& [name, model] : _models) {
         if (name == "robot") {
