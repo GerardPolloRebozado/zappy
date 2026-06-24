@@ -73,11 +73,11 @@ class BroadcastHandler:
         self.secret_key = secret_key
 
     def build_message(self, intent: BroadcastDict, params: str = "") -> str:
-        """Build a safe message"""
+        """Build a safe message using the team's secret key."""
         return f"{self.team_name}|{self.secret_key}|{intent.value}|{params}"
 
     def parse_message(self, raw_message: str):
-        """Decypher the message"""
+        """Decypher the message to ensure it belongs to our team."""
         parts = raw_message.split("|")
         if (
             len(parts) >= 3
@@ -88,7 +88,7 @@ class BroadcastHandler:
         return None, None
 
     def calculate_heuristic(self, direction: int, raw_message: str) -> dict:
-        """Heuristic calculations"""
+        """Heuristic calculations to determine the importance of the broadcast."""
         action, params = self.parse_message(raw_message)
 
         if not action:
@@ -190,7 +190,7 @@ class ObservationZappyEnv:
 
 
 class NetworkZappyEnv:
-    def __init__(self, env, port=4242, ip="127.0.0.1", team_name="TeamAI"):
+    def __init__(self, env, port=4242, ip="127.0.0.1", team_name="team1"):
         self.env = env
         self.ip = ip
         self.port = port
@@ -226,7 +226,7 @@ class LibZappyEnv:
         width=20,
         height=20,
         freq=100,
-        teams=["TeamAI", "TeamEnemigo1"],
+        teams=["team1", "team2"],
         clients_nb=10,
     ):
         self.env = env
@@ -252,17 +252,26 @@ class LibZappyEnv:
             self.width, self.height, self.freq, team_ptrs, team_count, self.clients_nb
         )
 
-        # Add training player
+        # Add 4 training allies (from the main team: teams[0])
         for _ in range(4):
             self.zappy_lib.lib.zappy_add_player(
                 self.server_ptr, self.teams[0].encode("utf-8")
             )
 
-        # enemy teams
-        for _ in range(5):
-            self.zappy_lib.lib.zappy_add_player(
-                self.server_ptr, self.teams[1].encode("utf-8")
-            )
+        # enemies (Distribute 5 remaining slots among rival teams)
+        enemy_slots = 5
+        enemy_teams_count = len(self.teams) - 1
+
+        if enemy_teams_count > 0:
+            bots_per_team = enemy_slots // enemy_teams_count
+            remainder = enemy_slots % enemy_teams_count
+
+            for i in range(1, len(self.teams)):
+                extra = 1 if i <= remainder else 0
+                for _ in range(bots_per_team + extra):
+                    self.zappy_lib.lib.zappy_add_player(
+                        self.server_ptr, self.teams[i].encode("utf-8")
+                    )
         player_id = self.zappy_lib.lib.zappy_add_player(
             self.server_ptr, self.teams[0].encode("utf-8")
         )
@@ -293,12 +302,23 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
     """
 
     def __init__(
-        self, use_lib=True, port=4242, ip="127.0.0.1", team_name="TeamAI", **kwargs
+        self,
+        use_lib=True,
+        port=4242,
+        ip="127.0.0.1",
+        team_name="team1",
+        total_teams=2,
+        **kwargs,
     ):
         super(ZappyEnv, self).__init__()
 
+        # Dynamic team generator: ["team1", "team2", "team3"...]
+        generated_teams = [team_name]
+        for i in range(2, total_teams + 1):
+            generated_teams.append(f"team{i}")
+
         if use_lib:
-            self.mode = LibZappyEnv(self, teams=[team_name], **kwargs)
+            self.mode = LibZappyEnv(self, teams=generated_teams, **kwargs)
         else:
             self.mode = NetworkZappyEnv(self, port=port, ip=ip, team_name=team_name)
 
@@ -330,7 +350,6 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         response = None
         zappy_action = None
         item_target = None
-        heuristics_override_active = False
 
         ZAPPY_ITEMS = [
             "food",
@@ -361,27 +380,6 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 best_heuristic = heuristic
                 best_heuristic["dir"] = direction
 
-        if best_heuristic["score"] >= 70:
-            target_dir = best_heuristic["dir"]
-
-            if target_dir == 0:
-                pass
-            else:
-                if target_dir in [1, 2, 8]:
-                    bot_action = ControllerAction.FORWARD
-                    heuristics_override_active = True
-                elif target_dir in [3, 4, 5]:
-                    bot_action = ControllerAction.LEFT
-                    heuristics_override_active = True
-                elif target_dir in [6, 7]:
-                    bot_action = ControllerAction.RIGHT
-                    heuristics_override_active = True
-
-        elif (
-            best_heuristic["score"] == 50 and best_heuristic["task"] == "FLEE_FROM_DIR"
-        ):
-            bot_action = ControllerAction.RIGHT
-            heuristics_override_active = True
         match bot_action:
             case ControllerAction.FORWARD:
                 response = self.client.forward()
@@ -400,17 +398,29 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 zappy_action = ZappyAction.INVENTORY
             case ControllerAction.BROADCAST:
                 inv = self.client.inventory()
-                if self.client.level >= 2 and hasattr(inv, "food") and inv.food > 15:
+
+                # do we have the required stones to reach at least Level 3?
+                # Level 3 requires: 2 players, 1 linemate, 1 deraumere, 1 sibur
+                has_stones = (
+                    getattr(inv, "linemate", 0) >= 1
+                    and getattr(inv, "deraumere", 0) >= 1
+                    and getattr(inv, "sibur", 0) >= 1
+                )
+
+                if self.client.level >= 2 and has_stones:
                     msg_to_send = self.broadcast_handler.build_message(
                         BroadcastDict.INCANT
                     )
                 elif hasattr(inv, "food") and inv.food < 5:
+                    #  looking for food
                     msg_to_send = self.broadcast_handler.build_message(
                         BroadcastDict.FIND, "food"
                     )
                 else:
+                    # not ready for ritual and not starving...
+                    # Announce we are looking for stones
                     msg_to_send = self.broadcast_handler.build_message(
-                        BroadcastDict.COME
+                        BroadcastDict.FIND, "stones"
                     )
 
                 response = self.client.broadcast(msg_to_send)
@@ -450,40 +460,72 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             reward = -100.0
         elif response == "ok":
             base_rewards = {
-                ZappyAction.FORWARD: 0.0,
-                ZappyAction.LEFT: 0.0,
-                ZappyAction.RIGHT: 0.0,
-                ZappyAction.LOOK: 0.0,
+                ZappyAction.FORWARD: 0.05,  # Small exploration reward
+                ZappyAction.LEFT: 0.02,
+                ZappyAction.RIGHT: 0.02,
+                ZappyAction.LOOK: 0.05,  # Reward for using eyes
                 ZappyAction.INVENTORY: 0.0,
                 ZappyAction.BROADCAST: 0.0,
                 ZappyAction.CONNECT_NBR: 0.0,
-                ZappyAction.FORK: -5.0,  # Hate the eggs without players
-                ZappyAction.EJECT: 0.0,  # Don't try to kick the air
-                ZappyAction.SET: -1.0,  # Don't waste time setting without thinking
-                ZappyAction.INCANTATION: 0.0,  # Everything is bad so, evolving is good :D
+                ZappyAction.FORK: -2.0,
+                ZappyAction.EJECT: 0.0,
+                ZappyAction.SET: -0.5,
+                ZappyAction.INCANTATION: 0.0,
             }
             reward += base_rewards.get(zappy_action, 0.0)
 
-            if heuristics_override_active:
-                reward += 2.0
+            if best_heuristic["score"] >= 50:
+                target_dir = best_heuristic["dir"]
+                task = best_heuristic["task"]
+                ideal_actions = []
+                if task == "MOVE_TO_DIR":
+                    if target_dir in [1, 2, 8]:
+                        ideal_actions = [ZappyAction.FORWARD]
+                    elif target_dir in [3, 4, 5]:
+                        ideal_actions = [ZappyAction.LEFT]
+                    elif target_dir in [6, 7]:
+                        ideal_actions = [ZappyAction.RIGHT]
+                    elif target_dir == 0:
+                        ideal_actions = [
+                            ZappyAction.INCANTATION,
+                            ZappyAction.TAKE,
+                            ZappyAction.LOOK,
+                        ]
+                elif task == "FLEE_FROM_DIR":
+                    if target_dir in [1, 2, 8]:
+                        ideal_actions = [
+                            ZappyAction.LEFT,
+                            ZappyAction.RIGHT,
+                        ]  # Turn away
+                    elif target_dir in [3, 4, 5]:
+                        ideal_actions = [ZappyAction.RIGHT, ZappyAction.FORWARD]
+                    elif target_dir in [6, 7]:
+                        ideal_actions = [ZappyAction.LEFT, ZappyAction.FORWARD]
+                    elif target_dir == 0:
+                        ideal_actions = [ZappyAction.FORWARD]  # Run away
+
+                if zappy_action in ideal_actions:
+                    reward += 3.0  # reward for listening to the radio
+                else:
+                    reward -= 0.5  # Penalty for ignoring teammates
 
             if zappy_action == ZappyAction.TAKE:
                 inv = self.client.inventory()
                 if item_target == "food":
-                    if hasattr(inv, "food") and inv.food >= 20:
-                        reward -= 1.0
+                    if hasattr(inv, "food") and inv.food >= 15:
+                        reward -= 0.5
                     else:
                         reward += 2.0
                 else:
                     stone_quantity = getattr(inv, item_target, 0)
-                    if stone_quantity == 0:
-                        reward += 4.0
-                    elif stone_quantity == 1:
-                        reward += 1.0
+                    if stone_quantity < 5:
+                        reward += 4.0  # BIG REWARD FOR STONES
                     else:
-                        reward -= 1.0  # Solve diogenes
+                        reward -= 0.5
+
         elif response == "ko":
-            reward = -1.0
+            reward = -0.1
+
         elif isinstance(response, str) and response.startswith("Current level:"):
             reward += 100.0
 
