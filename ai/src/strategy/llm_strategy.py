@@ -287,14 +287,6 @@ def get_tools_definition():
                 "parameters": {"type": "object", "properties": {}},
             },
         },
-        {
-            "type": "function",
-            "function": {
-                "name": "check_messages",
-                "description": "Check for any broadcast messages received from other players.",
-                "parameters": {"type": "object", "properties": {}},
-            },
-        },
     ]
 
 
@@ -348,10 +340,6 @@ def run_llm(client):
                 return str(client.eject())
             elif name == "incantation":
                 return str(client.incantation())
-            elif name == "check_messages":
-                msgs = list(client.messages)
-                client.messages.clear()
-                return json.dumps(msgs)
             else:
                 return f"Error: Unknown tool {name}"
         except Exception as e:
@@ -363,11 +351,22 @@ def run_llm(client):
         while not client.is_dead:
             logger.info(f"\n--- Turn {turn} (Level: {client.level}) ---")
 
-            # Check for async game events/messages
-            while client.messages:
-                msg = client.messages.pop(0)
-                logger.info(
-                    f"Asynchronous Broadcast from {msg['direction']}: {msg['text']}"
+            # Check for async game events/messages and feed them to LLM context
+            if client.messages:
+                incoming = []
+                while client.messages:
+                    msg = client.messages.pop(0)
+                    logger.info(
+                        f"Asynchronous Broadcast from {msg['direction']}: {msg['text']}"
+                    )
+                    incoming.append(f"From direction {msg['direction']}: {msg['text']}")
+
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": "[SYSTEM NOTICE] You received the following broadcasts:\n"
+                        + "\n".join(incoming),
+                    }
                 )
 
             # Query the LLM
