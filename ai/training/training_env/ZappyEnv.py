@@ -399,8 +399,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             case ControllerAction.BROADCAST:
                 inv = self.client.inventory()
 
-                # do we have the required stones to reach at least Level 3?
-                # Level 3 requires: 2 players, 1 linemate, 1 deraumere, 1 sibur
+                # Do we have the required stones to reach at least Level 3?
                 has_stones = (
                     getattr(inv, "linemate", 0) >= 1
                     and getattr(inv, "deraumere", 0) >= 1
@@ -412,13 +411,10 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                         BroadcastDict.INCANT
                     )
                 elif hasattr(inv, "food") and inv.food < 5:
-                    #  looking for food
                     msg_to_send = self.broadcast_handler.build_message(
                         BroadcastDict.FIND, "food"
                     )
                 else:
-                    # not ready for ritual and not starving...
-                    # Announce we are looking for stones
                     msg_to_send = self.broadcast_handler.build_message(
                         BroadcastDict.FIND, "stones"
                     )
@@ -455,15 +451,16 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             case _:
                 reward = -0.5
 
+        # 3. Reward processing
         if self.client.is_dead or response == "dead" or response is None:
             terminated = True
             reward = -100.0
         elif response == "ok":
             base_rewards = {
-                ZappyAction.FORWARD: 0.05,  # Small exploration reward
+                ZappyAction.FORWARD: 0.1,  # BUFF: Increased reward for walking (Anti-Casino)
                 ZappyAction.LEFT: 0.02,
                 ZappyAction.RIGHT: 0.02,
-                ZappyAction.LOOK: 0.05,  # Reward for using eyes
+                ZappyAction.LOOK: 0.1,  # BUFF: Increased reward for looking around
                 ZappyAction.INVENTORY: 0.0,
                 ZappyAction.BROADCAST: 0.0,
                 ZappyAction.CONNECT_NBR: 0.0,
@@ -491,18 +488,16 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                             ZappyAction.TAKE,
                             ZappyAction.LOOK,
                         ]
+
                 elif task == "FLEE_FROM_DIR":
                     if target_dir in [1, 2, 8]:
-                        ideal_actions = [
-                            ZappyAction.LEFT,
-                            ZappyAction.RIGHT,
-                        ]  # Turn away
+                        ideal_actions = [ZappyAction.LEFT, ZappyAction.RIGHT]
                     elif target_dir in [3, 4, 5]:
                         ideal_actions = [ZappyAction.RIGHT, ZappyAction.FORWARD]
                     elif target_dir in [6, 7]:
                         ideal_actions = [ZappyAction.LEFT, ZappyAction.FORWARD]
                     elif target_dir == 0:
-                        ideal_actions = [ZappyAction.FORWARD]  # Run away
+                        ideal_actions = [ZappyAction.FORWARD]
 
                 if zappy_action in ideal_actions:
                     reward += 3.0  # reward for listening to the radio
@@ -519,12 +514,18 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 else:
                     stone_quantity = getattr(inv, item_target, 0)
                     if stone_quantity < 5:
-                        reward += 4.0  # BIG REWARD FOR STONES
+                        reward += 4.0
                     else:
                         reward -= 0.5
 
         elif response == "ko":
-            reward = -0.1
+            # ANTI-CASINO SYSTEM
+            # Penalize spamming the 'TAKE' button on empty tiles strictly,
+            # while keeping regular mistake penalties low
+            if zappy_action == ZappyAction.TAKE:
+                reward -= 0.5
+            else:
+                reward -= 0.1
 
         elif isinstance(response, str) and response.startswith("Current level:"):
             reward += 100.0
