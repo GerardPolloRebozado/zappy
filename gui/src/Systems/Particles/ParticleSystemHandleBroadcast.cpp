@@ -39,19 +39,25 @@ void ParticleSystem::_handleBroadcast(World& w) {
                             // The destination
                             w.add_component<Position>(proj, Position{otherPos->x, otherPos->y});
 
+                            float dx = otherPos->x - startX;
+                            float dy = otherPos->y - startY;
+                            float dz = 3.5f - startZ;
+                            float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+
                             // The starting and current moving visual position
                             MovementInterpolation3D move3d;
                             move3d.visualX = startX;
                             move3d.visualZ = startZ;
                             move3d.visualY = startY;
                             move3d.targetZ = 3.5f;
+                            move3d.minSpeed = dist / 0.75f; // AT MOST 0.75s travel time
                             w.add_component<MovementInterpolation3D>(proj, move3d);
 
                             ComponentParticleEmitter emitter;
                             emitter.isPlaying = true;
-                            emitter.loop = true;       // Stay alive while moving
-                            emitter.duration = 5.0f;   // Failsafe duration
-                            emitter.emitRate = 200.0f; // Dense trail
+                            emitter.loop = true;      // Stay alive while moving
+                            emitter.duration = 5.0f;  // Failsafe duration
+                            emitter.emitRate = 80.0f; // Less particles
 
                             emitter.offset = raylib::Vector3(0.0f, 0.0f, 0.0f);
                             emitter.spawnRadius = 0.1f;
