@@ -329,6 +329,7 @@ void RenderSystem::renderShowEvents(World& w) {
         return;
     }
     float currentY = 100.0f;
+    raylib::Vector2 pos = {1920.0f / 2.0f - 200.0f, currentY};
 
     for (const auto& [entity, mapEvent] : *eventStorage) {
         if (mapEvent->active && mapEvent->name != "none") {
@@ -336,8 +337,9 @@ void RenderSystem::renderShowEvents(World& w) {
 
             std::string text = mapEvent->name;
             std::transform(text.begin(), text.end(), text.begin(), ::toupper);
-            font.DrawText(text, {1920.0f / 2.0f - 200.0f, currentY}, 60, 1.5f,
-                          raylib::Color::Red());
+            raylib::Rectangle::Draw(pos.x - 10, pos.y - 10, text.length() * 37, 80,
+                                    raylib::Color{255, 255, 255, 130});
+            font.DrawText(text, pos, 60, 1.5f, raylib::Color::DarkPurple());
             currentY += 70.0f;
         }
     }
