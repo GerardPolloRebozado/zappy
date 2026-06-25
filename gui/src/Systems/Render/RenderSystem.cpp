@@ -90,6 +90,7 @@ void RenderSystem::render(World& w) {
     _lazyLoadAssets();
     render::g_instanceBatches.clear();
 
+    _renderBackground(w);
     _camera.BeginMode();
     _renderTerrain(w);
     _renderLandmarks(w);
@@ -101,6 +102,7 @@ void RenderSystem::render(World& w) {
     _renderIncantations(w);
     _renderParticles(w);
     _renderTombs(w);
+    _renderCelestials(w);
 
     // Hardware Instancing Rendering Phase
     // Iterate through batches of grouped models and pass their accumulated
