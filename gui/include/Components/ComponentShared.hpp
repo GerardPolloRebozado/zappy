@@ -97,6 +97,26 @@ struct MovementInterpolation3D {
         false; ///< True if the visual position is currently moving towards the logical position.
     float targetZ = 2.01f;
 };
+
+struct BackgroundParallax {
+    raylib::Texture2D background = LoadTexture("assets/textures/background_1.png");
+    raylib::Texture2D midground = LoadTexture("assets/textures/background_2.png");
+    raylib::Texture2D foreground = LoadTexture("assets/textures/background_3.png");
+    float scrollingBack = 0.0f;
+    float scrollingMid = 0.0f;
+    float scrollingFore = 0.0f;
+};
+
+struct CelestialObject {
+    float angle = 0.0f; //< Represent the position of the object on the edge of a circle (like his path)
+    float x = 0.0f; //< Position in float, to avoid using "tile position" of the normal Positon component
+    float y = 0.0f;
+    float size = 0.01f;
+    std::string model; //< Name of the model to use
+    CelestialObject(float angle, float size, std::string modelName) : angle(angle), size(size) {
+        model = modelName;
+    };
+};
 } // namespace zappy
 
 #endif // ZAPPY_GUI_COMPONENTSHARED_HPP
