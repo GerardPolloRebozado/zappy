@@ -60,6 +60,53 @@ class ControllerAction(IntEnum):
     INCANTATION = 23
 
 
+class BroadcastDict(Enum):
+    COME = "COME"
+    FIND = "FIND"
+    DONT_COME = "DCOME"
+    INCANT = "INCANT"
+
+
+class BroadcastHandler:
+    def __init__(self, team_name, secret_key):
+        self.team_name = team_name
+        self.secret_key = secret_key
+
+    def build_message(self, intent: BroadcastDict, params: str = "") -> str:
+        """Build a safe message using the team's secret key."""
+        return f"{self.team_name}|{self.secret_key}|{intent.value}|{params}"
+
+    def parse_message(self, raw_message: str):
+        """Decypher the message to ensure it belongs to our team."""
+        parts = raw_message.split("|")
+        if (
+            len(parts) >= 3
+            and parts[0] == self.team_name
+            and parts[1] == self.secret_key
+        ):
+            return parts[2], parts[3] if len(parts) > 3 else ""
+        return None, None
+
+    def calculate_heuristic(self, direction: int, raw_message: str) -> dict:
+        """Heuristic calculations to determine the importance of the broadcast."""
+        action, params = self.parse_message(raw_message)
+
+        if not action:
+            return {"score": 0, "task": "IGNORE"}
+
+        match action:
+            case BroadcastDict.INCANT.value:
+                return {"score": 100, "task": "MOVE_TO_DIR", "dir": direction}
+            case BroadcastDict.COME.value:
+                return {"score": 70, "task": "MOVE_TO_DIR", "dir": direction}
+            case BroadcastDict.DONT_COME.value:
+                return {"score": 50, "task": "FLEE_FROM_DIR", "dir": direction}
+            case BroadcastDict.FIND.value:
+                return {"score": 30, "task": "SEARCH_RESOURCE", "target": params}
+
+        return {"score": 0, "task": "IGNORE"}
+
+
 class ZappyAction(Enum):
     """
     Enum mapping actions to their corresponding Zappy commands logic.
@@ -143,7 +190,7 @@ class ObservationZappyEnv:
 
 
 class NetworkZappyEnv:
-    def __init__(self, env, port=4242, ip="127.0.0.1", team_name="TeamAI"):
+    def __init__(self, env, port=4242, ip="127.0.0.1", team_name="team1"):
         self.env = env
         self.ip = ip
         self.port = port
@@ -174,7 +221,13 @@ class NetworkZappyEnv:
 
 class LibZappyEnv:
     def __init__(
-        self, env, width=10, height=10, freq=100, teams=["TeamAI"], clients_nb=10
+        self,
+        env,
+        width=20,
+        height=20,
+        freq=100,
+        teams=["team1", "team2"],
+        clients_nb=10,
     ):
         self.env = env
         self.width = width
@@ -199,7 +252,26 @@ class LibZappyEnv:
             self.width, self.height, self.freq, team_ptrs, team_count, self.clients_nb
         )
 
-        # Add training player
+        # Add 4 training allies (from the main team: teams[0])
+        for _ in range(4):
+            self.zappy_lib.lib.zappy_add_player(
+                self.server_ptr, self.teams[0].encode("utf-8")
+            )
+
+        # enemies (Distribute 5 remaining slots among rival teams)
+        enemy_slots = 5
+        enemy_teams_count = len(self.teams) - 1
+
+        if enemy_teams_count > 0:
+            bots_per_team = enemy_slots // enemy_teams_count
+            remainder = enemy_slots % enemy_teams_count
+
+            for i in range(1, len(self.teams)):
+                extra = 1 if i <= remainder else 0
+                for _ in range(bots_per_team + extra):
+                    self.zappy_lib.lib.zappy_add_player(
+                        self.server_ptr, self.teams[i].encode("utf-8")
+                    )
         player_id = self.zappy_lib.lib.zappy_add_player(
             self.server_ptr, self.teams[0].encode("utf-8")
         )
@@ -230,12 +302,23 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
     """
 
     def __init__(
-        self, use_lib=True, port=4242, ip="127.0.0.1", team_name="TeamAI", **kwargs
+        self,
+        use_lib=True,
+        port=4242,
+        ip="127.0.0.1",
+        team_name="team1",
+        total_teams=2,
+        **kwargs,
     ):
         super(ZappyEnv, self).__init__()
 
+        # Dynamic team generator: ["team1", "team2", "team3"...]
+        generated_teams = [team_name]
+        for i in range(2, total_teams + 1):
+            generated_teams.append(f"team{i}")
+
         if use_lib:
-            self.mode = LibZappyEnv(self, teams=[team_name], **kwargs)
+            self.mode = LibZappyEnv(self, teams=generated_teams, **kwargs)
         else:
             self.mode = NetworkZappyEnv(self, port=port, ip=ip, team_name=team_name)
 
@@ -243,6 +326,10 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         self.action_space = spaces.Discrete(24)
         self.observation_space = spaces.Box(
             low=0, high=10000, shape=(657,), dtype=np.int32
+        )
+
+        self.broadcast_handler = BroadcastHandler(
+            team_name=team_name, secret_key="ZAPPY_SEC"
         )
 
     def reset(self, seed=None, options=None):
@@ -279,6 +366,20 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         except ValueError:
             bot_action = None
 
+        pending_messages = []
+        if hasattr(self.client, "get_unread_messages"):
+            pending_messages = self.client.get_unread_messages()
+
+        best_heuristic = {"score": 0, "task": "IGNORE", "dir": 0}
+
+        for msg in pending_messages:
+            direction = msg.get("dir", 0)
+            text = msg.get("text", "")
+            heuristic = self.broadcast_handler.calculate_heuristic(direction, text)
+            if heuristic["score"] > best_heuristic["score"]:
+                best_heuristic = heuristic
+                best_heuristic["dir"] = direction
+
         match bot_action:
             case ControllerAction.FORWARD:
                 response = self.client.forward()
@@ -296,8 +397,31 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 response = self.client.inventory()
                 zappy_action = ZappyAction.INVENTORY
             case ControllerAction.BROADCAST:
-                response = self.client.broadcast("Hola")
+                inv = self.client.inventory()
+
+                # Do we have the required stones to reach at least Level 3?
+                has_stones = (
+                    getattr(inv, "linemate", 0) >= 1
+                    and getattr(inv, "deraumere", 0) >= 1
+                    and getattr(inv, "sibur", 0) >= 1
+                )
+
+                if self.client.level >= 2 and has_stones:
+                    msg_to_send = self.broadcast_handler.build_message(
+                        BroadcastDict.INCANT
+                    )
+                elif hasattr(inv, "food") and inv.food < 5:
+                    msg_to_send = self.broadcast_handler.build_message(
+                        BroadcastDict.FIND, "food"
+                    )
+                else:
+                    msg_to_send = self.broadcast_handler.build_message(
+                        BroadcastDict.FIND, "stones"
+                    )
+
+                response = self.client.broadcast(msg_to_send)
                 zappy_action = ZappyAction.BROADCAST
+
             case ControllerAction.CONNECT_NBR:
                 response = self.client.connect_nbr()
                 zappy_action = ZappyAction.CONNECT_NBR
@@ -327,39 +451,82 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             case _:
                 reward = -0.5
 
+        # 3. Reward processing
         if self.client.is_dead or response == "dead" or response is None:
             terminated = True
             reward = -100.0
         elif response == "ok":
             base_rewards = {
-                ZappyAction.FORWARD: 0.0,
-                ZappyAction.LEFT: 0.0,
-                ZappyAction.RIGHT: 0.0,
-                ZappyAction.LOOK: 0.0,
+                ZappyAction.FORWARD: 0.1,  # BUFF: Increased reward for walking (Anti-Casino)
+                ZappyAction.LEFT: 0.02,
+                ZappyAction.RIGHT: 0.02,
+                ZappyAction.LOOK: 0.1,  # BUFF: Increased reward for looking around
                 ZappyAction.INVENTORY: 0.0,
                 ZappyAction.BROADCAST: 0.0,
                 ZappyAction.CONNECT_NBR: 0.0,
-                ZappyAction.FORK: 50.0,
-                ZappyAction.EJECT: 10.0,
-                ZappyAction.SET: 5.0,
+                ZappyAction.FORK: -2.0,
+                ZappyAction.EJECT: 0.0,
+                ZappyAction.SET: -0.5,
                 ZappyAction.INCANTATION: 0.0,
             }
             reward += base_rewards.get(zappy_action, 0.0)
+
+            if best_heuristic["score"] >= 50:
+                target_dir = best_heuristic["dir"]
+                task = best_heuristic["task"]
+                ideal_actions = []
+                if task == "MOVE_TO_DIR":
+                    if target_dir in [1, 2, 8]:
+                        ideal_actions = [ZappyAction.FORWARD]
+                    elif target_dir in [3, 4, 5]:
+                        ideal_actions = [ZappyAction.LEFT]
+                    elif target_dir in [6, 7]:
+                        ideal_actions = [ZappyAction.RIGHT]
+                    elif target_dir == 0:
+                        ideal_actions = [
+                            ZappyAction.INCANTATION,
+                            ZappyAction.TAKE,
+                            ZappyAction.LOOK,
+                        ]
+
+                elif task == "FLEE_FROM_DIR":
+                    if target_dir in [1, 2, 8]:
+                        ideal_actions = [ZappyAction.LEFT, ZappyAction.RIGHT]
+                    elif target_dir in [3, 4, 5]:
+                        ideal_actions = [ZappyAction.RIGHT, ZappyAction.FORWARD]
+                    elif target_dir in [6, 7]:
+                        ideal_actions = [ZappyAction.LEFT, ZappyAction.FORWARD]
+                    elif target_dir == 0:
+                        ideal_actions = [ZappyAction.FORWARD]
+
+                if zappy_action in ideal_actions:
+                    reward += 3.0  # reward for listening to the radio
+                else:
+                    reward -= 0.5  # Penalty for ignoring teammates
 
             if zappy_action == ZappyAction.TAKE:
                 inv = self.client.inventory()
                 if item_target == "food":
                     if hasattr(inv, "food") and inv.food >= 15:
-                        reward += 0.0
-                    else:
-                        reward += 4.0
-                else:
-                    if getattr(inv, item_target, 0) >= 1:
-                        reward += 10.0
+                        reward -= 0.5
                     else:
                         reward += 2.0
+                else:
+                    stone_quantity = getattr(inv, item_target, 0)
+                    if stone_quantity < 5:
+                        reward += 4.0
+                    else:
+                        reward -= 0.5
+
         elif response == "ko":
-            reward = -1.0
+            # ANTI-CASINO SYSTEM
+            # Penalize spamming the 'TAKE' button on empty tiles strictly,
+            # while keeping regular mistake penalties low
+            if zappy_action == ZappyAction.TAKE:
+                reward -= 0.5
+            else:
+                reward -= 0.1
+
         elif isinstance(response, str) and response.startswith("Current level:"):
             reward += 100.0
 

@@ -70,6 +70,7 @@ void Core::_update() {
             _renderSystem.update(_world, dt);
             _particleSystem.update(_world, dt);
             _musicSystem.update(_world, dt);
+            _backgroundSystem.update(_world, dt);
         } else {
             // Server disconnected, go back to menu
             _appState = AppState::MENU;

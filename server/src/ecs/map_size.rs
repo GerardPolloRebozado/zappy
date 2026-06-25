@@ -40,6 +40,7 @@ pub fn get_tile_content_by_entity(world: &World, entity: Entity) -> String {
         TerrainType::LuminousOrchards => 6,
         TerrainType::CrystalCanyons => 7,
         TerrainType::MagneticTundra => 8,
+        TerrainType::Wormhole => 9,
     };
 
     format!(
@@ -101,6 +102,7 @@ pub fn get_tile_content(world: &World, x: u32, y: u32) -> Option<String> {
             TerrainType::LuminousOrchards => 6,
             TerrainType::CrystalCanyons => 7,
             TerrainType::MagneticTundra => 8,
+            TerrainType::Wormhole => 9,
         };
 
         return Some(format!(

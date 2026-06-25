@@ -5,6 +5,7 @@ use crate::ecs::components::position::Position;
 use crate::ecs::components::resource::Resource;
 use crate::ecs::components::task::TaskList;
 use crate::ecs::components::tile::Tile;
+use crate::ecs::map_size::get_tile_content_by_entity;
 use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::task::broadcast_event;
 use crate::protocol::{Response, ResponseCode, ServerEvent, StatusCode};
@@ -152,14 +153,27 @@ pub fn execute_incantation(world: &mut World, entity: Entity) -> (Response, Opti
         requirements;
 
     // Remove stones
-    if let Some(tile_inv) = world.get_component_mut::<Inventory>(tile_entity) {
-        tile_inv.remove_item(Resource::Linemate, req_linemate);
-        tile_inv.remove_item(Resource::Deraumere, req_deraumere);
-        tile_inv.remove_item(Resource::Sibur, req_sibur);
-        tile_inv.remove_item(Resource::Mendiane, req_mendiane);
-        tile_inv.remove_item(Resource::Phiras, req_phiras);
-        tile_inv.remove_item(Resource::Thystame, req_thystame);
+    for _ in 0..req_linemate {
+        Tile::remove_resource_from_tile(tile_entity, world, Resource::Linemate);
     }
+    for _ in 0..req_deraumere {
+        Tile::remove_resource_from_tile(tile_entity, world, Resource::Deraumere);
+    }
+    for _ in 0..req_sibur {
+        Tile::remove_resource_from_tile(tile_entity, world, Resource::Sibur);
+    }
+    for _ in 0..req_mendiane {
+        Tile::remove_resource_from_tile(tile_entity, world, Resource::Mendiane);
+    }
+    for _ in 0..req_phiras {
+        Tile::remove_resource_from_tile(tile_entity, world, Resource::Phiras);
+    }
+    for _ in 0..req_thystame {
+        Tile::remove_resource_from_tile(tile_entity, world, Resource::Thystame);
+    }
+
+    let content = get_tile_content_by_entity(world, tile_entity);
+    broadcast_event(world, ServerEvent::TileContent { content });
 
     let new_level = level + 1;
     let ok_resp_data = format!("Current level: {}", new_level);

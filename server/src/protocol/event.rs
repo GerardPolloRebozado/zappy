@@ -81,6 +81,8 @@ pub enum ServerEvent {
     ServerMessage { message: String },
     /// A team with more than 6 players at max lvl
     WinGame { team_name: String },
+    /// Explicit tile content broadcast (e.g. after resource spawn): GUI `bct X Y ...`
+    TileContent { content: String },
 }
 
 impl ServerEvent {
@@ -161,6 +163,10 @@ impl ServerEvent {
         Self::WinGame { team_name }
     }
 
+    pub fn tile_content(content: String) -> Self {
+        Self::TileContent { content }
+    }
+
     /// Formats this event for GUI clients.
     ///
     /// Returns `None` only when the variant has no GUI representation
@@ -226,6 +232,7 @@ impl ServerEvent {
             ServerEvent::EndOfGame { team } => Some(format!("seg {team}")),
             ServerEvent::ServerMessage { message } => Some(format!("smg {message}")),
             ServerEvent::WinGame { team_name: team_id } => Some(format!("seg {team_id}")),
+            ServerEvent::TileContent { content } => Some(content.clone()),
         }
     }
 
@@ -285,6 +292,7 @@ impl ServerEvent {
             | ServerEvent::EggLaid { .. }
             | ServerEvent::EggConnect { .. }
             | ServerEvent::EggDeath { .. }
+            | ServerEvent::TileContent { .. }
             | ServerEvent::EndOfGame { .. } => None,
             ServerEvent::ServerMessage { message } => {
                 let _ = for_player?;

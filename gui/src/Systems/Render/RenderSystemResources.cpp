@@ -197,25 +197,25 @@ void RenderSystem::_renderAnimatedResources(World& w) {
             raylib::Color tint = WHITE;
             float scale = 0.25f;
 
-            int resId = animRes->resourceId;
-            if (resId == 0) { // Food
+            ResourceType resId = animRes->resourceId;
+            if (resId == ResourceType::FOOD) { // Food
                 modelName = "food_ham";
                 tint = WHITE;
                 scale = 0.25f;
             } else { // Resources 1-6
                 modelName = "resource_1";
                 scale = 0.35f;
-                if (resId == 1) {
+                if (resId == ResourceType::LINEMATE) {
                     tint = raylib::Color(110, 210, 120, 255); // linemate
-                } else if (resId == 2) {
+                } else if (resId == ResourceType::DERAUMERE) {
                     tint = raylib::Color(100, 180, 240, 255); // deraumere
-                } else if (resId == 3) {
+                } else if (resId == ResourceType::SIBUR) {
                     tint = raylib::Color(190, 130, 230, 255); // sibur
-                } else if (resId == 4) {
+                } else if (resId == ResourceType::MENDIANE) {
                     tint = raylib::Color(240, 220, 110, 255); // mendiane
-                } else if (resId == 5) {
+                } else if (resId == ResourceType::PHIRAS) {
                     tint = raylib::Color(235, 120, 120, 255); // phiras
-                } else if (resId == 6) {
+                } else if (resId == ResourceType::THYSTAME) {
                     tint = raylib::Color(245, 245, 245, 255); // thystame
                 }
             }

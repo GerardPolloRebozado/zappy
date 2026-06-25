@@ -22,7 +22,7 @@ class AResourceCommand : public ACommand {
   protected:
     struct CommandArgs {
         int playerId;
-        int resourceId;
+        ResourceType resourceId;
         bool valid;
     };
 
@@ -33,39 +33,39 @@ class AResourceCommand : public ACommand {
         int pId, rId;
         if (!(iss >> pId >> rId)) {
             log_error("Protocol: failed to parse resource command args: " + args);
-            return {0, 0, false};
+            return {0, static_cast<ResourceType>(0), false};
         }
-        return {pId, rId, true};
+        return {pId, static_cast<ResourceType>(rId), true};
     }
 
-    void updateInventory(Inventory* inv, int resourceId, int delta) {
+    void updateInventory(Inventory* inv, ResourceType resourceId, int delta) {
         if (!inv) {
             return;
         }
         switch (resourceId) {
-            case 0:
+            case ResourceType::FOOD:
                 inv->food += delta;
                 inv->exactHp += delta * 126.0f;
                 if (inv->exactHp > inv->maxHp) {
                     inv->maxHp = inv->exactHp;
                 }
                 break;
-            case 1:
+            case ResourceType::LINEMATE:
                 inv->linemate += delta;
                 break;
-            case 2:
+            case ResourceType::DERAUMERE:
                 inv->deraumere += delta;
                 break;
-            case 3:
+            case ResourceType::SIBUR:
                 inv->sibur += delta;
                 break;
-            case 4:
+            case ResourceType::MENDIANE:
                 inv->mendiane += delta;
                 break;
-            case 5:
+            case ResourceType::PHIRAS:
                 inv->phiras += delta;
                 break;
-            case 6:
+            case ResourceType::THYSTAME:
                 inv->thystame += delta;
                 break;
             default:
@@ -94,7 +94,7 @@ class AResourceCommand : public ACommand {
         return {Entity(0, 0), {0, 0}, false};
     }
 
-    void updateTileInventory(Position playerPos, int resourceId, int delta, World& world) {
+    void updateTileInventory(Position playerPos, ResourceType resourceId, int delta, World& world) {
         auto tileTagStorage = world.get_storage<TileTag>();
         if (!tileTagStorage) {
             return;
@@ -104,7 +104,7 @@ class AResourceCommand : public ACommand {
             auto tPos = world.get_component<Position>(ent);
             if (tPos && tPos->x == playerPos.x && tPos->y == playerPos.y) {
                 Entity food = world.spawn();
-                world.add_component<AnimatedResource>(food, {resourceId});
+                world.add_component<AnimatedResource>(food, {resourceId, false});
                 world.add_component<Position>(food, tPos);
                 world.add_component<Animation>(food, {"", 0.0f, 60.0f, 1.0f, true});
                 world.add_component<MovementInterpolation3D>(food, {static_cast<float>(playerPos.x),

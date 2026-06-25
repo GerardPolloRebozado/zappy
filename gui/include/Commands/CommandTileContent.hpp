@@ -7,6 +7,7 @@
 #ifndef ZAPPY_COMMANDTILECONTENT_HPP
 #define ZAPPY_COMMANDTILECONTENT_HPP
 #include "ACommand.hpp"
+#include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
 #include "Components/ComponentTile.hpp"
@@ -54,12 +55,119 @@ class CommandTileContent : public ACommand {
             world.add_component<TileTag>(tileEntity, TileTag{});
         }
 
-        world.add_component<Inventory>(tileEntity, {q0, q1, q2, q3, q4, q5, q6});
+        auto oldInv = world.get_component<Inventory>(tileEntity);
+        int old_q0 = oldInv ? oldInv->food : 0;
+        int old_q1 = oldInv ? oldInv->linemate : 0;
+        int old_q2 = oldInv ? oldInv->deraumere : 0;
+        int old_q3 = oldInv ? oldInv->sibur : 0;
+        int old_q4 = oldInv ? oldInv->mendiane : 0;
+        int old_q5 = oldInv ? oldInv->phiras : 0;
+        int old_q6 = oldInv ? oldInv->thystame : 0;
+
+        world.add_component<Inventory>(tileEntity, {std::min(old_q0, q0), std::min(old_q1, q1),
+                                                    std::min(old_q2, q2), std::min(old_q3, q3),
+                                                    std::min(old_q4, q4), std::min(old_q5, q5),
+                                                    std::min(old_q6, q6)});
+
+        auto spawnFallingResource = [&](ResourceType resId, int delta) {
+            for (int i = 0; i < delta; ++i) {
+                Entity res = world.spawn();
+                world.add_component<AnimatedResource>(res, {resId, true});
+                world.add_component<Position>(res, {x, y});
+                world.add_component<Animation>(res, {"", 0.0f, 60.0f, 1.0f, true});
+                world.add_component<MovementInterpolation3D>(
+                    res, {static_cast<float>(x), static_cast<float>(y),
+                          20.0f + (i * 2.0f), // Start high in the sky
+                          true, 2.01f});
+            }
+        };
+
+        if (q0 > old_q0) {
+            spawnFallingResource(ResourceType::FOOD, q0 - old_q0);
+        }
+        if (q1 > old_q1) {
+            spawnFallingResource(ResourceType::LINEMATE, q1 - old_q1);
+        }
+        if (q2 > old_q2) {
+            spawnFallingResource(ResourceType::DERAUMERE, q2 - old_q2);
+        }
+        if (q3 > old_q3) {
+            spawnFallingResource(ResourceType::SIBUR, q3 - old_q3);
+        }
+        if (q4 > old_q4) {
+            spawnFallingResource(ResourceType::MENDIANE, q4 - old_q4);
+        }
+        if (q5 > old_q5) {
+            spawnFallingResource(ResourceType::PHIRAS, q5 - old_q5);
+        }
+        if (q6 > old_q6) {
+            spawnFallingResource(ResourceType::THYSTAME, q6 - old_q6);
+        }
 
         // terrain type
         int t_type;
         if (iss >> t_type) {
-            world.add_component<TerrainType>(tileEntity, {static_cast<TerrainType::Type>(t_type)});
+            auto newType = static_cast<TerrainType::Type>(t_type);
+            world.add_component<TerrainType>(tileEntity, {newType});
+
+            if (newType == TerrainType::WORMHOLE) {
+                if (!world.get_component<ComponentParticleEmitter>(tileEntity)) {
+                    ComponentParticleEmitter emitter;
+                    emitter.loop = true;
+                    emitter.isPlaying = true;
+                    emitter.emitRate = 100.0f;                     // Dense portal ring
+                    emitter.offset = raylib::Vector3(0, 0.02f, 0); // Flat on the floor
+                    emitter.spawnRadius = 0.4f; // Circle on the edges of the tile
+                    emitter.spawnVolumeMin = raylib::Vector3(0.0f, 0.0f, 0.0f);
+                    emitter.spawnVolumeMax = raylib::Vector3(0.0f, 0.05f, 0.0f); // Slight thickness
+                    emitter.minLifetime = 0.5f;
+                    emitter.maxLifetime = 1.2f;
+                    emitter.minSize = 0.04f;
+                    emitter.maxSize = 0.09f;
+                    emitter.minVelocity = raylib::Vector3(-0.2f, 0.1f, -0.2f);
+                    emitter.maxVelocity = raylib::Vector3(0.2f, 0.6f, 0.2f); // Swirling up slightly
+
+                    emitter.colorPalette = {
+                        raylib::Color{138, 43, 226, 255}, // Blue Violet
+                        raylib::Color{148, 0, 211, 255},  // Dark Violet
+                        raylib::Color{186, 85, 211, 200}, // Medium Orchid
+                        raylib::Color{75, 0, 130, 255},   // Indigo
+                        raylib::Color{0, 255, 255, 150}   // Subtle cyan highlight
+                    };
+                    world.add_component<ComponentParticleEmitter>(tileEntity, emitter);
+                }
+            } else if (newType == TerrainType::OBSIDIAN_BARRENS) {
+                if (!world.get_component<ComponentParticleEmitter>(tileEntity)) {
+                    ComponentParticleEmitter emitter;
+                    emitter.loop = true;
+                    emitter.isPlaying = true;
+                    emitter.emitRate = 15.0f; // Slower spawn rate for fewer embers
+                    emitter.offset = raylib::Vector3(0, 0.05f, 0);
+                    emitter.spawnRadius = 0.5f; // Across the tile
+                    emitter.spawnVolumeMin = raylib::Vector3(-0.2f, 0.0f, -0.2f);
+                    emitter.spawnVolumeMax = raylib::Vector3(0.2f, 0.1f, 0.2f);
+                    emitter.minLifetime = 1.5f;
+                    emitter.maxLifetime =
+                        3.5f; // Increased lifetime so they linger longer even if slower
+                    emitter.minSize = 0.02f;
+                    emitter.maxSize = 0.06f;
+                    emitter.minVelocity =
+                        raylib::Vector3(-0.05f, 0.1f, -0.05f); // Reduced upward speed
+                    emitter.maxVelocity = raylib::Vector3(0.05f, 0.25f, 0.05f);
+
+                    emitter.colorPalette = {
+                        raylib::Color{255, 69, 0, 255},  // Orange Red
+                        raylib::Color{255, 140, 0, 255}, // Dark Orange
+                        raylib::Color{139, 0, 0, 200},   // Dark Red
+                        raylib::Color{50, 50, 50, 255}   // Ash / Smoke
+                    };
+                    world.add_component<ComponentParticleEmitter>(tileEntity, emitter);
+                }
+            } else {
+                if (world.get_component<ComponentParticleEmitter>(tileEntity)) {
+                    world.remove_component<ComponentParticleEmitter>(tileEntity);
+                }
+            }
         }
 
         log_info("Protocol: Tile (" + std::to_string(x) + ", " + std::to_string(y) +
