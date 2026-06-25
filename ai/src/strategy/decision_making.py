@@ -13,7 +13,7 @@ def get_missing_resources(level, inventory):
     missing = []
 
     # make sure player eats as to not die
-    if inventory.food < 10:
+    if inventory.food < 20:
         missing.append("food")
 
     if inventory.linemate < req.linemate:
@@ -91,25 +91,55 @@ def take_decision(client):
     if can_evolve(client.level, inv, players_on_tile):
         req = ELEVATION_TABLE[client.level]
         logger.info(f"Evolving to level {client.level + 1}! Dropping resources...")
-        logger.debug(
-            f"[SERVER] -> {client.set('linemate')}"
-        ) if req.linemate > 0 else None
-        logger.debug(
-            f"[SERVER] -> {client.set('deraumere')}"
-        ) if req.deraumere > 0 else None
-        logger.debug(f"[SERVER] -> {client.set('sibur')}") if req.sibur > 0 else None
-        logger.debug(
-            f"[SERVER] -> {client.set('mendiane')}"
-        ) if req.mendiane > 0 else None
-        logger.debug(f"[SERVER] -> {client.set('phiras')}") if req.phiras > 0 else None
-        logger.debug(
-            f"[SERVER] -> {client.set('thystame')}"
-        ) if req.thystame > 0 else None
+        for _ in range(req.linemate):
+            logger.debug(f"[SERVER] -> {client.set('linemate')}")
+        for _ in range(req.deraumere):
+            logger.debug(f"[SERVER] -> {client.set('deraumere')}")
+        for _ in range(req.sibur):
+            logger.debug(f"[SERVER] -> {client.set('sibur')}")
+        for _ in range(req.mendiane):
+            logger.debug(f"[SERVER] -> {client.set('mendiane')}")
+        for _ in range(req.phiras):
+            logger.debug(f"[SERVER] -> {client.set('phiras')}")
+        for _ in range(req.thystame):
+            logger.debug(f"[SERVER] -> {client.set('thystame')}")
         res = client.incantation()
         logger.debug(f"[SERVER] -> {res}")
         return
 
-    # 3 we have enough resources but not enough players, broadcast
+    # 3 check broadcast messages from teammates first before waiting or resource hunting
+    target_msg = None
+    if hasattr(client, "messages") and client.messages:
+        for msg in reversed(client.messages):
+            if msg.get("text") == f"Elevation {client.name} level {client.level}":
+                target_msg = msg
+                break
+
+    if target_msg is not None:
+        direction = target_msg.get("direction", -1)
+        if direction == 0:
+            logger.info("On the same tile as elevation leader. Waiting...")
+            if "food" in current_tile and inv.food < 20:
+                logger.info("Taking food while waiting...")
+                logger.debug(f"[SERVER] -> {client.take('food')}")
+            else:
+                logger.debug(f"[SERVER] -> {client.inventory()}")
+            client.messages.clear()
+            return
+        elif direction > 0:
+            logger.info(
+                f"Received elevation broadcast from direction {direction}. Steering towards it..."
+            )
+            if direction in [1, 2, 8]:
+                logger.debug(f"[SERVER] -> {client.forward()}")
+            elif direction in [3, 4, 5]:
+                logger.debug(f"[SERVER] -> {client.left()}")
+            elif direction in [6, 7]:
+                logger.debug(f"[SERVER] -> {client.right()}")
+            client.messages.clear()
+            return
+
+    # 4 we have enough resources but not enough players, broadcast
     if client.level in ELEVATION_TABLE:
         req = ELEVATION_TABLE[client.level]
         has_resources = (
@@ -125,7 +155,7 @@ def take_decision(client):
                 f"Waiting for players for level {client.level}. Current: {players_on_tile}/{req.players}"
             )
             logger.debug(
-                f"[SERVER] -> {client.broadcast(f'Elevation level {client.level}')}"
+                f"[SERVER] -> {client.broadcast(f'Elevation {client.name} level {client.level}')}"
             )
             if "food" in current_tile:
                 logger.info("Taking food while waiting...")
