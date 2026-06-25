@@ -7,6 +7,7 @@
 #ifndef ZAPPY_COMMANDTILECONTENT_HPP
 #define ZAPPY_COMMANDTILECONTENT_HPP
 #include "ACommand.hpp"
+#include "Components/ComponentParticleEmitter.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
 #include "Components/ComponentTile.hpp"
@@ -106,7 +107,67 @@ class CommandTileContent : public ACommand {
         // terrain type
         int t_type;
         if (iss >> t_type) {
-            world.add_component<TerrainType>(tileEntity, {static_cast<TerrainType::Type>(t_type)});
+            auto newType = static_cast<TerrainType::Type>(t_type);
+            world.add_component<TerrainType>(tileEntity, {newType});
+
+            if (newType == TerrainType::WORMHOLE) {
+                if (!world.get_component<ComponentParticleEmitter>(tileEntity)) {
+                    ComponentParticleEmitter emitter;
+                    emitter.loop = true;
+                    emitter.isPlaying = true;
+                    emitter.emitRate = 100.0f;                     // Dense portal ring
+                    emitter.offset = raylib::Vector3(0, 0.02f, 0); // Flat on the floor
+                    emitter.spawnRadius = 0.4f; // Circle on the edges of the tile
+                    emitter.spawnVolumeMin = raylib::Vector3(0.0f, 0.0f, 0.0f);
+                    emitter.spawnVolumeMax = raylib::Vector3(0.0f, 0.05f, 0.0f); // Slight thickness
+                    emitter.minLifetime = 0.5f;
+                    emitter.maxLifetime = 1.2f;
+                    emitter.minSize = 0.04f;
+                    emitter.maxSize = 0.09f;
+                    emitter.minVelocity = raylib::Vector3(-0.2f, 0.1f, -0.2f);
+                    emitter.maxVelocity = raylib::Vector3(0.2f, 0.6f, 0.2f); // Swirling up slightly
+
+                    emitter.colorPalette = {
+                        raylib::Color{138, 43, 226, 255}, // Blue Violet
+                        raylib::Color{148, 0, 211, 255},  // Dark Violet
+                        raylib::Color{186, 85, 211, 200}, // Medium Orchid
+                        raylib::Color{75, 0, 130, 255},   // Indigo
+                        raylib::Color{0, 255, 255, 150}   // Subtle cyan highlight
+                    };
+                    world.add_component<ComponentParticleEmitter>(tileEntity, emitter);
+                }
+            } else if (newType == TerrainType::OBSIDIAN_BARRENS) {
+                if (!world.get_component<ComponentParticleEmitter>(tileEntity)) {
+                    ComponentParticleEmitter emitter;
+                    emitter.loop = true;
+                    emitter.isPlaying = true;
+                    emitter.emitRate = 15.0f; // Slower spawn rate for fewer embers
+                    emitter.offset = raylib::Vector3(0, 0.05f, 0);
+                    emitter.spawnRadius = 0.5f; // Across the tile
+                    emitter.spawnVolumeMin = raylib::Vector3(-0.2f, 0.0f, -0.2f);
+                    emitter.spawnVolumeMax = raylib::Vector3(0.2f, 0.1f, 0.2f);
+                    emitter.minLifetime = 1.5f;
+                    emitter.maxLifetime =
+                        3.5f; // Increased lifetime so they linger longer even if slower
+                    emitter.minSize = 0.02f;
+                    emitter.maxSize = 0.06f;
+                    emitter.minVelocity =
+                        raylib::Vector3(-0.05f, 0.1f, -0.05f); // Reduced upward speed
+                    emitter.maxVelocity = raylib::Vector3(0.05f, 0.25f, 0.05f);
+
+                    emitter.colorPalette = {
+                        raylib::Color{255, 69, 0, 255},  // Orange Red
+                        raylib::Color{255, 140, 0, 255}, // Dark Orange
+                        raylib::Color{139, 0, 0, 200},   // Dark Red
+                        raylib::Color{50, 50, 50, 255}   // Ash / Smoke
+                    };
+                    world.add_component<ComponentParticleEmitter>(tileEntity, emitter);
+                }
+            } else {
+                if (world.get_component<ComponentParticleEmitter>(tileEntity)) {
+                    world.remove_component<ComponentParticleEmitter>(tileEntity);
+                }
+            }
         }
 
         log_info("Protocol: Tile (" + std::to_string(x) + ", " + std::to_string(y) +

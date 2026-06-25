@@ -100,6 +100,7 @@ void RenderSystem::render(World& w) {
     _renderEggs(w);
     _renderPOV(w);
     _renderIncantations(w);
+    _renderWormholes(w);
     _renderParticles(w);
     _renderTombs(w);
     _renderCelestials(w);
