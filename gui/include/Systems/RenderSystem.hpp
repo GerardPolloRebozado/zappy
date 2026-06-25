@@ -55,6 +55,8 @@ class RenderSystem {
      */
     void update(World& w, float dt);
 
+    void renderShowEvents(World& w);
+
     /**
      * @brief Main draw loop for the rendering system.
      *
@@ -168,6 +170,8 @@ class RenderSystem {
 
     bool _showDebugHud = false;
     void _renderDebugHud(World& w);
+
+    std::vector<std::string> eventsRunning;
 };
 } // namespace zappy
 

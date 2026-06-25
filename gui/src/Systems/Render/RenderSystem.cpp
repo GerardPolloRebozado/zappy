@@ -138,7 +138,7 @@ void RenderSystem::render(World& w) {
     }
 
     _camera.EndMode();
-
+    renderShowEvents(w);
     if (_showDebugHud) {
         _renderDebugHud(w);
     }

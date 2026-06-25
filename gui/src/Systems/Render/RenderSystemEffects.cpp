@@ -27,6 +27,8 @@
 #include "Vector3.hpp"
 #include "raylib.h"
 
+#include "Systems/RenderSystemBatches.hpp"
+#include "UI/UIText.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -36,8 +38,6 @@
 #include <rlgl.h>
 #include <set>
 #include <unordered_set>
-
-#include "Systems/RenderSystemBatches.hpp"
 
 namespace zappy {
 
@@ -321,6 +321,26 @@ void RenderSystem::_renderDebugHud(World& w) {
 
     auto eggStorage = w.get_storage<Egg>();
     drawText("Eggs on Map: " + std::to_string(eggStorage ? eggStorage->size() : 0));
+}
+
+void RenderSystem::renderShowEvents(World& w) {
+    auto eventStorage = w.get_storage<MapEvent>();
+    if (!eventStorage) {
+        return;
+    }
+    float currentY = 100.0f;
+
+    for (const auto& [entity, mapEvent] : *eventStorage) {
+        if (mapEvent->active && mapEvent->name != "none") {
+            auto& font = AssetManager::getInstance().getFont("HeaderFont");
+
+            std::string text = mapEvent->name;
+            std::transform(text.begin(), text.end(), text.begin(), ::toupper);
+            font.DrawText(text, {1920.0f / 2.0f - 200.0f, currentY}, 60, 1.5f,
+                          raylib::Color::Red());
+            currentY += 70.0f;
+        }
+    }
 }
 
 void RenderSystem::_renderWormholes(World& w) {
