@@ -20,6 +20,7 @@ class ZappyAiClient:
         self.messages = []
         self.is_dead = False
         self.level = 1
+        self.is_initiator = False
 
     def connect(self):
         """
@@ -77,13 +78,25 @@ class ZappyAiClient:
             logger.info(f"Event: {line}")
             return True
 
+        if line == "Elevation underway":
+            if not self.is_initiator:
+                logger.info("Event: Elevation underway (participant)")
+                return True
+            return False
+
         if line.startswith("Current level:"):
             try:
                 self.level = int(line.split(":")[1].strip())
                 logger.info(f"Event: {line}")
             except (ValueError, IndexError):
                 logger.warning(f"Failed to parse level up message: {line}")
+            if not self.is_initiator:
+                return True
             return False
+
+        if line.startswith("event_start") or line.startswith("event_end"):
+            logger.info(f"Event: {line}")
+            return True
 
         return False
 
@@ -96,6 +109,7 @@ class ZappyAiClient:
             line = self.connection.receive_line()
 
             if line is None:
+                self.is_dead = True
                 return None
             if line == "":
                 continue
@@ -208,12 +222,16 @@ class ZappyAiClient:
         Calls command incantation, waits for completion if it starts.
         :return: Current level: X / ko
         """
-        commands.incantation(self)
-        first_resp = self.wait_for_response()
-        if first_resp == "Elevation underway":
-            final_resp = self.wait_for_response()
-            return final_resp
-        return first_resp
+        self.is_initiator = True
+        try:
+            commands.incantation(self)
+            first_resp = self.wait_for_response()
+            if first_resp == "Elevation underway":
+                final_resp = self.wait_for_response()
+                return final_resp
+            return first_resp
+        finally:
+            self.is_initiator = False
 
     def close(self):
         self.connection.close()
