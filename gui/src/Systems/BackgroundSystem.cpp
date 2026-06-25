@@ -24,12 +24,21 @@ void BackgroundSystem::update(World& w, float dt) {
         }
     }
 
+    int mapSizeX = 0, mapSizeY = 0;
+    auto mapStorage = w.get_storage<MapTag>();
+    if (!mapStorage)
+        return;
+    for (auto& [mapEntity, mapTagePtr] : *mapStorage) {
+        auto mapSize = w.get_component<Size>(mapEntity);
+        mapSizeX = mapSize->width;
+        mapSizeY = mapSize->height;
+    }
     auto celestialBackground = w.get_storage<CelestialObject>();
     if (celestialBackground) {
         for (auto& [entity, celestialPtr] : *celestialBackground) {
             auto& celestial = *celestialPtr;
-            float x = 5.0f + 5.0f * cos(celestial.angle);
-            float y = 5.0f + 5.0f * sin(celestial.angle);
+            float x = (mapSizeX / 2) + (std::max(mapSizeX, mapSizeY) / 1.5f) * cos(celestial.angle);
+            float y = (mapSizeY / 2) + (std::max(mapSizeX, mapSizeY) / 1.5f) * sin(celestial.angle);
             celestial.angle += 0.01f;
             celestial.x = x;
             celestial.y = y;
