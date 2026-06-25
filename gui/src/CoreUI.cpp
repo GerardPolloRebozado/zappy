@@ -282,8 +282,23 @@ void Core::_setupTestingData() {
     return;
     // Hardcoded testing data
     for (int x = 0; x < 10; ++x) {
-        for (int y = 0; y < 10; ++y) {            auto tile = _world.spawn();            _world.add_component(tile, Position{x, y});            _world.add_component(tile, TerrainType{TerrainType::GRASS});            _world.add_component(tile, Inventory{x + y, x, y, 0, 0, 0, 0});        }    }
-    auto p1 = _world.spawn();    _world.add_component(p1, Position{2, 2});    _world.add_component(p1, Orientation{Orientation::N});    _world.add_component(p1, Level{1});    _world.add_component(p1, TeamName{"Team Alpha", raylib::Color::Black()});
-    auto p2 = _world.spawn();    _world.add_component(p2, Position{5, 5});    _world.add_component(p2, Orientation{Orientation::E});    _world.add_component(p2, Level{4});    _world.add_component(p2, TeamName{"Team Beta", raylib::Color::Red()});}
+        for (int y = 0; y < 10; ++y) {
+            auto tile = _world.spawn();
+            _world.add_component(tile, Position{x, y});
+            _world.add_component(tile, TerrainType{TerrainType::GRASS});
+            _world.add_component(tile, Inventory{x + y, x, y, 0, 0, 0, 0});
+        }
+    }
+    auto p1 = _world.spawn();
+    _world.add_component(p1, Position{2, 2});
+    _world.add_component(p1, Orientation{Orientation::N});
+    _world.add_component(p1, Level{1});
+    _world.add_component(p1, TeamName{"Team Alpha", raylib::Color::Black()});
+    auto p2 = _world.spawn();
+    _world.add_component(p2, Position{5, 5});
+    _world.add_component(p2, Orientation{Orientation::E});
+    _world.add_component(p2, Level{4});
+    _world.add_component(p2, TeamName{"Team Beta", raylib::Color::Red()});
+}
 
 } // namespace zappy

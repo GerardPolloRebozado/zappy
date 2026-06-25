@@ -7,9 +7,9 @@
 
 #include "UI/UIChatPanel.hpp"
 #include "Components/ComponentInhabitant.hpp"
+#include "Graphics/AssetManager.hpp"
 #include <algorithm>
 #include <sstream>
-#include "Graphics/AssetManager.hpp"
 
 namespace zappy {
 
@@ -37,7 +37,7 @@ void UIChatPanel::render() {
     if (tex.id != 0) {
         raylib::Rectangle sourceRec(0.0f, 0.0f, (float)tex.width, (float)tex.height);
         tex.Draw(sourceRec, {_bounds.x, _bounds.y - 10.0f, _bounds.width, _bounds.height},
-            raylib::Vector2(0, 0), 0.0f, tint);
+                 raylib::Vector2(0, 0), 0.0f, tint);
     }
     auto& font = AssetManager::getInstance().getFont("TextFont");
     raylib::Vector2 titlePos = {_bounds.x + 10.0f, _bounds.y - 35.0f};
