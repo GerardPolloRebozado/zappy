@@ -15,7 +15,7 @@ Your objectives are to survive by eating food and collect resources to elevate y
 
 ### Survival & Food Strategy
 - You automatically consume food to survive.
-- Check your inventory regularly. If your food count is less than 12, prioritize finding and taking food above all else.
+- Check your inventory regularly. If your food count is less than 5, prioritize finding and taking food above all else. When the game starts you have 10
 - If you see food on the current tile or a nearby tile, move to it and call `take_object` with 'food'.
 
 ### Elevation Requirements
@@ -55,28 +55,26 @@ The `inventory` tool returns a JSON object containing the quantities of all reso
 You have tools to navigate, get inventory/look info, take or set objects, broadcast messages, check messages, and perform incantations.
 
 Work step-by-step. In each turn, analyze your current inventory, check if you need food, look at the tiles around you, choose the optimal movement or action, and execute it. You can call multiple tools if appropriate (e.g. moving and then taking an item).
+Dont waste the time looking at your inventory all the time, 1 food are 126 seconds to live as 1 time unit is 1 second
 """
 
 
 def load_dotenv():
-    candidates = [
-        ".env",
-        os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", ".env"),
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            logger.info(f"Loading env vars from {os.path.abspath(path)}")
-            with open(path, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith("#"):
-                        continue
-                    if "=" in line:
-                        key, val = line.split("=", 1)
-                        key = key.strip()
-                        val = val.strip().strip("'\"")
-                        os.environ[key] = val
-            break
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    env_path = os.path.abspath(os.path.join(script_dir, "..", "..", ".env"))
+
+    if os.path.exists(env_path):
+        logger.info(f"Loading env vars from {env_path}")
+        with open(env_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, val = line.split("=", 1)
+                    key = key.strip()
+                    val = val.strip().strip("'\"")
+                    os.environ[key] = val
 
 
 class LLMProvider:
@@ -176,7 +174,7 @@ def get_tools_definition():
             "type": "function",
             "function": {
                 "name": "look",
-                "description": "Look around the current and visible tiles in front of you. Returns a list of lists of items.",
+                "description": "Look around the current and visible tiles in front of you. Returns a list of lists of items. the view is a cone and increses with your incantation level, tiles are separated by , and items by spaces so if there are two items with just a space it means its the same tile, the first tile is the tile you are standing on",
                 "parameters": {"type": "object", "properties": {}},
             },
         },

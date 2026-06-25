@@ -49,6 +49,7 @@
     pkgs.criterion
     pkgs.ruff
     pkgs.clang-tools
+    pkgs.pyright
   ];
 
   # https://devenv.sh/languages/
