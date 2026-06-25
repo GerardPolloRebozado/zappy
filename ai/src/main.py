@@ -137,6 +137,8 @@ def main():
     )
     parser.add_argument(
         "-llm", "--llm", action="store_true", help="starts the game in LLM mode"
+    )
+    parser.add_argument(
         "--ai", action="store_true", help="starts the game using the trained AI model"
     )
     parser.add_argument(
