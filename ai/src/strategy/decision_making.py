@@ -90,6 +90,9 @@ def take_decision(client):
 
     if can_evolve(client.level, inv, players_on_tile):
         req = ELEVATION_TABLE[client.level]
+        logger.debug(
+            f"[SERVER] -> {client.broadcast(f'Incantation {client.name} level {client.level}')}"
+        )
         logger.info(f"Evolving to level {client.level + 1}! Dropping resources...")
         for _ in range(req.linemate):
             logger.debug(f"[SERVER] -> {client.set('linemate')}")
@@ -111,7 +114,10 @@ def take_decision(client):
     target_msg = None
     if hasattr(client, "messages") and client.messages:
         for msg in reversed(client.messages):
-            if msg.get("text") == f"Elevation {client.name} level {client.level}":
+            if msg.get("text") in [
+                f"Elevation {client.name} level {client.level}",
+                f"Incantation {client.name} level {client.level}",
+            ]:
                 target_msg = msg
                 break
 
@@ -138,6 +144,8 @@ def take_decision(client):
                 logger.debug(f"[SERVER] -> {client.right()}")
             client.messages.clear()
             return
+    else:
+        client.is_follower = False
 
     # 4 we have enough resources but not enough players, broadcast
     if client.level in ELEVATION_TABLE:
