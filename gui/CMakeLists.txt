@@ -64,6 +64,7 @@ set(CORE_SOURCES
         src/Systems/Animations/AnimationSystemMovement2D.cpp
         src/Systems/Animations/AnimationSystemMovement3D.cpp
         src/Systems/Animations/AnimationSystemAnimations.cpp
+        src/Systems/BackgroundSystem.cpp
         src/Systems/MusicSystem.cpp
         src/Graphics/AssetManager/AssetManager.cpp
         src/Graphics/AssetManager/AssetManagerModels.cpp
