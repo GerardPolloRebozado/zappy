@@ -68,30 +68,50 @@ Test(CommandTileContentTest, ExecuteValidTileContent) {
 
     cmd.execute("5 4 10 1 2 0 0 0 0 1", world);
 
-    auto posStorage = world.get_storage<Position>();
-    cr_assert_not_null(posStorage);
+    auto tileStorage = world.get_storage<TileTag>();
+    cr_assert_not_null(tileStorage);
 
     int count = 0;
-    for (auto const& [entity, pos] : *posStorage) {
+    for (auto const& [entity, tag] : *tileStorage) {
+        auto pos = world.get_component<Position>(entity);
+        cr_assert_not_null(pos);
         cr_assert_eq(pos->x, 5);
         cr_assert_eq(pos->y, 4);
 
         auto inv = world.get_component<Inventory>(entity);
         cr_assert_not_null(inv);
-        cr_assert_eq(inv->food, 10);
-        cr_assert_eq(inv->linemate, 1);
-        cr_assert_eq(inv->deraumere, 2);
-        cr_assert_eq(inv->sibur, 0);
-        cr_assert_eq(inv->mendiane, 0);
-        cr_assert_eq(inv->phiras, 0);
-        cr_assert_eq(inv->thystame, 0);
+        cr_assert_eq(inv->food, 0); // Delayed until landing
+        cr_assert_eq(inv->linemate, 0);
 
         auto terrain = world.get_component<TerrainType>(entity);
         cr_assert_not_null(terrain);
         cr_assert_eq(terrain->current_type, static_cast<zappy::TerrainType::Type>(1));
 
-        cr_assert_not_null(world.get_component<TileTag>(entity));
         count++;
     }
     cr_assert_eq(count, 1);
+
+    // Verify that the correct number of AnimatedResources were spawned
+    auto animStorage = world.get_storage<AnimatedResource>();
+    cr_assert_not_null(animStorage);
+
+    int foodCount = 0;
+    int linemateCount = 0;
+    int deraumereCount = 0;
+
+    for (auto const& [ent, anim] : *animStorage) {
+        if (anim->addToTileOnLand) {
+            if (anim->resourceId == ResourceType::FOOD) {
+                foodCount++;
+            } else if (anim->resourceId == ResourceType::LINEMATE) {
+                linemateCount++;
+            } else if (anim->resourceId == ResourceType::DERAUMERE) {
+                deraumereCount++;
+            }
+        }
+    }
+
+    cr_assert_eq(foodCount, 10);
+    cr_assert_eq(linemateCount, 1);
+    cr_assert_eq(deraumereCount, 2);
 }

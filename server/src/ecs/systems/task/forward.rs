@@ -19,6 +19,7 @@ pub fn execute_forward(world: &mut World, entity: Entity) -> (Response, Option<S
     {
         pos.move_forward(ori, map_width, map_height);
     }
+    crate::ecs::components::tile::Tile::trigger_wormhole_if_any(world, entity);
     let ok = Response::new(ResponseCode::Status(StatusCode::Ok), None);
     let event = Inhabitant::get(entity, world).map(|player| ServerEvent::player_position(&player));
     (ok, event)

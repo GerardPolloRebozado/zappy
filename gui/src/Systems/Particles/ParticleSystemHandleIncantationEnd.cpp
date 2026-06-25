@@ -34,6 +34,13 @@ void ParticleSystem::_handleIncantationEnd(World& w) {
                                 if (anim) {
                                     anim->currentAnim = "inhabitant_general_Idle_A";
                                 }
+                                if (result == 1) {
+                                    auto levelComp = w.get_component<Level>(player);
+                                    if (levelComp) {
+                                        levelComp->level++;
+                                    }
+                                    w.add_component<RequestPlayerLevel>(player, {});
+                                }
                             }
 
                             auto burstEntity = w.spawn();

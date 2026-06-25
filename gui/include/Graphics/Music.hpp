@@ -6,7 +6,7 @@
 namespace zappy {
 
 struct Music {
-    raylib::Music music; // Music oject from RayLib
+    raylib::Music music;    // Music oject from RayLib
     std::string sourcePath; // path of the music file (.mp3)
 };
 

@@ -18,6 +18,7 @@
 #include "Network/NetworkErrors.hpp"
 #include "UI/UIButton.hpp"
 #include "UI/UIChatPanel.hpp"
+#include "UI/UIEventMenu.hpp"
 #include "UI/UIHudPanel.hpp"
 #include "UI/UIInput.hpp"
 #include "UI/UIManager.hpp"
@@ -234,11 +235,11 @@ void Core::_setupGameUI() {
         raylib::Rectangle{(float)_window->GetWidth() - 220, 50, 200, 400}, _world, _renderSystem,
         nullptr, 10));
 
-    // Time frequency slider
+    // Event menu (contains frequency slider + map event buttons)
     _uiManager->addComponent(
-        std::make_shared<UISlider>(raylib::Rectangle{(float)_window->GetWidth() - 270,
-                                                     (float)_window->GetHeight() - 60, 250, 40},
-                                   _world, _network, 10));
+        std::make_shared<UIEventMenu>(raylib::Rectangle{(float)_window->GetWidth() - 170,
+                                                        (float)_window->GetHeight() - 60, 150, 50},
+                                      _world, _network, _chatLogs, 10));
 
     std::filesystem::path dirpath = "assets/sounds/music";
 
@@ -260,7 +261,17 @@ void Core::_setupGameUI() {
     // music panel
     _uiManager->addComponent(std::make_shared<UIRadio>(
         raylib::Rectangle{40.0f, 40.0f, 160.0f, 100.0f}, _world, 15, 0, _bckMusic));
-    // Chat Panel
+
+    // Spawn Background parallax
+    auto backgroundParallaxEntity = _world.spawn();
+    _world.add_component(backgroundParallaxEntity, std::make_shared<BackgroundParallax>());
+
+    // Spawn Moon & Sun
+    auto moon = _world.spawn();
+    _world.add_component(moon, std::make_shared<CelestialObject>(0.0f, 0.01f, "moon"));
+    auto sun = _world.spawn();
+    _world.add_component(sun, std::make_shared<CelestialObject>(3.0f, 0.0015f, "sun"));
+
     // Chat Panel
     float chatY = (float)_window->GetHeight() - 240.0f;
     _uiManager->addComponent(std::make_shared<UIChatPanel>(

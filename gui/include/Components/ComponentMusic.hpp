@@ -15,8 +15,8 @@ struct ComponentMusic {
     bool isStarted = false;
     bool isFinished = false;
     float volume; // Volume is between 0.0f and 1.0f
-    ComponentMusic (std::string source) {song.sourcePath = source;}
-    ComponentMusic (std::string source, bool isLoop) : loop(isLoop) {song.sourcePath = source;}
+    ComponentMusic(std::string source) { song.sourcePath = source; }
+    ComponentMusic(std::string source, bool isLoop) : loop(isLoop) { song.sourcePath = source; }
 };
 
 } // namespace zappy

@@ -1,10 +1,15 @@
 use rand::{RngExt, rng, seq::SliceRandom};
 
+use std::collections::HashSet;
+
 use crate::{
     ecs::{
         components::{resource::Resource, terrain_type::TerrainType, tile::Tile},
+        map_size::get_tile_content_by_entity,
         storage::{Entity, World},
+        systems::task::broadcast_event,
     },
+    protocol::ServerEvent,
     utils::constants::UNITS_BETWEEN_RESOURCE_SPAWN,
 };
 
@@ -65,6 +70,7 @@ pub fn resource_spawn_system(world: &mut World) {
         };
 
     let mut rng = rng();
+    let mut modified_tiles = HashSet::new();
 
     loop {
         let mut spawned_this_pass = false;
@@ -87,12 +93,19 @@ pub fn resource_spawn_system(world: &mut World) {
         for (entity, terrain) in &tile_entities {
             if populate_tile_resources(world, entity, *terrain) {
                 spawned_this_pass = true;
+                modified_tiles.insert(*entity);
             }
         }
 
         if !spawned_this_pass {
             break;
         }
+    }
+
+    // Broadcast the changes to the GUI
+    for entity in modified_tiles {
+        let content = get_tile_content_by_entity(world, entity);
+        broadcast_event(world, ServerEvent::TileContent { content });
     }
 
     world.last_resource_spawn = current_time;

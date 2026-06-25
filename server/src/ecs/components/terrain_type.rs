@@ -13,4 +13,7 @@ pub enum TerrainType {
     LuminousOrchards,
     CrystalCanyons,
     MagneticTundra,
+
+    // Mechanics
+    Wormhole,
 }
