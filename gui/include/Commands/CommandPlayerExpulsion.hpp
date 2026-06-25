@@ -51,6 +51,9 @@ class CommandPlayerExpulsion : public ACommand {
 
         auto [executorEntity, executorPos, executorOri] = *executorData;
 
+        // Add Expulsions effects
+        world.add_component<EventExpulsion>(executorEntity, EventExpulsion{});
+
         auto victims = findVictims(world, posStorage, executorEntity, executorPos);
         if (victims.empty()) {
             return;
