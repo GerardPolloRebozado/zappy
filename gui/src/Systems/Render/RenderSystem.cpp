@@ -84,6 +84,7 @@ void RenderSystem::update(World& w, float dt) {
             }
         }
     }
+    _updateMapEvents(w, dt);
 }
 
 void RenderSystem::render(World& w) {

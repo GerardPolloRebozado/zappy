@@ -69,6 +69,17 @@ void AssetManager::_loadTextures() {
         _textures["next"] = std::make_unique<raylib::Texture2D>("assets/ui/step_front.png");
         _textures["prev"] = std::make_unique<raylib::Texture2D>("assets/ui/step_back.png");
 
+        _textures["M001"] =
+            std::make_unique<raylib::Texture2D>("assets/textures/Meteorite/Meteorite/M001.png");
+        _textures["M002"] =
+            std::make_unique<raylib::Texture2D>("assets/textures/Meteorite/Meteorite/M002.png");
+        _textures["M003"] =
+            std::make_unique<raylib::Texture2D>("assets/textures/Meteorite/Meteorite/M003.png");
+        _textures["M004"] =
+            std::make_unique<raylib::Texture2D>("assets/textures/Meteorite/Meteorite/M004.png");
+        _textures["M005"] =
+            std::make_unique<raylib::Texture2D>("assets/textures/Meteorite/Meteorite/M005.png");
+
         // Apply custom tintable texture to all materials of the mannequin model
         if (_models.find("robot") != _models.end() &&
             _textures.find("mannequin") != _textures.end()) {

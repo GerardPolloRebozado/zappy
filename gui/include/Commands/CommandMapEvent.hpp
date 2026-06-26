@@ -28,6 +28,12 @@ inline void updateMapEventState(World& world, const std::string& name, int cente
             mapEvent->centerY = centerY;
             mapEvent->active = active;
             found = true;
+            if (name == "meteor_shower") {
+                auto meteor = world.get_component<Meteorite>(entity);
+                if (!meteor) {
+                    world.add_component<Meteorite>(entity, {});
+                }
+            }
             break;
         }
     }

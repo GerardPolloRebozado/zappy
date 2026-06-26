@@ -323,13 +323,47 @@ void RenderSystem::_renderDebugHud(World& w) {
     drawText("Eggs on Map: " + std::to_string(eggStorage ? eggStorage->size() : 0));
 }
 
-void RenderSystem::_reanderMapEvents(World& w, std::string event) {
+void RenderSystem::_updateMapEvents(World& w, float dt) {
+    auto eventStorage = w.get_storage<MapEvent>();
+    if (!eventStorage) {
+        return;
+    }
+
+    for (auto& [entity, mapEvent] : *eventStorage) {
+        if (mapEvent->active && mapEvent->name == "meteor_shower") {
+
+            auto meteor = w.get_component<Meteorite>(entity);
+            if (!meteor) {
+                w.add_component<Meteorite>(entity, Meteorite{});
+                meteor = w.get_component<Meteorite>(entity);
+            }
+
+            meteor->frameCounter++;
+            if (meteor->frameCounter >= meteor->frameDelay) {
+                meteor->currentFrame++;
+
+                if (meteor->currentFrame > meteor->maxFrames) {
+                    meteor->currentFrame = 1;
+                }
+                meteor->frameCounter = 0;
+            }
+        }
+    }
+}
+
+void RenderSystem::_reanderMapEvents(World& w, std::string event, Entity entity) {
+
     if (event == "meteor_shower") {
-        std::cout << "-------------------------------------------------------" << std::endl;
-        int animFrames = 0;
-        Image imScarfyAnim = LoadImageAnim("assets/textures/Meteorite/FB000.gif", &animFrames);
-        Texture2D texScarfyAnim = LoadTextureFromImage(imScarfyAnim);
-        DrawTexture(texScarfyAnim, GetScreenWidth() / 2 - texScarfyAnim.width / 2, 140, WHITE);
+        auto meteor = w.get_component<Meteorite>(entity);
+        if (!meteor) {
+            return;
+        }
+        std::string text = "M00" + std::to_string(meteor->currentFrame);
+        auto& tex = AssetManager::getInstance().getTexture(text);
+
+        if (tex.id != 0) {
+            ::DrawTexture(tex, GetScreenWidth() / 2 - tex.width / 2, 140, WHITE);
+        }
     }
 }
 
@@ -339,7 +373,7 @@ void RenderSystem::renderShowEvents(World& w) {
         return;
     }
     float currentY = 100.0f;
-    raylib::Vector2 pos = {1920.0f / 2.0f - 200.0f, currentY};
+    raylib::Vector2 pos = {static_cast<float>(GetScreenWidth()) / 2.0f - 200.0f, currentY};
 
     for (const auto& [entity, mapEvent] : *eventStorage) {
         if (mapEvent->active && mapEvent->name != "none") {
@@ -352,7 +386,7 @@ void RenderSystem::renderShowEvents(World& w) {
             font.DrawText(text, pos, 60, 1.5f, raylib::Color::DarkPurple());
             currentY += 70.0f;
 
-            RenderSystem::_reanderMapEvents(w, mapEvent->name);
+            RenderSystem::_reanderMapEvents(w, mapEvent->name, entity);
         }
     }
 }
