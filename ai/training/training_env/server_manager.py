@@ -48,6 +48,7 @@ class ServerManager:
 
         possible_locations = [
             base_dir / "zappy_server",
+            base_dir / "build" / "zappy_server",
             base_dir / "cmake-build-debug" / "zappy_server",
             base_dir / "server" / "zappy_server",
         ]

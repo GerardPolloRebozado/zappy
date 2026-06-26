@@ -10,6 +10,12 @@ class TestServerManager(unittest.TestCase):
         binary_path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "../../server/zappy_server")
         )
+        if not os.path.isfile(binary_path):
+            binary_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "../../zappy_server")
+            )
+        if not os.path.isfile(binary_path):
+            binary_path = None
 
         manager = ServerManager(binary_path=binary_path)
 
