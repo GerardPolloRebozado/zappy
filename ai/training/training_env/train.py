@@ -1,6 +1,7 @@
 import argparse
 import os
 import multiprocessing
+import time
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
@@ -44,6 +45,7 @@ def main():
     Initializes the custom environment, verifies its compliance with Stable Baselines 3,
     and trains a Proximal Policy Optimization (PPO) model.
     """
+    start_time = time.time()
     # Force the 'spawn' multiprocessing start method to ensure clean ctypes loading per process
     try:
         multiprocessing.set_start_method("spawn", force=True)
@@ -153,6 +155,13 @@ def main():
     # Save the trained model weights to a zip file
     model.save(args.model_name)
     print(f"Finished and saved on {args.model_name}.zip")
+
+    elapsed_time = time.time() - start_time
+    minutes = int(elapsed_time // 60)
+    seconds = int(elapsed_time % 60)
+    print(
+        f"\n[Training] Total execution time: {minutes}m {seconds}s ({elapsed_time:.2f} seconds)"
+    )
 
     env.close()
 
