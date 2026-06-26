@@ -323,6 +323,16 @@ void RenderSystem::_renderDebugHud(World& w) {
     drawText("Eggs on Map: " + std::to_string(eggStorage ? eggStorage->size() : 0));
 }
 
+void RenderSystem::_reanderMapEvents(World& w, std::string event) {
+    if (event == "meteor_shower") {
+        std::cout << "-------------------------------------------------------" << std::endl;
+        int animFrames = 0;
+        Image imScarfyAnim = LoadImageAnim("assets/textures/Meteorite/FB000.gif", &animFrames);
+        Texture2D texScarfyAnim = LoadTextureFromImage(imScarfyAnim);
+        DrawTexture(texScarfyAnim, GetScreenWidth() / 2 - texScarfyAnim.width / 2, 140, WHITE);
+    }
+}
+
 void RenderSystem::renderShowEvents(World& w) {
     auto eventStorage = w.get_storage<MapEvent>();
     if (!eventStorage) {
@@ -341,6 +351,8 @@ void RenderSystem::renderShowEvents(World& w) {
                                     raylib::Color{255, 255, 255, 130});
             font.DrawText(text, pos, 60, 1.5f, raylib::Color::DarkPurple());
             currentY += 70.0f;
+
+            RenderSystem::_reanderMapEvents(w, mapEvent->name);
         }
     }
 }
