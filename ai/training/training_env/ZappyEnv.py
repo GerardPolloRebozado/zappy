@@ -5,7 +5,7 @@ import numpy as np
 from gymnasium import spaces
 from src.client.ai_client import ZappyAiClient
 from src.client.lib_client import ZappyLibClient
-from src.utils import Inventory
+from src.utils import Inventory, ELEVATION_TABLE
 
 # Import and re-export the modularized components for backwards compatibility
 from training.training_env.actions import ControllerAction, ZappyAction
@@ -255,11 +255,8 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 ZappyAction.RIGHT: 0.02,
                 ZappyAction.LOOK: 0.1,  # BUFF: Increased reward for looking around
                 ZappyAction.INVENTORY: 0.0,
-                ZappyAction.BROADCAST: 0.0,
                 ZappyAction.CONNECT_NBR: 0.0,
-                ZappyAction.FORK: -2.0,
                 ZappyAction.EJECT: 0.0,
-                ZappyAction.SET: -0.5,
                 ZappyAction.INCANTATION: 0.0,
             }
             if zappy_action is not None:
@@ -302,16 +299,68 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 inv = self.client.inventory()
                 if item_target == "food":
                     if isinstance(inv, Inventory) and inv.food >= 15:
-                        reward -= 0.5
+                        reward += (
+                            0.2  # Small positive reward for maintaining buffer of food
+                        )
                     else:
-                        reward += 2.0
+                        reward += 2.0  # Large positive reward for survival
                 else:
                     if isinstance(inv, Inventory) and isinstance(item_target, str):
-                        stone_quantity = getattr(inv, item_target, 0)
-                        if stone_quantity < 5:
+                        req = ELEVATION_TABLE.get(self.client.level)
+                        needed = getattr(req, item_target, 0) if req is not None else 0
+                        current_quantity = getattr(inv, item_target, 0)
+                        if current_quantity <= needed:
                             reward += 4.0
                         else:
-                            reward -= 0.5
+                            reward -= 0.2
+
+            elif zappy_action == ZappyAction.SET:
+                if item_target == "food":
+                    reward -= 2.0
+                elif isinstance(item_target, str):
+                    inv = self.client.inventory()
+                    if isinstance(inv, Inventory):
+                        req = ELEVATION_TABLE.get(self.client.level)
+                        needed = getattr(req, item_target, 0) if req is not None else 0
+                        current_quantity = getattr(inv, item_target, 0)
+                        if current_quantity < needed:
+                            reward -= 4.0
+                        else:
+                            reward += 0.2
+
+            elif zappy_action == ZappyAction.FORK:
+                slots = self.client.connect_nbr()
+                req = ELEVATION_TABLE.get(self.client.level)
+                if (
+                    req is not None
+                    and req.players > 1
+                    and isinstance(slots, int)
+                    and slots == 0
+                ):
+                    reward += 2.0
+                else:
+                    reward -= 2.0
+
+            elif zappy_action == ZappyAction.BROADCAST:
+                inv = self.client.inventory()
+                req = ELEVATION_TABLE.get(self.client.level)
+                if req is not None and isinstance(inv, Inventory):
+                    has_stones = (
+                        inv.linemate >= req.linemate
+                        and inv.deraumere >= req.deraumere
+                        and inv.sibur >= req.sibur
+                        and inv.mendiane >= req.mendiane
+                        and inv.phiras >= req.phiras
+                        and inv.thystame >= req.thystame
+                    )
+                    if has_stones and req.players > 1:
+                        reward += 2.0
+                    elif inv.food < 5:
+                        reward += 0.5
+                    else:
+                        reward -= 0.1
+                else:
+                    reward -= 0.1
 
         elif response == "ko":
             # ANTI-CASINO SYSTEM
@@ -319,11 +368,13 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             # while keeping regular mistake penalties low
             if zappy_action == ZappyAction.TAKE:
                 reward -= 0.5
+            elif zappy_action == ZappyAction.INCANTATION:
+                reward -= 10.0
             else:
                 reward -= 0.1
 
         elif isinstance(response, str) and response.startswith("Current level:"):
-            reward += 100.0
+            reward += 100.0 * self.client.level
 
         if not terminated:
             try:
