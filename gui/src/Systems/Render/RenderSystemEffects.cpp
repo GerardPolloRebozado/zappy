@@ -334,8 +334,31 @@ void RenderSystem::_updateMapEvents(World& w, float dt) {
 
             auto meteor = w.get_component<Meteorite>(entity);
             if (!meteor) {
-                w.add_component<Meteorite>(entity, Meteorite{});
+                Meteorite newMeteor;
+
+                newMeteor.worldX = (float)mapEvent->centerX + 15.0f;
+                newMeteor.worldY = 30.0f;
+                newMeteor.worldZ = (float)mapEvent->centerY + 15.0f;
+
+                w.add_component<Meteorite>(entity, newMeteor);
                 meteor = w.get_component<Meteorite>(entity);
+            }
+
+            if (!meteor->hasLanded) {
+                float speed = 25.0f * dt;
+                float dirX = (float)mapEvent->centerX - meteor->worldX;
+                float dirY = 2.0f - meteor->worldY;
+                float dirZ = (float)mapEvent->centerY - meteor->worldZ;
+
+                float distance = std::sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+
+                if (distance > 0.5f) {
+                    meteor->worldX += (dirX / distance) * speed;
+                    meteor->worldY += (dirY / distance) * speed;
+                    meteor->worldZ += (dirZ / distance) * speed;
+                } else {
+                    meteor->hasLanded = true;
+                }
             }
 
             meteor->frameCounter++;
@@ -352,21 +375,32 @@ void RenderSystem::_updateMapEvents(World& w, float dt) {
 }
 
 void RenderSystem::_reanderMapEvents(World& w, std::string event, Entity entity) {
-
     if (event == "meteor_shower") {
         auto meteor = w.get_component<Meteorite>(entity);
         if (!meteor) {
+            return;
+        }
+        if (meteor->hasLanded) {
             return;
         }
         std::string text = "M00" + std::to_string(meteor->currentFrame);
         auto& tex = AssetManager::getInstance().getTexture(text);
 
         if (tex.id != 0) {
-            ::DrawTexture(tex, GetScreenWidth() / 2 - tex.width / 2, 140, WHITE);
+            raylib::Vector3 pos3D = {meteor->worldX, meteor->worldY, meteor->worldZ};
+            raylib::Vector2 pos2D = ::GetWorldToScreen(pos3D, _camera);
+            float scale = 3.0f;
+            float rotation = 90.0;
+
+            raylib::Rectangle source = {0.0f, 0.0f, (float)tex.width, (float)tex.height};
+            raylib::Rectangle dest = {pos2D.x, pos2D.y, (float)tex.width * scale,
+                                      (float)tex.height * scale};
+
+            raylib::Vector2 origin = {dest.width / 2.0f, dest.height / 2.0f};
+            ::DrawTexturePro(tex, source, dest, origin, rotation, WHITE);
         }
     }
 }
-
 void RenderSystem::renderShowEvents(World& w) {
     auto eventStorage = w.get_storage<MapEvent>();
     if (!eventStorage) {
