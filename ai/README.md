@@ -15,7 +15,7 @@ The source code is organized into a layered architecture:
   - `ZappyEnv.py`: Gymnasium environment definition and observation generation.
   - `actions.py`: Discrete action space definition.
   - `broadcast.py`: Team communications parser and heuristic calculations.
-  - `env_modes.py`: Network (TCP socket) and Direct-Library (FFI ctypes) execution modes.
+  - `env_modes.py`: Direct-Library (FFI ctypes) execution mode.
 
 ## Compile
 ### Prepare the build directory (recomended)
@@ -123,6 +123,16 @@ You can also customize the training session using command-line arguments:
 *(Use `./ai/training/run_training.sh --help` to see all available options).*
 
 > **Note on Timesteps:** The Proximal Policy Optimization (PPO) algorithm processes data in batches called "rollouts". By default, Stable-Baselines3 uses a rollout buffer size of **2048 timesteps**. This means even if you request a training session of `-t 10`, the AI will *always* complete at least one full buffer of 2048 steps before performing its first mathematical update and exiting. For a proper training cycle, it is recommended to run at least `-t 2500`.
+
+### Strict Headless Evaluation
+
+To evaluate your trained model's performance under strict multi-agent conditions (2 teams of 2 players) without launching a GUI or starting network subprocesses, run:
+
+```bash
+PYTHONPATH=ai /Users/anapallares/epi/tek2/zappy/.venv/bin/python ai/training/training_env/evaluate_ai.py --model zappy_ai_model --episodes 5
+```
+
+This runs high-speed headless episodes and outputs an evaluation report showing turns survived and levels achieved, rating the model into one of 6 performance tiers (from Tier 1: Starvation/Survival Failure to Tier 6: Level 8 Victory). Results are saved to `ai/training/results/`.
 
 ### Run AI Model
 
