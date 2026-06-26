@@ -23,6 +23,7 @@
     pkgs.libxcursor
     pkgs.libxi
     pkgs.libxrandr
+    pkgs.zlib
   ];
 
   # https://devenv.sh/packages/
@@ -49,6 +50,7 @@
     pkgs.criterion
     pkgs.ruff
     pkgs.clang-tools
+    pkgs.zlib
   ];
 
   # https://devenv.sh/languages/

@@ -4,7 +4,7 @@
 ._*
 Thumbs.db
 desktop.ini
-
+tensorboard_logs
 .zed
 
 .idea/

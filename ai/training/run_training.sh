@@ -11,6 +11,7 @@ FREQ=100
 TEAM="TeamAI"
 MODEL_NAME="zappy_ai_model"
 DEBUG_BUILD=false
+ENVS=""
 
 # Help message
 print_usage() {
@@ -22,6 +23,7 @@ print_usage() {
     echo "  -f, --freq N        Simulation frequency (default: $FREQ)"
     echo "  -n, --team NAME     Team name (default: $TEAM)"
     echo "  -m, --model NAME    Saved model name (default: $MODEL_NAME)"
+    echo "  -e, --envs N        Number of parallel environments (default: half of CPU cores)"
     echo "  -d, --debug         Build Rust library in debug mode instead of release"
     echo "  -h, --help          Show this help message"
 }
@@ -35,6 +37,7 @@ while [[ "$#" -gt 0 ]]; do
         -f|--freq) FREQ="$2"; shift ;;
         -n|--team) TEAM="$2"; shift ;;
         -m|--model) MODEL_NAME="$2"; shift ;;
+        -e|--envs) ENVS="$2"; shift ;;
         -d|--debug) DEBUG_BUILD=true ;;
         -h|--help) print_usage; exit 0 ;;
         *) echo "Unknown parameter passed: $1"; print_usage; exit 1 ;;
@@ -83,6 +86,7 @@ echo "  Map Size:  ${WIDTH}x${HEIGHT}"
 echo "  Frequency: $FREQ"
 echo "  Team:      $TEAM"
 echo "  Model:     $MODEL_NAME"
+echo "  Envs:      ${ENVS:-"Default (half of CPU cores)"}"
 echo "==================================="
 echo ""
 
@@ -90,13 +94,19 @@ echo ""
 export PYTHONPATH="$PROJECT_ROOT/ai:$PYTHONPATH"
 
 # Run the training script
+ARGS=()
+if [ -n "$ENVS" ]; then
+    ARGS+=(--envs "$ENVS")
+fi
+
 python3 ai/training/training_env/train.py \
     --timesteps "$TIMESTEPS" \
     --width "$WIDTH" \
     --height "$HEIGHT" \
     --freq "$FREQ" \
     --team "$TEAM" \
-    --model-name "$MODEL_NAME"
+    --model-name "$MODEL_NAME" \
+    "${ARGS[@]}"
 
 echo ""
 echo "==================================="

@@ -230,15 +230,14 @@ class LibZappyEnv:
     def __init__(
         self,
         env,
-        width=20,
-        height=20,
         freq=100,
         teams=["team1", "team2"],
         clients_nb=10,
+        **kwargs,
     ):
         self.env = env
-        self.width = width
-        self.height = height
+        self.width = int(np.random.randint(10, 50))
+        self.height = int(np.random.randint(10, 50))
         self.freq = freq
         self.teams = teams
         self.clients_nb = clients_nb
@@ -250,37 +249,37 @@ class LibZappyEnv:
         if self.server_ptr:
             self.zappy_lib.lib.zappy_free(self.server_ptr)
 
-        # Convert teams to C types
-        team_count = len(self.teams)
-        TeamArray = ctypes.c_char_p * team_count
-        team_ptrs = TeamArray(*[t.encode("utf-8") for t in self.teams])
+        num_teams = int(np.random.randint(1, 6))
+        teams = [self.teams[0]] + [f"team{i}" for i in range(2, num_teams + 1)]
+
+        self.width = int(np.random.randint(10, 25))
+        self.height = int(np.random.randint(10, 25))
+        area = self.width * self.height
+        players_per_team = max(1, area // (50 * num_teams))
+        clients_nb = players_per_team
+
+        TeamArray = ctypes.c_char_p * num_teams
+        team_ptrs = TeamArray(*[t.encode("utf-8") for t in teams])
 
         self.server_ptr = self.zappy_lib.lib.zappy_init(
-            self.width, self.height, self.freq, team_ptrs, team_count, self.clients_nb
+            self.width, self.height, self.freq, team_ptrs, num_teams, clients_nb
         )
 
-        # Add 4 training allies (from the main team: teams[0])
-        for _ in range(4):
+        # -1 player for allies that 1 of them is the ai
+        for _ in range(players_per_team - 1):
             self.zappy_lib.lib.zappy_add_player(
-                self.server_ptr, self.teams[0].encode("utf-8")
+                self.server_ptr, teams[0].encode("utf-8")
             )
 
-        # enemies (Distribute 5 remaining slots among rival teams)
-        enemy_slots = 5
-        enemy_teams_count = len(self.teams) - 1
+        # Enemies
+        for i in range(1, num_teams):
+            for _ in range(players_per_team):
+                self.zappy_lib.lib.zappy_add_player(
+                    self.server_ptr, teams[i].encode("utf-8")
+                )
 
-        if enemy_teams_count > 0:
-            bots_per_team = enemy_slots // enemy_teams_count
-            remainder = enemy_slots % enemy_teams_count
-
-            for i in range(1, len(self.teams)):
-                extra = 1 if i <= remainder else 0
-                for _ in range(bots_per_team + extra):
-                    self.zappy_lib.lib.zappy_add_player(
-                        self.server_ptr, self.teams[i].encode("utf-8")
-                    )
         player_id = self.zappy_lib.lib.zappy_add_player(
-            self.server_ptr, self.teams[0].encode("utf-8")
+            self.server_ptr, teams[0].encode("utf-8")
         )
 
         self.client = ZappyLibClient(
@@ -560,3 +559,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
 
         info = {}
         return observation, reward, terminated, truncated, info
+
+    @property
+    def player_level(self) -> int:
+        return self.client.level if self.client is not None else 1
