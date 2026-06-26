@@ -8,7 +8,7 @@
 #define ZAPPY_COMMANDSERVERMESSAGE_HPP
 
 #include "ACommand.hpp"
-#include "Commands/CommandMapEvent.hpp"
+#include "Commands/CommandGetMapEvent.hpp"
 #include "Logging/Logger.hpp"
 #include <sstream>
 #include <string>
