@@ -411,13 +411,13 @@ void RenderSystem::renderShowEvents(World& w) {
 
     for (const auto& [entity, mapEvent] : *eventStorage) {
         if (mapEvent->active && mapEvent->name != "none") {
-            auto& font = AssetManager::getInstance().getFont("HeaderFont");
+            auto& font = AssetManager::getInstance().getFont("EventFont");
 
             std::string text = mapEvent->name;
             std::transform(text.begin(), text.end(), text.begin(), ::toupper);
-            raylib::Rectangle::Draw(pos.x - 10, pos.y - 10, text.length() * 37, 80,
+            raylib::Rectangle::Draw(pos.x - 10, pos.y, text.length() * 31, 80,
                                     raylib::Color{255, 255, 255, 130});
-            font.DrawText(text, pos, 60, 1.5f, raylib::Color::DarkPurple());
+            font.DrawText(text, pos, 80, 1.5f, raylib::Color::DarkPurple());
             currentY += 70.0f;
 
             RenderSystem::_reanderMapEvents(w, mapEvent->name, entity);

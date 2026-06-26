@@ -98,6 +98,9 @@ void AssetManager::_loadFonts() {
     try {
         _fonts["TextFont"] = std::make_unique<raylib::Font>("assets/fonts/BoldPixels.ttf");
         _fonts["HeaderFont"] = std::make_unique<raylib::Font>("assets/fonts/DungeonFont.ttf");
+        _fonts["MagicalFont"] = std::make_unique<raylib::Font>("assets/fonts/Magical World.ttf");
+        _fonts["EventFont"] = std::make_unique<raylib::Font>("assets/fonts/Halther.ttf");
+
     } catch (const raylib::RaylibException& e) {
         log_error(ErrorAsset("Failed to load fonts: " + std::string(e.what())).what());
     }
