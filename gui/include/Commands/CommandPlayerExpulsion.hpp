@@ -66,6 +66,9 @@ class CommandPlayerExpulsion : public ACommand {
         int mapWidth = sizeIt->begin()->second->width;
         int mapHeight = sizeIt->begin()->second->height;
 
+        for (auto victim : victims) {
+            move_forward(victim, executorOri->current_direction, mapWidth, mapHeight);
+        }
         (void)victims;
         (void)mapWidth;
         (void)mapHeight;
@@ -123,6 +126,7 @@ class CommandPlayerExpulsion : public ACommand {
             }
             if (pos->x == executorPos->x && pos->y == executorPos->y) {
                 victims.push_back(pos);
+                world.add_component<EventExpulsed>(entity, EventExpulsed{});
             }
         }
         return victims;

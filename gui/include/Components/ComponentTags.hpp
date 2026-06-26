@@ -32,6 +32,7 @@ struct EventDeath {};
 struct EventBroadcast {};
 struct EventJump {};
 struct EventExpulsion {};
+struct EventExpulsed {};
 struct TombTag {};
 } // namespace zappy
 

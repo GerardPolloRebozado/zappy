@@ -11,9 +11,10 @@
 namespace zappy {
 
 void ParticleSystem::_handleExpulsions(World& w) {
+    // Expulsion
     auto eventExpulsionStorage = w.get_storage<EventExpulsion>();
     if (eventExpulsionStorage) {
-        std::vector<Entity> eventToRemove;
+        std::vector<Entity> eventExpulsionToRemove;
         for (auto const& [entity, event] : *eventExpulsionStorage) {
             auto posComponent = w.get_component<Position>(entity);
             if (posComponent) {
@@ -71,10 +72,32 @@ void ParticleSystem::_handleExpulsions(World& w) {
                     move->isMoving = false;
                 }
             }
-            eventToRemove.push_back(entity);
+            eventExpulsionToRemove.push_back(entity);
         }
-        for (const auto& e : eventToRemove) {
+        for (const auto& e : eventExpulsionToRemove) {
             w.remove_component<EventExpulsion>(e);
+        }
+    }
+
+    // Expulsed
+    auto eventExpulsedStorage = w.get_storage<EventExpulsed>();
+    if (eventExpulsedStorage) {
+        std::vector<Entity> eventExpulsedToRemove;
+        for (auto const& [entity, event] : *eventExpulsedStorage) {
+            auto anim = w.get_component<Animation>(entity);
+            if (anim) {
+                anim->currentAnim = "inhabitant_general_Death_B";
+                anim->loop = false;
+                anim->currentFrame = 0.0f;
+            }
+            auto move = w.get_component<MovementInterpolation2D>(entity);
+            if (move) {
+                move->isMoving = false;
+            }
+            eventExpulsedToRemove.push_back(entity);
+        }
+        for (const auto& e : eventExpulsedToRemove) {
+            w.remove_component<EventExpulsed>(e);
         }
     }
 }
