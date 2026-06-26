@@ -11,6 +11,11 @@ The source code is organized into a layered architecture:
 - **`src/strategy/`**: The logic layer. This is where the AI's "brain" resides, containing the main loop and decision making algorithms.
 - **`src/utils/`**: Utility functions and classes that support the other layers.
 - **`src/main.py`**: The entry point. Manages command-line argument parsing and initializes the client connection.
+- **`training/training_env/`**: Contains the reinforcement learning environment wrappers.
+  - `ZappyEnv.py`: Gymnasium environment definition and observation generation.
+  - `actions.py`: Discrete action space definition.
+  - `broadcast.py`: Team communications parser and heuristic calculations.
+  - `env_modes.py`: Network (TCP socket) and Direct-Library (FFI ctypes) execution modes.
 
 ## Compile
 ### Prepare the build directory (recomended)
@@ -81,12 +86,27 @@ The AI does not interact with the game via strings or visuals; it interacts thro
 We significantly improved training speeds by converting the Rust `zappy_server` into a shared library (`zappy_engine`). Instead of running a background server process and communicating via TCP sockets, the Python `LibZappyEnv` uses `ctypes` to invoke engine ticks and functions directly in memory. This eliminates network overhead and allows training to process hundreds of times faster.
 
 ### The Rewards System
-The Reinforcement Learning agent starts blind and learns optimal behavior by trying to maximize its cumulative score based on the following ruleset:
+The Reinforcement Learning agent learns optimal behavior by maximizing its cumulative score. The reward function is shaped as follows to prevent loops and optimize performance:
 
-- **`+1.0` (Success):** Awarded when the server returns `ok`. The AI is encouraged to perform valid, actionable commands (like moving successfully or picking up an item that actually exists).
-- **`-0.1` (Failure):** Penalized when the server returns `ko`. The AI learns to avoid useless actions (like trying to pick up food from an empty tile or walking into walls).
-- **`-0.5` (Invalid Action):** Penalized if the neural network attempts to use an unmapped/invalid action ID.
-- **`-100.0` (Death/Termination):** The ultimate punishment. If the player runs out of life units (1260 ticks without eating) and the server sends a `dead` signal (Broken Pipe), the episode terminates with a massive penalty. This forces the AI to prioritize food collection and survival above all else.
+- **Symmetric Take & Set Rewards**:
+  - Picking up a stone needed for elevation gives **`+4.0` points**; an excess stone gives **`-0.2` points**.
+  - Dropping a stone that causes deficiency gives **`-4.0` points**; an excess stone gives **`+0.2` points**.
+  - This symmetry makes standard drop-and-pickup loop exploits net **`0.0` points**, preventing reward-hacking.
+- **Hunger-Sensitive Food Collection**:
+  - Taking food when hungry (`food < 15`) gives **`+2.0` points** (high priority).
+  - Taking food when satisfied (`food >= 15`) gives **`+0.2` points** (buffer maintenance).
+  - Setting (dropping) food is penalized with **`-2.0` points**.
+- **Scaled Elevation Success**:
+  - Reaching target level `K` awards a scaled reward of **`+100.0 * K` points** (e.g. `+200.0` for Level 2, `+800.0` for Level 8).
+- **Failed Incantation Penalty**:
+  - Trying to incant but getting a `"ko"` response is penalized with **`-10.0` points**.
+- **Contextual Forking and Broadcasting**:
+  - Spawning a slot (`FORK`) when empty (`connect_nbr == 0`) and team slots are needed awards **`+2.0` points**; otherwise, it is penalized with **`-2.0` points**.
+  - Sending coordinates (`BROADCAST`) when ready for elevation or asking for food when starving is rewarded; unnecessary/spam broadcasting is penalized with **`-0.1` points**.
+- **Base Actions & Survival**:
+  - Small step reward (`-0.01` per tick) to encourage fast completion.
+  - Forward walking (`+0.1`), turning (`+0.02`), and looking (`+0.1`).
+  - Dying terminates the episode with a severe penalty of **`-100.0` points**.
 
 ### Run AI Training
 To launch the autonomous training loop using the high-speed library implementation, you can use the provided bash script. This script automatically builds the Rust engine in release mode and starts the python process with the correct parameters.
@@ -104,13 +124,24 @@ You can also customize the training session using command-line arguments:
 
 > **Note on Timesteps:** The Proximal Policy Optimization (PPO) algorithm processes data in batches called "rollouts". By default, Stable-Baselines3 uses a rollout buffer size of **2048 timesteps**. This means even if you request a training session of `-t 10`, the AI will *always* complete at least one full buffer of 2048 steps before performing its first mathematical update and exiting. For a proper training cycle, it is recommended to run at least `-t 2500`.
 
-### Run AI Model  
+### Run AI Model
 
-```bash
-python -m training.training_env.watch_ai
-#on different terminals
-./zappy_gui -p 8080 -h localhost
-```
+To see your trained model play, you can run the server and connect your AI model client manually.
+
+1. **Start the server**:
+   ```bash
+   ./zappy_server -p 8080 -x 10 -y 10 -n TeamAI -c 2 -f 10
+   ```
+2. **Open the GUI**:
+   ```bash
+   ./zappy_gui -p 8080 -h localhost
+   ```
+3. **Connect the AI client**:
+   From the `ai/` folder, launch the client with the `--ai` flag pointing to your model:
+   ```bash
+   PYTHONPATH=. python3 src/main.py -p 8080 -n TeamAI -ip 127.0.0.1 --ai --model zappy_ai_model
+   ```
+   *(To launch multiple AI clients at once, customize variables in [run_bots.sh](file:///Users/anapallares/epi/tek2/zappy/ai/run_bots.sh) and execute it).*
 
 ### Run tests
 From inside build/
