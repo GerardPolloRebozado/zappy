@@ -2,10 +2,10 @@
 ** EPITECH PROJECT, 2026
 ** zappy
 ** File description:
-** CommandMapEvent.hpp
+** CommandGetMapEvent.hpp
 */
-#ifndef ZAPPY_COMMANDMAPEVENT_HPP
-#define ZAPPY_COMMANDMAPEVENT_HPP
+#ifndef ZAPPY_COMMANDGETMAPEVENT_HPP
+#define ZAPPY_COMMANDGETMAPEVENT_HPP
 
 #include "ACommand.hpp"
 #include "Components/ComponentShared.hpp"
@@ -38,17 +38,27 @@ inline void updateMapEventState(World& world, const std::string& name, int cente
     }
 }
 
-class CommandMapEvent : public ACommand {
+inline void updateMapEventCoords(World& world, int centerX, int centerY) {
+    auto storage = world.get_storage<MapEvent>();
+    if (storage) {
+        for (auto const& [entity, mapEvent] : *storage) {
+            mapEvent->centerX = centerX;
+            mapEvent->centerY = centerY;
+            break;
+        }
+    }
+}
+
+class CommandGetMapEvent : public ACommand {
   public:
-    CommandMapEvent() = default;
-    ~CommandMapEvent() override = default;
+    CommandGetMapEvent() = default;
+    ~CommandGetMapEvent() override = default;
 
     /**
-     * @brief Handles server responses for "gev" (get map event) and "mev" (trigger map event).
+     * @brief Handles server responses for "gev" (get map event).
      *
      * Response formats:
-     * - gev: "none" or "<name>" or "gravity_well X Y"
-     * - mev: "<name>" on successful trigger
+     * - "none" or "<name>" or "gravity_well X Y"
      */
     void execute(const std::string& args, World& world) override {
         std::istringstream iss(args);
@@ -85,4 +95,4 @@ class CommandMapEvent : public ACommand {
 };
 } // namespace zappy
 
-#endif // ZAPPY_COMMANDMAPEVENT_HPP
+#endif // ZAPPY_COMMANDGETMAPEVENT_HPP
