@@ -72,6 +72,12 @@ def main():
         default=default_envs,
         help=f"Number of parallel environments to run (default: {default_envs})",
     )
+    parser.add_argument(
+        "--load-model",
+        type=str,
+        default="",
+        help="Name or path of a saved model to continue training from",
+    )
     args = parser.parse_args()
 
     print("Verifying single environment compliance")
@@ -115,13 +121,28 @@ def main():
     print(
         f"PPO configuration: n_steps per env = {n_steps} (Total batch size: {n_steps * args.envs})"
     )
-    model = PPO(
-        "MlpPolicy",
-        env,
-        verbose=0,
-        tensorboard_log="./tensorboard_logs/",
-        n_steps=n_steps,
-    )
+    if args.load_model:
+        # Resolve path
+        load_path = args.load_model
+        if not load_path.endswith(".zip") and not os.path.exists(load_path):
+            if os.path.exists(load_path + ".zip"):
+                load_path = load_path + ".zip"
+        print(f"Loading existing model from: {load_path}")
+        model = PPO.load(
+            load_path,
+            env=env,
+            verbose=0,
+            tensorboard_log="./tensorboard_logs/",
+            custom_objects={"n_steps": n_steps},
+        )
+    else:
+        model = PPO(
+            "MlpPolicy",
+            env,
+            verbose=0,
+            tensorboard_log="./tensorboard_logs/",
+            n_steps=n_steps,
+        )
 
     print(f"Training model for {args.timesteps} timesteps")
 

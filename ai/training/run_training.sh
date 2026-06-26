@@ -10,6 +10,7 @@ HEIGHT=10
 FREQ=100
 TEAM="TeamAI"
 MODEL_NAME="zappy_ai_model"
+LOAD_MODEL=""
 DEBUG_BUILD=false
 ENVS=""
 
@@ -23,6 +24,7 @@ print_usage() {
     echo "  -f, --freq N        Simulation frequency (default: $FREQ)"
     echo "  -n, --team NAME     Team name (default: $TEAM)"
     echo "  -m, --model NAME    Saved model name (default: $MODEL_NAME)"
+    echo "  -l, --load-model NAME Model name/path to load and continue training"
     echo "  -e, --envs N        Number of parallel environments (default: half of CPU cores)"
     echo "  -d, --debug         Build Rust library in debug mode instead of release"
     echo "  -h, --help          Show this help message"
@@ -37,6 +39,7 @@ while [[ "$#" -gt 0 ]]; do
         -f|--freq) FREQ="$2"; shift ;;
         -n|--team) TEAM="$2"; shift ;;
         -m|--model) MODEL_NAME="$2"; shift ;;
+        -l|--load-model) LOAD_MODEL="$2"; shift ;;
         -e|--envs) ENVS="$2"; shift ;;
         -d|--debug) DEBUG_BUILD=true ;;
         -h|--help) print_usage; exit 0 ;;
@@ -86,6 +89,7 @@ echo "  Map Size:  ${WIDTH}x${HEIGHT}"
 echo "  Frequency: $FREQ"
 echo "  Team:      $TEAM"
 echo "  Model:     $MODEL_NAME"
+echo "  Load Model: ${LOAD_MODEL:-"None (train from scratch)"}"
 echo "  Envs:      ${ENVS:-"Default (half of CPU cores)"}"
 echo "==================================="
 echo ""
@@ -106,6 +110,7 @@ python3 ai/training/training_env/train.py \
     --freq "$FREQ" \
     --team "$TEAM" \
     --model-name "$MODEL_NAME" \
+    --load-model "$LOAD_MODEL" \
     "${ARGS[@]}"
 
 echo ""
