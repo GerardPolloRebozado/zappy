@@ -3,18 +3,17 @@ from typing import Union
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
-from src.client.ai_client import ZappyAiClient
 from src.client.lib_client import ZappyLibClient
 from src.utils import Inventory, ELEVATION_TABLE
 
 # Import and re-export the modularized components for backwards compatibility
 from training.training_env.actions import ControllerAction, ZappyAction
 from training.training_env.broadcast import BroadcastDict, BroadcastHandler
-from training.training_env.env_modes import LibZappyEnv, NetworkZappyEnv
+from training.training_env.env_modes import LibZappyEnv
 
 
 class ObservationZappyEnv:
-    client: Union[ZappyAiClient, ZappyLibClient, None] = None
+    client: Union[ZappyLibClient, None] = None
 
     def _get_real_observation(self):
         """
@@ -88,9 +87,6 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
 
     def __init__(
         self,
-        use_lib=True,
-        port=4242,
-        ip="127.0.0.1",
         team_name="team1",
         total_teams=2,
         **kwargs,
@@ -102,10 +98,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         for i in range(2, total_teams + 1):
             generated_teams.append(f"team{i}")
 
-        if use_lib:
-            self.mode = LibZappyEnv(self, teams=generated_teams, **kwargs)
-        else:
-            self.mode = NetworkZappyEnv(self, port=port, ip=ip, team_name=team_name)
+        self.mode = LibZappyEnv(self, teams=generated_teams, **kwargs)
 
         self.client = None
         self.action_space = spaces.Discrete(24)

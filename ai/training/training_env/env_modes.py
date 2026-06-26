@@ -1,38 +1,6 @@
 import ctypes
 import numpy as np
-from src.client.ai_client import ZappyAiClient
 from src.client.lib_client import ZappyLib, ZappyLibClient
-from training.training_env.server_manager import ServerManager
-
-
-class NetworkZappyEnv:
-    def __init__(self, env, port=4242, ip="127.0.0.1", team_name="team1"):
-        self.env = env
-        self.ip = ip
-        self.port = port
-        self.team_name = team_name
-        self.server_manager = ServerManager(port=port)
-        self.client = None
-
-    def reset(self, *, seed=None, options=None):
-        if self.client:
-            self.client.close()
-
-        self.server_manager.start()
-        self.port = self.server_manager.port
-
-        self.client = ZappyAiClient(self.port, self.team_name, self.ip)
-        self.client.connect()
-        self.env.client = self.client
-
-        observation = self.env._get_real_observation()
-        info = {}
-        return observation, info
-
-    def close(self):
-        if self.client:
-            self.client.close()
-        self.server_manager.stop()
 
 
 class LibZappyEnv:
