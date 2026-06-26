@@ -70,6 +70,7 @@ class ZappyLibClient:
         self.is_dead = False
         self.level = 1
         self.messages = []
+        self.is_initiator = False
 
     def get_unread_messages(self):
         """
@@ -83,10 +84,13 @@ class ZappyLibClient:
         self.lib.zappy_tick(self.server_ptr, ms)
 
     def wait_for_response(self):
+        if self.is_dead:
+            return "dead"
+
         # Calculate the actual millisecond length of one server tick.
         tick_size_ms = max(1, int(1000 / self.freq))
 
-        max_ticks = 100000
+        max_ticks = 2000
         ticks = 0
         while ticks < max_ticks:
             resp_ptr = self.lib.zappy_get_response(self.server_ptr, self.player_id)
@@ -106,18 +110,27 @@ class ZappyLibClient:
                     if parsed:
                         self.messages.append(parsed)
                     continue
+                if resp.startswith("eject:"):
+                    continue
+                if resp == "Elevation underway":
+                    if not self.is_initiator:
+                        continue
+                    return resp
                 if resp.startswith("Current level:"):
                     try:
                         self.level = int(resp.split(":")[1].strip())
                     except (ValueError, IndexError):
                         pass
+                    if not self.is_initiator:
+                        continue
                     return resp
                 return resp
 
             self._tick(tick_size_ms)
             ticks += 1
 
-        return None
+        self.is_dead = True
+        return "dead"
 
     def forward(self):
         self.lib.zappy_send_command(self.server_ptr, self.player_id, b"Forward\n")
@@ -181,11 +194,17 @@ class ZappyLibClient:
         return self.wait_for_response()
 
     def incantation(self):
-        self.lib.zappy_send_command(self.server_ptr, self.player_id, b"Incantation\n")
-        first_resp = self.wait_for_response()
-        if first_resp == "Elevation underway":
-            return self.wait_for_response()
-        return first_resp
+        self.is_initiator = True
+        try:
+            self.lib.zappy_send_command(
+                self.server_ptr, self.player_id, b"Incantation\n"
+            )
+            first_resp = self.wait_for_response()
+            if first_resp == "Elevation underway":
+                return self.wait_for_response()
+            return first_resp
+        finally:
+            self.is_initiator = False
 
     def close(self):
         # Handled by ZappyLibManager
