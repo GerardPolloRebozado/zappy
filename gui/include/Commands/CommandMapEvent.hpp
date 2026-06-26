@@ -62,10 +62,7 @@ class CommandMapEvent : public ACommand {
         int centerX = -1;
         int centerY = -1;
         if (name == "gravity_well") {
-            if (!(iss >> centerX >> centerY)) {
-                log_error("Protocol: failed to parse gravity well coords: " + args);
-                return;
-            }
+            iss >> centerX >> centerY;
         }
 
         updateMapEventState(world, name, centerX, centerY);
