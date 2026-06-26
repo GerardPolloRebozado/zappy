@@ -1,12 +1,15 @@
-from enum import Enum
-import gymnasium as gym
-from gymnasium import spaces
-import numpy as np
-from training.training_env.server_manager import ServerManager
-from src.client.ai_client import ZappyAiClient
-from enum import IntEnum
-from src.client.lib_client import ZappyLib, ZappyLibClient
 import ctypes
+from enum import Enum, IntEnum
+from typing import Union
+
+import gymnasium as gym
+import numpy as np
+from gymnasium import spaces
+from src.client.ai_client import ZappyAiClient
+from src.client.lib_client import ZappyLib, ZappyLibClient
+from src.utils import Inventory
+
+from training.training_env.server_manager import ServerManager
 
 """
 ---------------------------------------
@@ -127,11 +130,15 @@ class ZappyAction(Enum):
 
 
 class ObservationZappyEnv:
+    client: Union[ZappyAiClient, ZappyLibClient, None] = None
+
     def _get_real_observation(self):
         """
         Retrieves the player's inventory and vision from the server and maps them
         into the 657-dimensional numpy array used for neural network input.
         """
+        assert self.client is not None, "Client is not connected"
+
         obs = np.zeros(657, dtype=np.int32)
         resources = [
             "player",
@@ -158,7 +165,7 @@ class ObservationZappyEnv:
                         if idx >= 0:
                             obs[idx] = quantity
             obs[656] = obs[0]
-        elif hasattr(inv, "food"):
+        elif isinstance(inv, Inventory):
             obs[0] = inv.food
             obs[1] = inv.linemate
             obs[2] = getattr(inv, "deraumere", 0)
@@ -198,7 +205,7 @@ class NetworkZappyEnv:
         self.server_manager = ServerManager(port=port)
         self.client = None
 
-    def reset(self, seed=None, options=None):
+    def reset(self, *, seed=None, options=None):
         if self.client:
             self.client.close()
 
@@ -239,7 +246,7 @@ class LibZappyEnv:
         self.server_ptr = None
         self.client = None
 
-    def reset(self, seed=None, options=None):
+    def reset(self, *, seed=None, options=None):
         if self.server_ptr:
             self.zappy_lib.lib.zappy_free(self.server_ptr)
 
@@ -332,7 +339,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             team_name=team_name, secret_key="ZAPPY_SEC"
         )
 
-    def reset(self, seed=None, options=None):
+    def reset(self, *, seed=None, options=None):
         obs, info = self.mode.reset(seed=seed, options=options)
         self.client = self.mode.client
         return obs, info
@@ -351,6 +358,9 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         zappy_action = None
         item_target = None
 
+        if self.client is None:
+            return np.zeros(657, dtype=np.int32), 0.0, True, False, {}
+
         ZAPPY_ITEMS = [
             "food",
             "linemate",
@@ -367,7 +377,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             bot_action = None
 
         pending_messages = []
-        if hasattr(self.client, "get_unread_messages"):
+        if isinstance(self.client, ZappyLibClient):
             pending_messages = self.client.get_unread_messages()
 
         best_heuristic = {"score": 0, "task": "IGNORE", "dir": 0}
@@ -401,16 +411,17 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
 
                 # Do we have the required stones to reach at least Level 3?
                 has_stones = (
-                    getattr(inv, "linemate", 0) >= 1
-                    and getattr(inv, "deraumere", 0) >= 1
-                    and getattr(inv, "sibur", 0) >= 1
+                    isinstance(inv, Inventory)
+                    and inv.linemate >= 1
+                    and inv.deraumere >= 1
+                    and inv.sibur >= 1
                 )
 
                 if self.client.level >= 2 and has_stones:
                     msg_to_send = self.broadcast_handler.build_message(
                         BroadcastDict.INCANT
                     )
-                elif hasattr(inv, "food") and inv.food < 5:
+                elif isinstance(inv, Inventory) and inv.food < 5:
                     msg_to_send = self.broadcast_handler.build_message(
                         BroadcastDict.FIND, "food"
                     )
@@ -432,7 +443,8 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 response = self.client.eject()
                 zappy_action = ZappyAction.EJECT
             case _ if (
-                ControllerAction.TAKE_FOOD
+                bot_action is not None
+                and ControllerAction.TAKE_FOOD
                 <= bot_action
                 <= ControllerAction.TAKE_THYSTAME
             ):
@@ -440,7 +452,10 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 response = self.client.take(item_target)
                 zappy_action = ZappyAction.TAKE
             case _ if (
-                ControllerAction.SET_FOOD <= bot_action <= ControllerAction.SET_THYSTAME
+                bot_action is not None
+                and ControllerAction.SET_FOOD
+                <= bot_action
+                <= ControllerAction.SET_THYSTAME
             ):
                 item_target = ZAPPY_ITEMS[bot_action - ControllerAction.SET_FOOD]
                 response = self.client.set(item_target)
@@ -469,7 +484,8 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 ZappyAction.SET: -0.5,
                 ZappyAction.INCANTATION: 0.0,
             }
-            reward += base_rewards.get(zappy_action, 0.0)
+            if zappy_action is not None:
+                reward += base_rewards.get(zappy_action, 0.0)
 
             if best_heuristic["score"] >= 50:
                 target_dir = best_heuristic["dir"]
@@ -507,16 +523,17 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             if zappy_action == ZappyAction.TAKE:
                 inv = self.client.inventory()
                 if item_target == "food":
-                    if hasattr(inv, "food") and inv.food >= 15:
+                    if isinstance(inv, Inventory) and inv.food >= 15:
                         reward -= 0.5
                     else:
                         reward += 2.0
                 else:
-                    stone_quantity = getattr(inv, item_target, 0)
-                    if stone_quantity < 5:
-                        reward += 4.0
-                    else:
-                        reward -= 0.5
+                    if isinstance(inv, Inventory) and isinstance(item_target, str):
+                        stone_quantity = getattr(inv, item_target, 0)
+                        if stone_quantity < 5:
+                            reward += 4.0
+                        else:
+                            reward -= 0.5
 
         elif response == "ko":
             # ANTI-CASINO SYSTEM
