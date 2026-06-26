@@ -8,7 +8,9 @@
 #define ZAPPY_COMMANDSERVERMESSAGE_HPP
 
 #include "ACommand.hpp"
+#include "Commands/CommandMapEvent.hpp"
 #include "Logging/Logger.hpp"
+#include <sstream>
 #include <string>
 
 namespace zappy {
@@ -19,6 +21,26 @@ class CommandServerMessage : public ACommand {
 
     void execute(const std::string& args, World& world) override {
         log_info("Server message: " + args);
+
+        std::istringstream iss(args);
+        std::string phase;
+        std::string eventName;
+
+        if (!(iss >> phase >> eventName)) {
+            return;
+        }
+
+        if (phase == "event_start") {
+            updateMapEventState(world, eventName);
+            if (_chatLogs) {
+                _chatLogs->addChatLog("Celestial anomaly started: " + eventName, "EVENT");
+            }
+        } else if (phase == "event_end") {
+            updateMapEventState(world, "none");
+            if (_chatLogs) {
+                _chatLogs->addChatLog("Celestial anomaly ended: " + eventName, "EVENT");
+            }
+        }
     }
 };
 } // namespace zappy
