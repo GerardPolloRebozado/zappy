@@ -12,6 +12,7 @@
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
+#include "Logging/LogConfig.hpp"
 #include "Logging/Logger.hpp"
 #include <algorithm>
 #include <memory>
@@ -53,6 +54,7 @@ class CommandPlayerExpulsion : public ACommand {
 
         auto victims = findVictims(world, posStorage, executorEntity, executorPos);
         if (victims.empty()) {
+            log_info("No players to eject in this tile");
             return;
         }
 
@@ -63,9 +65,9 @@ class CommandPlayerExpulsion : public ACommand {
         int mapWidth = sizeIt->begin()->second->width;
         int mapHeight = sizeIt->begin()->second->height;
 
-        (void)victims;
-        (void)mapWidth;
-        (void)mapHeight;
+        for (auto& victimPos : victims) {
+            move_forward(victimPos, executorOri->current_direction, mapWidth, mapHeight);
+        }
         log_info("Protocol: Player #" + std::to_string(executorId) +
                  " expelled everyone on their tile");
     }
