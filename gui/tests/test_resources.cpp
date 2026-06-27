@@ -10,6 +10,7 @@
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
 #include "ECS/World.hpp"
+#include "Systems/SimulationSystem.hpp"
 #include <criterion/criterion.h>
 
 using namespace zappy;
@@ -29,6 +30,9 @@ Test(CommandResourceTest, CollectResource) {
 
     CommandResourceCollect cmd;
     cmd.execute("100 1", world); // Collect linemate (1)
+
+    SimulationSystem sys;
+    sys.update(world);
 
     auto playerInv = world.get_component<Inventory>(player);
     auto tileInv = world.get_component<Inventory>(tile);
@@ -54,6 +58,9 @@ Test(CommandResourceTest, DropResource) {
 
     CommandResourceDrop cmd;
     cmd.execute("200 0", world); // Drop food (0)
+
+    SimulationSystem sys;
+    sys.update(world);
 
     auto playerInv = world.get_component<Inventory>(player);
     auto tileInv = world.get_component<Inventory>(tile);

@@ -68,9 +68,6 @@ class CommandPlayerExpulsion : public ACommand {
         int mapWidth = sizeIt->begin()->second->width;
         int mapHeight = sizeIt->begin()->second->height;
 
-        for (auto& victimPos : victims) {
-            move_forward(victimPos, executorOri->current_direction, mapWidth, mapHeight);
-        }
         log_info("Protocol: Player #" + std::to_string(executorId) +
                  " expelled everyone on their tile");
     }
@@ -129,24 +126,6 @@ class CommandPlayerExpulsion : public ACommand {
             }
         }
         return victims;
-    }
-
-    static void move_forward(const std::shared_ptr<Position>& pos, Orientation::Direction direction,
-                             int mapWidth, int mapHeight) {
-        switch (direction) {
-            case Orientation::N:
-                pos->y = (pos->y + mapHeight - 1) % mapHeight;
-                break;
-            case Orientation::E:
-                pos->x = (pos->x + 1) % mapWidth;
-                break;
-            case Orientation::S:
-                pos->y = (pos->y + 1) % mapHeight;
-                break;
-            case Orientation::W:
-                pos->x = (pos->x + mapWidth - 1) % mapWidth;
-                break;
-        }
     }
 };
 

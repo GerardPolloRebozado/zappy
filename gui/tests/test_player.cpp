@@ -17,6 +17,7 @@
 #include "Components/ComponentTags.hpp"
 #include "ECS/World.hpp"
 #include "Systems/ParticleSystem.hpp"
+#include "Systems/SimulationSystem.hpp"
 #include <criterion/criterion.h>
 #include <string>
 
@@ -159,6 +160,9 @@ Test(CommandPlayerExpulsionTest, EjectEast) {
     CommandPlayerExpulsion cmd;
     cmd.execute("2", world);
 
+    SimulationSystem sys;
+    sys.update(world);
+
     auto pos = world.get_component<Position>(victim);
     cr_assert_not_null(pos.get());
     cr_assert_eq(pos->x, 6);
@@ -182,6 +186,9 @@ Test(CommandPlayerExpulsionTest, EjectNorthWithWrap) {
 
     CommandPlayerExpulsion cmd;
     cmd.execute("11", world);
+
+    SimulationSystem sys;
+    sys.update(world);
 
     auto pos = world.get_component<Position>(victim);
     cr_assert_not_null(pos.get());
