@@ -397,3 +397,38 @@ Evaluation file: *[eval_20260627_181943.md](../training/results/eval_20260627_18
   - Modified `lib_client.py` to intercept and translate teammate broadcasts to `team1|ZAPPY_SEC|INCANT` or `COME`.
   - Modified `ZappyEnv.py` so Level 2 teammates periodically broadcast a `COME` beacon every 10 steps.
   - Execute a 2,000,000 step training run loading from `zappy_coordination_v1` so the agent can learn to follow the newly unlocked radio signal and coordinate to reach Level 3.
+
+
+## Run #12
+- **Base Model**: `Loaded from zappy_coordination_v1`
+- **Output Model Name**: `zappy_coordination_v1_2`
+- **Timesteps Run**: `2,000,000`
+- **Real-World Duration**: `11m 58s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 2000000 -f 1000 -m zappy_coordination_v1_2 -l zappy_coordination_v1
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v1_2 --teams team01 --player 2 --width 15 --height 15
+```
+- **Average Level Achieved**: `1.50`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `105.40`
+- **Max Turns Survived**: `159`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_184331.md](../training/results/eval_20260627_184331.md)*
+
+#### Observations
+- *Key observations*
+  - Average turns survived increased to 105.40 turns (Max 159).
+  - `Vision & Info` count jumped to 90.2% (943 times) and `Movement` dropped to 6.7% (70 times).
+  - Discovered that the PPO agent's 657-element observation vector did **not** contain any features representing the teammate's broadcast direction. The agent was mathematically blind to the radio signal, explaining why it got stuck spamming `LOOK` (which yields 0.0 points) to minimize loss while waiting to die.
+- *Adjustments needed for the next run:*
+  - Overwrote the redundant food-copy feature at `obs[656]` to contain the coordinate direction (`best_heuristic["dir"]`) of the teammate's broadcast.
+  - Run a 2,000,000 step training run loading from `zappy_coordination_v1_2` so the agent can learn to map this newly visible broadcast direction input to correct steering actions and reach Level 3
