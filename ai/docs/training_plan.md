@@ -29,7 +29,7 @@ graph TD
 * **Map Size**: `12x12`
 * **Configuration**: Load `zappy_survival_v1`, `total_teams=1`, `frequency=1000`
 * **Expected Result**: Reaches Level 2 consistently.
-* **Timesteps**: `300,000` (Cumulative: `500,000`)
+* **Timesteps**: `300,000`
 * **Target Model Name**: `zappy_level2_v1`
 
 ### Phase 3: Coordination & Radio Broadcasts (Level 3-4 Competence)
@@ -37,7 +37,7 @@ graph TD
 * **Map Size**: `15x15`
 * **Configuration**: Load `zappy_level2_v1`, `total_teams=1` (with 2 players), `frequency=1000`
 * **Expected Result**: Reaches Level 3/4.
-* **Timesteps**: `500,000` (Cumulative: `1,000,000`)
+* **Timesteps**: `500,000`
 * **Target Model Name**: `zappy_coordination_v1`
 
 ### Phase 4: Competitive Multi-Team Play (Level 5-8 Competence)
@@ -45,5 +45,5 @@ graph TD
 * **Map Size**: `20x20`
 * **Configuration**: Load `zappy_coordination_v1`, `total_teams=2` (each with 2-3 players), `frequency=1000`
 * **Expected Result**: Master coordination, reaching Level 5+ consistently.
-* **Timesteps**: `1,000,000` (Cumulative: `2,000,000`)
+* **Timesteps**: `1,000,000`
 * **Target Model Name**: `zappy_master_v1`
