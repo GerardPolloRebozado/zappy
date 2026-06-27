@@ -450,7 +450,7 @@ void RenderSystem::_reanderMapEvents(World& w, const std::string& event, Entity 
         float maxRadius = std::sqrt(screenW * screenW + screenH * screenH);
         for (int i = 0; i < 3; i++) {
             float waveRadius = std::fmod((time * 400.0f) + (i * (maxRadius / 3.0f)), maxRadius);
-            float waveAlpha = 1.0f - (waveRadius / maxRadius); // loose intensity in the distance
+            float waveAlpha = 1.0f - (waveRadius / maxRadius); // Loose intensity in the distance
 
             raylib::Color waveColor = {100, 200, 255, (unsigned char)(150.0f * waveAlpha)};
 
