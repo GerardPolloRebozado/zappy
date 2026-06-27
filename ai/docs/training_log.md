@@ -66,12 +66,13 @@ template to document each training run.
 #### Parameters
 ```bash
 # Paste the exact run command here:
-./ai/training/run_training.sh -t 200000 -x 10 -y 10 -f 1000 -n TeamAI -m zappy_survival_v1
+./ai/training/run_training.sh -t 200000 -f 1000 -n TeamAI -m zappy_survival_v1
 ```
 
 #### Evaluation Metrics (via evaluate_ai.py)
 ```
-# Run: PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survival_v1
+# Run (adjust --teams, --players, --width, --height depending on phase):
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survival_v1 --teams team01 --players 1 --width 10 --height 10
 ```
 - **Average Level Achieved**: `X.XX`
 - **Max Level Achieved**: `X`
@@ -100,7 +101,7 @@ template to document each training run.
 #### Evaluation Metrics (via evaluate_ai.py)
 Run: 
 ```
-PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survival_v1
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survival_v1 --teams team01 --players 1 --width 10 --height 10
 ```
 - **Average Level Achieved**: `1.10`
 - **Max Level Achieved**: `2`
