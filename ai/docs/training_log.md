@@ -70,13 +70,14 @@ template to document each training run.
 ```
 
 #### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
 ```
-# Run (adjust --teams, --players, --width, --height depending on phase):
 PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survival_v1 --teams team01 --players 1 --width 10 --height 10
 ```
 - **Average Level Achieved**: `X.XX`
 - **Max Level Achieved**: `X`
 - **Average Turns Survived**: `XXXX`
+- **Max Turns Survived**: `X`
 - **Rating Tier**: `[Tier 1 / Tier 2 / ...]`
 
 #### Observations (when running game with gui)
@@ -99,23 +100,57 @@ PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survi
 ```
 
 #### Evaluation Metrics (via evaluate_ai.py)
-Run: 
+Run (adjust --teams, --players, --width, --height depending on phase):
 ```
 PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survival_v1 --teams team01 --players 1 --width 10 --height 10
 ```
-- **Average Level Achieved**: `1.10`
+- **Average Level Achieved**: `1.80`
 - **Max Level Achieved**: `2`
-- **Average Turns Survived**: `41.00`
-- **Max Turns Survived**: `85`
-- **Rating Tier**: `Tier 1 Starvation/Survival Failure`
+- **Average Turns Survived**: `84.00`
+- **Max Turns Survived**: `102`
+- **Rating Tier**: `Tier 1`
 
 #### Observations (when running game with gui)
 - *What actions did the agent prioritize?*
   - The player would not take any stones from the ground
-  - The player manage to evolve to level 2 when the stone needed was already on the tile and he AI's random exploration chooses the Incantation action. 
+  - The player manage to evolve to level 2 when the stone needed was already on the tile. 
   - Player would ignore food on the tiles unless it's life bar fell bellow a certain mark
 - *Did it exhibit any loop behaviors or stuck states?*
   - Player would only walk forward. This can be explained by the fact that in level 1 the player can only look one tile ahead, because in this phase the AI is not  
 - *Adjustments needed for the next run:*
   - Phase 1 is complete and successful. The agent has mastered basic survival and hunger control. 
   - In Phase 2, we introduce stones needed for elevation, which award a massive +4.0 points (compared to the tiny +0.1 for walking forward). The agent will quickly learn that it cannot get these high rewards by just walking in a straight line; it will be forced to turn, look, and steer towards the stones.
+
+### Run #2
+- **Base Model**: `Loaded from zappy_survival_v1`
+- **Output Model Name**: `zappy_level2_v1`
+- **Timesteps Run**: `300,000`
+- **Real-World Duration**: `1m 47s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 300000 -f 1000 -m zappy_level2_v1 -l zappy_survival_v1 
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level2_v1 --teams team01 --players 1 --width 12 --height 12
+```
+- **Average Level Achieved**: `1`
+- **Max Level Achieved**: `1`
+- **Average Turns Survived**: `139`
+- **Max Turns Survived**: `159`
+- **Rating Tier**: `Tier 1`
+
+#### Observations (when running game with gui)
+- *What actions did the agent prioritize?*
+  - Agent would take food more frequently
+  - Agent did pick up Linemate at some point. It died not use it or evolve at any point
+  - The agent did perform a turn at some point, but then kept only moving forward
+- *Did it exhibit any loop behaviors or stuck states?*
+  - Agent still moves forward constantly 
+- *Adjustments needed for the next run:*
+  - We will continue training Phase 2 for longer. Now that the AI has discovered the stones and started turning, it needs more experience to reinforce and complete the sequence.
+  - Make a new run with a training cycle of 500,000 timesteps, loading the current `zappy_level2_v1` model to fine-tune it
