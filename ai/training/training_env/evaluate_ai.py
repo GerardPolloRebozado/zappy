@@ -188,6 +188,17 @@ def main():
         action="store_true",
         help="Print detailed step-by-step logs of agent actions",
     )
+    parser.add_argument("--width", type=int, default=15, help="Map width")
+    parser.add_argument("--height", type=int, default=15, help="Map height")
+    parser.add_argument(
+        "--teams",
+        type=str,
+        default="team01,team02",
+        help="Comma-separated list of team names",
+    )
+    parser.add_argument(
+        "--players", type=int, default=2, help="Number of players per team"
+    )
     args = parser.parse_args()
 
     # Locate model path
@@ -220,16 +231,17 @@ def main():
         )
         sys.exit(84)
 
-    width, height = 15, 15
-    teams = ["team01", "team02"]
+    width = args.width
+    height = args.height
+    teams = [t.strip() for t in args.teams.split(",")]
     num_teams = len(teams)
-    clients_nb = 2
+    clients_nb = args.players
 
     all_turns = []
     all_levels = []
 
     print(
-        f"[Eval] Starting evaluation: {args.episodes} episodes (2 teams of 2 players each)..."
+        f"[Eval] Starting evaluation: {args.episodes} episodes ({num_teams} teams of {clients_nb} players each)..."
     )
 
     for ep in range(args.episodes):
@@ -240,21 +252,16 @@ def main():
             width, height, args.freq, team_ptrs, num_teams, clients_nb
         )
 
-        # 2. Add players
-        p1 = zappy_lib.lib.zappy_add_player(server_ptr, b"team01")
-        p2 = zappy_lib.lib.zappy_add_player(server_ptr, b"team01")
-        p3 = zappy_lib.lib.zappy_add_player(server_ptr, b"team02")
-        p4 = zappy_lib.lib.zappy_add_player(server_ptr, b"team02")
-
-        c1 = ZappyLibClient(zappy_lib.lib, server_ptr, p1, args.freq)
-        c2 = ZappyLibClient(zappy_lib.lib, server_ptr, p2, args.freq)
-        c3 = ZappyLibClient(zappy_lib.lib, server_ptr, p3, args.freq)
-        c4 = ZappyLibClient(zappy_lib.lib, server_ptr, p4, args.freq)
-
-        c1.team_name, c2.team_name = "team01", "team01"
-        c3.team_name, c4.team_name = "team02", "team02"
-
-        clients = [c1, c2, c3, c4]
+        # 2. Add players and clients dynamically
+        clients = []
+        for team_name in teams:
+            for _ in range(clients_nb):
+                p_id = zappy_lib.lib.zappy_add_player(
+                    server_ptr, team_name.encode("utf-8")
+                )
+                client = ZappyLibClient(zappy_lib.lib, server_ptr, p_id, args.freq)
+                client.team_name = team_name
+                clients.append(client)
 
         # Consume initial server logs
         for c in clients:
@@ -334,6 +341,8 @@ def main():
 **Date**: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 **Model**: `{model_name}`
 **Episodes**: {args.episodes}
+**Map Size**: `{width}x{height}`
+**Teams**: `{", ".join(teams)} ({clients_nb} players/team)`
 
 | Metric | Average | Max |
 | :--- | :---: | :---: |
