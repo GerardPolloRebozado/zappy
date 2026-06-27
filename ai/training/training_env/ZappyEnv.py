@@ -307,7 +307,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                             0.0  # No reward for excess food hoarding (focus on stones)
                         )
                     else:
-                        reward += 2.0  # Large positive reward for survival
+                        reward += 0.2  # Reduced from 2.0 to prevent food-farming loops
                 else:
                     if isinstance(inv, Inventory) and isinstance(item_target, str):
                         req = ELEVATION_TABLE.get(self.client.level)
