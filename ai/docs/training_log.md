@@ -176,7 +176,7 @@ PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level
 - **Max Level Achieved**: `2`
 - **Average Turns Survived**: `3574.20`
 - **Max Turns Survived**: `8230`
-- **Rating Tier**: `Tier 2: Single-Player Competence`
+- **Rating Tier**: `Tier 2`
 
 Evaluation file: *[eval_20260627_153033.md](../training/results/eval_20260627_153033.md)*
 
@@ -188,3 +188,37 @@ Evaluation file: *[eval_20260627_153033.md](../training/results/eval_20260627_15
   - Reached **Tier 2: Single-Player Competence**.
 - *Adjustments needed for the next run:*
   - Transition to Phase 3. We will load the trained `zappy_level2_v2` model and train it under multi-agent conditions to force coordination, radio usage, and active stone-gathering (since multi-stone recipes cannot be solved by the shortcut).
+
+
+## Run #6
+- **Base Model**: `Loaded from zappy_level2_v2`
+- **Output Model Name**: `zappy_coordination_v1`
+- **Timesteps Run**: `500,000`
+- **Real-World Duration**: `2m 55s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 500000 -f 1000 -m zappy_coordination_v1 -l zappy_level2_v2 
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v1 --teams team01 --player 2 --width 15 --height 15
+```
+- **Average Level Achieved**: `1.10`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `74.80`
+- **Max Turns Survived**: `89`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_154847.md](../training/results/eval_20260627_154847.md)*
+
+#### Observations
+- *Key observations*
+  - Because the evaluation script runs clients sequentially and ticks the server for each command, time passed twice as fast relative to the actions they took. This caused both players to consume food twice as fast and starve in ~74 turns.
+  - During training, the second teammate is a dummy player that stands completely still. It never eats, never collects stones, and stays at Level 1 forever. Therefore, it was mathematically impossible for the learning agent to ever successfully elevate to Level 3 during training.
+- *Adjustments needed for the next run:*
+  - To train Phase 3 successfully, the teammate cannot be a dummy. It must be active, survive, reach Level 2, and coordinate. 
+  - We can achieve this by using the existing heuristic logic (`take_decision` from *src.strategy.decision_making*) to run the teammate players in the background during training.
