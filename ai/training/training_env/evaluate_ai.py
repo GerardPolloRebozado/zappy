@@ -72,6 +72,7 @@ def build_observation(client, inv, look_resp, verbose=False):
                     obs[base_index + (i * 8) + offset_resource] += 1
 
     obs[655] = client.level
+    obs[656] = getattr(client, "last_broadcast_dir", 0)
     return obs
 
 
@@ -350,6 +351,22 @@ def main():
             looks = batch_send_command(
                 active_clients, [b"Look\n"] * len(active_clients)
             )
+
+            # 2.5 Parse broadcasts for all active clients to find coordinate direction
+            for client in active_clients:
+                unread = client.get_unread_messages()
+                best_h = {"score": 0, "dir": 0}
+                handler = BroadcastHandler(
+                    team_name=client.team_name, secret_key="ZAPPY_SEC"
+                )
+                for msg in unread:
+                    direction = msg.get("direction", 0)
+                    text = msg.get("text", "")
+                    h = handler.calculate_heuristic(direction, text)
+                    if h["score"] > best_h["score"]:
+                        best_h = h
+                        best_h["dir"] = direction
+                client.last_broadcast_dir = best_h["dir"]
 
             # 3. Build observations and predict actions
             actions = {}

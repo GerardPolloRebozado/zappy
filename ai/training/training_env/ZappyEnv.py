@@ -50,7 +50,7 @@ class ObservationZappyEnv:
                         idx = resources.index(name) - 1
                         if idx >= 0:
                             obs[idx] = quantity
-            obs[656] = obs[0]
+            obs[656] = getattr(self, "client_broadcast_dir", 0)
         elif isinstance(inv, Inventory):
             obs[0] = inv.food
             obs[1] = inv.linemate
@@ -59,7 +59,7 @@ class ObservationZappyEnv:
             obs[4] = getattr(inv, "mendiane", 0)
             obs[5] = getattr(inv, "phiras", 0)
             obs[6] = getattr(inv, "thystame", 0)
-            obs[656] = inv.food
+            obs[656] = getattr(self, "client_broadcast_dir", 0)
 
         # Parse Vision (Look)
         vision_list = self.client.look()
@@ -117,6 +117,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         obs, info = self.mode.reset(seed=seed, options=options)
         self.client = self.mode.client
         self.turns_elapsed = 0
+        self.client_broadcast_dir = 0
         return obs, info
 
     def close(self):
@@ -164,6 +165,8 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             if heuristic["score"] > best_heuristic["score"]:
                 best_heuristic = heuristic
                 best_heuristic["dir"] = direction
+
+        self.client_broadcast_dir = best_heuristic["dir"]
 
         match bot_action:
             case ControllerAction.FORWARD:
