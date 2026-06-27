@@ -292,8 +292,12 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
 
                 if zappy_action in ideal_actions:
                     reward += 3.0  # reward for listening to the radio
-                else:
-                    reward -= 0.5  # Penalty for ignoring teammates
+                elif zappy_action in [
+                    ZappyAction.FORWARD,
+                    ZappyAction.LEFT,
+                    ZappyAction.RIGHT,
+                ]:
+                    reward -= 0.5  # Penalty for incorrect movement direction when teammate is calling
 
             if zappy_action == ZappyAction.TAKE:
                 inv = self.client.inventory()
