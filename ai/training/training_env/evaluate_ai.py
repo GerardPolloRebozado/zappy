@@ -206,6 +206,7 @@ def main():
     model_path = model_name
     possible_paths = [
         pathlib.Path(model_name),
+        pathlib.Path(__file__).resolve().parents[1] / "models" / model_name,
         pathlib.Path(__file__).resolve().parents[3] / model_name,
         pathlib.Path(__file__).resolve().parents[2] / model_name,
     ]

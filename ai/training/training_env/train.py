@@ -80,6 +80,11 @@ def main():
     )
     args = parser.parse_args()
 
+    models_dir = os.path.abspath(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), "../models")
+    )
+    os.makedirs(models_dir, exist_ok=True)
+
     print("Verifying single environment compliance")
     temp_env = ZappyEnv(
         use_lib=True,
@@ -124,6 +129,11 @@ def main():
     if args.load_model:
         # Resolve path
         load_path = args.load_model
+        if not os.path.dirname(load_path):
+            load_path = os.path.join(models_dir, load_path)
+        else:
+            load_path = os.path.abspath(load_path)
+
         if not load_path.endswith(".zip") and not os.path.exists(load_path):
             if os.path.exists(load_path + ".zip"):
                 load_path = load_path + ".zip"
@@ -151,8 +161,16 @@ def main():
     model.learn(total_timesteps=args.timesteps, callback=callback)
 
     # Save the trained model weights to a zip file
-    model.save(args.model_name)
-    print(f"Finished and saved on {args.model_name}.zip")
+    model_path = args.model_name
+    if not os.path.dirname(model_path):
+        model_path = os.path.join(models_dir, model_path)
+    else:
+        model_path = os.path.abspath(model_path)
+
+    model.save(model_path)
+    if not model_path.endswith(".zip"):
+        model_path += ".zip"
+    print(f"Finished and saved on {model_path}")
 
     elapsed_time = time.time() - start_time
     minutes = int(elapsed_time // 60)
