@@ -437,6 +437,27 @@ void RenderSystem::_reanderMapEvents(World& w, std::string event, Entity entity)
             raylib::Vector2 origin = {dest.width / 2.0f, dest.height / 2.0f};
             ::DrawTexturePro(tex, source, dest, origin, rotation, WHITE);
         }
+    } else if (event == "psionic_echo") {
+
+        float time = (float)GetTime();
+        int screenW = GetScreenWidth();
+        int screenH = GetScreenHeight();
+
+        unsigned char bgAlpha = (unsigned char)(30.0f + std::sin(time * 3.0f) * 20.0f);
+        ::DrawRectangle(0, 0, screenW, screenH, raylib::Color{50, 100, 255, bgAlpha});
+
+        raylib::Vector2 center = {(float)screenW / 2.0f, (float)screenH / 2.0f};
+        float maxRadius = std::sqrt(screenW * screenW + screenH * screenH);
+        for (int i = 0; i < 3; i++) {
+            float waveRadius = std::fmod((time * 400.0f) + (i * (maxRadius / 3.0f)), maxRadius);
+            float waveAlpha = 1.0f - (waveRadius / maxRadius); // loose intensity in the distance
+
+            raylib::Color waveColor = {100, 200, 255, (unsigned char)(150.0f * waveAlpha)};
+
+            ::DrawCircleLines(center.x, center.y, waveRadius, waveColor);
+            ::DrawCircleLines(center.x, center.y, waveRadius + 1.0f, waveColor);
+            ::DrawCircleLines(center.x, center.y, waveRadius + 2.0f, waveColor);
+        }
     }
 }
 
