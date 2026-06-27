@@ -6,10 +6,11 @@ import numpy as np
 import ctypes
 from stable_baselines3 import PPO
 from src.client.lib_client import ZappyLib, ZappyLibClient
-from src.utils import Inventory
+from src.utils import Inventory, parse_look
 from training.training_env.actions import ControllerAction
 from training.training_env.broadcast import BroadcastDict, BroadcastHandler
 import datetime
+import re
 
 # Resolve project path to allow imports of 'src' and 'training'
 sys.path.insert(
@@ -18,11 +19,15 @@ sys.path.insert(
 )
 
 
-def get_observation(client, verbose=False):
-    """Generates the 657-dimensional observation vector for a client."""
-    if client.is_dead:
-        return np.zeros(657, dtype=np.int32)
+def parse_inventory_resp(resp):
+    if resp and resp.startswith("["):
+        matches = re.findall(r"([a-zA-Z]+)[^0-9a-zA-Z]*(\d+)", resp)
+        clean_resp = "[" + ", ".join(f"{name} {count}" for name, count in matches) + "]"
+        return Inventory.from_string(clean_resp)
+    return resp
 
+
+def build_observation(client, inv, look_resp, verbose=False):
     obs = np.zeros(657, dtype=np.int32)
     resources = [
         "player",
@@ -35,36 +40,23 @@ def get_observation(client, verbose=False):
         "thystame",
     ]
 
-    # 1. Parse inventory
-    if verbose:
-        print(f"    [Agent {client.player_id}] Sending Inventory...", flush=True)
-    inv = client.inventory()
-    if verbose:
-        print(f"    [Agent {client.player_id}] Inventory response: {inv}", flush=True)
-    if client.is_dead:
-        return np.zeros(657, dtype=np.int32)
+    parsed_inv = parse_inventory_resp(inv)
+    # Cache inventory for broadcasts in action selection
+    client.cached_inventory = parsed_inv
 
-    if isinstance(inv, Inventory):
-        obs[0] = inv.food
-        obs[1] = inv.linemate
-        obs[2] = getattr(inv, "deraumere", 0)
-        obs[3] = getattr(inv, "sibur", 0)
-        obs[4] = getattr(inv, "mendiane", 0)
-        obs[5] = getattr(inv, "phiras", 0)
-        obs[6] = getattr(inv, "thystame", 0)
-        obs[656] = inv.food
+    if isinstance(parsed_inv, Inventory):
+        obs[0] = parsed_inv.food
+        obs[1] = parsed_inv.linemate
+        obs[2] = getattr(parsed_inv, "deraumere", 0)
+        obs[3] = getattr(parsed_inv, "sibur", 0)
+        obs[4] = getattr(parsed_inv, "mendiane", 0)
+        obs[5] = getattr(parsed_inv, "phiras", 0)
+        obs[6] = getattr(parsed_inv, "thystame", 0)
+        obs[656] = parsed_inv.food
 
-    # 2. Parse vision
-    if verbose:
-        print(f"    [Agent {client.player_id}] Sending Look...", flush=True)
-    vision_list = client.look()
-    if verbose:
-        print(
-            f"    [Agent {client.player_id}] Look response: {vision_list}", flush=True
-        )
-    if client.is_dead:
-        return np.zeros(657, dtype=np.int32)
-
+    vision_list = (
+        parse_look(look_resp) if look_resp and look_resp.startswith("[") else look_resp
+    )
     if isinstance(vision_list, list):
         base_index = 7
         for i, tile_str in enumerate(vision_list):
@@ -79,20 +71,15 @@ def get_observation(client, verbose=False):
                     offset_resource = resources.index(entity)
                     obs[base_index + (i * 8) + offset_resource] += 1
 
-    # 3. Current level
     obs[655] = client.level
     return obs
 
 
-def perform_action(client, action_id, verbose=False):
-    """Maps discrete action ID to ZappyLibClient FFI calls."""
-    if client.is_dead:
-        return "dead"
-
+def get_action_command_bytes(client, action_id):
     try:
         bot_action = ControllerAction(int(action_id))
     except ValueError:
-        return "ko"
+        return b""
 
     ZAPPY_ITEMS = [
         "food",
@@ -104,34 +91,26 @@ def perform_action(client, action_id, verbose=False):
         "thystame",
     ]
 
-    if verbose:
-        print(
-            f"    [Agent {client.player_id}] Performing action {bot_action}...",
-            flush=True,
-        )
-    res = "ko"
     if bot_action == ControllerAction.FORWARD:
-        res = client.forward()
+        return b"Forward\n"
     elif bot_action == ControllerAction.LEFT:
-        res = client.left()
+        return b"Left\n"
     elif bot_action == ControllerAction.RIGHT:
-        res = client.right()
+        return b"Right\n"
     elif bot_action == ControllerAction.LOOK:
-        res = client.look()
+        return b"Look\n"
     elif bot_action == ControllerAction.INVENTORY:
-        res = client.inventory()
+        return b"Inventory\n"
     elif bot_action == ControllerAction.CONNECT_NBR:
-        res = client.connect_nbr()
+        return b"Connect_nbr\n"
     elif bot_action == ControllerAction.FORK:
-        res = client.fork()
+        return b"Fork\n"
     elif bot_action == ControllerAction.EJECT:
-        res = client.eject()
+        return b"Eject\n"
     elif bot_action == ControllerAction.INCANTATION:
-        res = client.incantation()
+        return b"Incantation\n"
     elif bot_action == ControllerAction.BROADCAST:
-        inv = client.inventory()
-        if client.is_dead:
-            return "dead"
+        inv = getattr(client, "cached_inventory", None)
         has_stones = (
             isinstance(inv, Inventory)
             and inv.linemate >= 1
@@ -145,16 +124,80 @@ def perform_action(client, action_id, verbose=False):
             msg = handler.build_message(BroadcastDict.FIND, "food")
         else:
             msg = handler.build_message(BroadcastDict.FIND, "stones")
-        res = client.broadcast(msg)
+        return f"Broadcast {msg}\n".encode("utf-8")
     elif ControllerAction.TAKE_FOOD <= bot_action <= ControllerAction.TAKE_THYSTAME:
         item = ZAPPY_ITEMS[bot_action - ControllerAction.TAKE_FOOD]
-        res = client.take(item)
+        return f"Take {item}\n".encode("utf-8")
     elif ControllerAction.SET_FOOD <= bot_action <= ControllerAction.SET_THYSTAME:
         item = ZAPPY_ITEMS[bot_action - ControllerAction.SET_FOOD]
-        res = client.set(item)
-    if verbose:
-        print(f"    [Agent {client.player_id}] Action response: {res}", flush=True)
-    return res
+        return f"Set {item}\n".encode("utf-8")
+
+    return b""
+
+
+def wait_for_response_no_tick(client):
+    resp_ptr = client.lib.zappy_get_response(client.server_ptr, client.player_id)
+    if resp_ptr:
+        resp = ctypes.cast(resp_ptr, ctypes.c_char_p).value.decode("utf-8").strip()
+        client.lib.zappy_free_string(resp_ptr)
+
+        if resp == "dead":
+            client.is_dead = True
+            return "dead"
+
+        if resp.startswith("Current level:"):
+            try:
+                client.level = int(resp.split(":")[1].strip())
+            except Exception:
+                pass
+        return resp
+    return None
+
+
+def batch_send_command(clients, command_bytes_list, max_wait_ticks=2000):
+    if not clients:
+        return {}
+
+    for client, cmd in zip(clients, command_bytes_list):
+        if not client.is_dead and cmd:
+            client.lib.zappy_send_command(client.server_ptr, client.player_id, cmd)
+
+    ticks = 0
+    responses = {client: None for client in clients if not client.is_dead}
+    tick_size_ms = max(1, int(1000 / clients[0].freq))
+
+    while ticks < max_wait_ticks:
+        all_done = True
+        for client in responses:
+            if responses[client] is None:
+                resp = wait_for_response_no_tick(client)
+                if resp is not None:
+                    if resp.startswith("message"):
+                        from src.client.lib_client import parse_broadcast
+
+                        parsed = parse_broadcast(resp)
+                        if parsed:
+                            client.messages.append(parsed)
+                        all_done = False
+                    elif resp.startswith("eject:"):
+                        all_done = False
+                    else:
+                        responses[client] = resp
+                else:
+                    all_done = False
+
+        if all_done:
+            break
+
+        clients[0].lib.zappy_tick(clients[0].server_ptr, tick_size_ms)
+        ticks += 1
+
+    for client in list(responses.keys()):
+        if responses[client] is None:
+            client.is_dead = True
+            responses[client] = "dead"
+
+    return responses
 
 
 def classify_performance(avg_level, avg_turns):
@@ -280,6 +323,7 @@ def main():
 
         turns = 0
         max_turns = 10000  # Safety cap to avoid infinite loops
+        dead_clients = set()
 
         # Episode Loop
         while turns < max_turns:
@@ -297,19 +341,48 @@ def main():
                     flush=True,
                 )
 
-            for client in active_clients:
-                try:
-                    obs = get_observation(client, verbose=args.verbose)
-                    if client.is_dead:
-                        stats["deaths"] += 1
-                        continue
-                    action, _ = model.predict(obs, deterministic=True)
+            # 1. Batch query Inventory for all active clients
+            inventories = batch_send_command(
+                active_clients, [b"Inventory\n"] * len(active_clients)
+            )
 
+            # 2. Batch query Look for all active clients
+            looks = batch_send_command(
+                active_clients, [b"Look\n"] * len(active_clients)
+            )
+
+            # 3. Build observations and predict actions
+            actions = {}
+            for client in active_clients:
+                inv = inventories.get(client)
+                look_resp = looks.get(client)
+
+                if inv == "dead" or look_resp == "dead" or client.is_dead:
+                    client.is_dead = True
+                    if client not in dead_clients:
+                        dead_clients.add(client)
+                        stats["deaths"] += 1
+                    continue
+
+                obs = build_observation(client, inv, look_resp, verbose=args.verbose)
+                action, _ = model.predict(obs, deterministic=True)
+                actions[client] = action
+
+            # 4. Batch execute the actions
+            clients_to_act = [c for c in active_clients if c in actions]
+            if clients_to_act:
+                action_bytes_list = [
+                    get_action_command_bytes(c, actions[c]) for c in clients_to_act
+                ]
+                action_responses = batch_send_command(clients_to_act, action_bytes_list)
+
+                for client in clients_to_act:
+                    res = action_responses.get(client)
+                    action = actions[client]
                     bot_action = ControllerAction(int(action))
                     stats["actions"][bot_action.name] += 1
 
                     level_before = client.level
-                    res = perform_action(client, action, verbose=args.verbose)
                     level_after = client.level
 
                     if bot_action == ControllerAction.INCANTATION:
@@ -351,10 +424,10 @@ def main():
                             )
 
                     if res == "dead" or client.is_dead:
-                        stats["deaths"] += 1
-                except Exception:
-                    client.is_dead = True
-                    stats["deaths"] += 1
+                        client.is_dead = True
+                        if client not in dead_clients:
+                            dead_clients.add(client)
+                            stats["deaths"] += 1
 
             turns += 1
 

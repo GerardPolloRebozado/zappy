@@ -391,6 +391,10 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 for teammate in self.mode.teammate_clients:
                     if not teammate.is_dead:
                         try:
+                            # Periodically send a COME beacon if teammate is Level 2
+                            # to teach the agent to follow the radio signal
+                            if teammate.level >= 2 and (self.turns_elapsed % 10 == 0):
+                                teammate.broadcast("COME")
                             take_decision(teammate)
                         except Exception:
                             teammate.is_dead = True
