@@ -1,6 +1,11 @@
 # Zappy AI Training Log & Roadmap
 
-This file acts as a lab notebook to document the parameter tweaks, learning curves, and results of training runs. Below is the proposed step-by-step training roadmap starting from scratch.
+This file acts as a lab notebook to document the parameter tweaks, learning curves, and results of training runs.
+
+> [!NOTE]
+> **Training vs. Evaluation Settings**:
+> Under the hood, the library training environment (`LibZappyEnv`) dynamically randomizes the map size, team count, and players per team on every reset. This "Domain Randomization" prevents overfitting and teaches the AI general skills.
+> The parameters listed below (like **Map Size** and **Configuration**) represent the **target settings we use during evaluation** (via `evaluate_ai.py`) to measure if the phase was successful.
 
 ---
 
@@ -51,6 +56,7 @@ graph TD
 
 template to document each training run.
 
+(start of template)
 ### Run #[Number]
 - **Base Model**: `[Fresh / Loaded from <model_name>]`
 - **Output Model Name**: `[e.g. zappy_survival_v1]`
@@ -72,7 +78,43 @@ template to document each training run.
 - **Average Turns Survived**: `XXXX`
 - **Rating Tier**: `[Tier 1 / Tier 2 / ...]`
 
-#### Observations
+#### Observations (when running game with gui)
 - *What actions did the agent prioritize?*
 - *Did it exhibit any loop behaviors or stuck states?*
 - *Adjustments needed for the next run:*
+
+(end of template)
+
+### Run #1
+- **Base Model**: `Fresh`
+- **Output Model Name**: `zappy_survival_v1`
+- **Timesteps Run**: `200,000`
+- **Real-World Duration**: `1m 50s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 200000 -f 1000 -m zappy_survival_v1
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run: 
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survival_v1
+```
+- **Average Level Achieved**: `1.10`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `41.00`
+- **Max Turns Survived**: `85`
+- **Rating Tier**: `Tier 1 Starvation/Survival Failure`
+
+#### Observations (when running game with gui)
+- *What actions did the agent prioritize?*
+  - The player would not take any stones from the ground
+  - The player manage to evolve to level 2 when the stone needed was already on the tile and he AI's random exploration chooses the Incantation action. 
+  - Player would ignore food on the tiles unless it's life bar fell bellow a certain mark
+- *Did it exhibit any loop behaviors or stuck states?*
+  - Player would only walk forward. This can be explained by the fact that in level 1 the player can only look one tile ahead, because in this phase the AI is not  
+- *Adjustments needed for the next run:*
+  - Phase 1 is complete and successful. The agent has mastered basic survival and hunger control. 
+  - In Phase 2, we introduce stones needed for elevation, which award a massive +4.0 points (compared to the tiny +0.1 for walking forward). The agent will quickly learn that it cannot get these high rewards by just walking in a straight line; it will be forced to turn, look, and steer towards the stones.
