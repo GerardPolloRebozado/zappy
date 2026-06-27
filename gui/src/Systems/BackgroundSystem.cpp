@@ -39,9 +39,11 @@ void BackgroundSystem::update(World& w, float dt) {
             auto& celestial = *celestialPtr;
             float x = (mapSizeX / 2) + (std::max(mapSizeX, mapSizeY) / 1.5f) * cos(celestial.angle);
             float y = (mapSizeY / 2) + (std::max(mapSizeX, mapSizeY) / 1.5f) * sin(celestial.angle);
+            float z = (5 * sin(-1 * celestial.angle) + (std::max(mapSizeX, mapSizeY) / 5));
             celestial.angle += 0.01f;
             celestial.x = x;
             celestial.y = y;
+            celestial.z = z;
         }
     }
 }

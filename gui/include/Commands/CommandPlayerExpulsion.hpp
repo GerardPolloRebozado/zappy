@@ -52,6 +52,9 @@ class CommandPlayerExpulsion : public ACommand {
 
         auto [executorEntity, executorPos, executorOri] = *executorData;
 
+        // Add Expulsions effects
+        world.add_component<EventExpulsion>(executorEntity, EventExpulsion{});
+
         auto victims = findVictims(world, posStorage, executorEntity, executorPos);
         if (victims.empty()) {
             log_info("No players to eject in this tile");
@@ -122,6 +125,7 @@ class CommandPlayerExpulsion : public ACommand {
             }
             if (pos->x == executorPos->x && pos->y == executorPos->y) {
                 victims.push_back(pos);
+                world.add_component<EventExpulsed>(entity, EventExpulsed{});
             }
         }
         return victims;

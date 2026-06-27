@@ -59,6 +59,7 @@ set(CORE_SOURCES
         src/Systems/Particles/ParticleSystemHandleIncantationEnd.cpp
         src/Systems/Particles/ParticleSystemHandleJump.cpp
         src/Systems/Particles/ParticleSystemHandleBroadcast.cpp
+        src/Systems/Particles/ParticleSystemHandleExpulsions.cpp
         src/Systems/Particles/ParticleSystemEmitters.cpp
         src/Systems/Animations/AnimationSystem.cpp
         src/Systems/Animations/AnimationSystemMovement2D.cpp
