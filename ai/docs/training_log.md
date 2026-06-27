@@ -470,14 +470,14 @@ Evaluation file: *[eval_20260627_200328.md](../training/results/eval_20260627_20
 
 ## Run #14
 - **Base Model**: `Loaded from zappy_coordination_v1_2`
-- **Output Model Name**: `zappy_coordination_v1_2`
+- **Output Model Name**: `zappy_coordination_v2`
 - **Timesteps Run**: `2,000,000`
 - **Real-World Duration**: `12m`
 
 #### Parameters
 ```bash
 # Paste the exact run command here:
-./run_training.sh -t 2000000 -f 1000 -m zappy_coordination_v1 -l zappy_level2_v2
+./run_training.sh -t 2000000 -f 1000 -m zappy_coordination_v2 -l zappy_level2_v2
 ```
 
 #### Evaluation Metrics (via evaluate_ai.py)
@@ -501,3 +501,38 @@ Evaluation file: *[eval_20260627_205408.md](../training/results/eval_20260627_20
 - *Adjustments needed for the next run:*
   - Modified `ZappyEnv.py` to only apply the `-0.5` ignore penalty if the agent chose an incorrect movement action (`FORWARD`, `LEFT`, `RIGHT`) in the wrong direction, rather than penalizing it for survival tasks.
   - Start a fresh 2,000,000 timestep training run loading from `zappy_level2_v2` with the refined reward structure. This will keep the agent's natural survival behaviors intact while safely steering it toward the teammate beacon!
+
+
+## Run #15
+- **Base Model**: `Loaded from zappy_level2_v2`
+- **Output Model Name**: `zappy_coordination_v2`
+- **Timesteps Run**: `2,000,000`
+- **Real-World Duration**: `11m 52s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 2000000 -f 1000 -m zappy_coordination_v2 -l zappy_level2_v2
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v2 --teams team01 --player 2 --width 15 --height 15
+```
+- **Average Level Achieved**: `1.80`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `53.00`
+- **Max Turns Survived**: `81`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_220735.md](../training/results/eval_20260627_220735.md)*
+
+#### Observations
+- *Key observations*
+  - Reached an average level of 1.80 (8 players successfully elevated to Level 2).
+  - `Take Food` was still very high at 85.0% and `Movement` was only 7.5%
+  - Picking up food yielded a massive `+2.0` reward (when inventory was < 15), while moving forward only gave `+0.1` and consumed energy. The agent learned that standing still and waiting for food to spawn on its tile to pick it up was a low-risk, highly lucrative reward farming loop, completely overshadowing navigation and stone gathering.
+- *Adjustments needed for the next run:*
+  - Reduced `Take Food` reward in `ZappyEnv.py` from `2.0` to `0.2` (making it enough to incentivize survival but too small to farm). This ensures coordinate beacon steering (`+3.0`) and stone collection (`+4.0`) are the dominant reward sources.
+  - Run a fresh 2,000,000 timestep training run loading from `zappy_level2_v2` with the reduced food reward.
