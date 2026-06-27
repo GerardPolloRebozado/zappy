@@ -431,4 +431,38 @@ Evaluation file: *[eval_20260627_184331.md](../training/results/eval_20260627_18
   - Discovered that the PPO agent's 657-element observation vector did **not** contain any features representing the teammate's broadcast direction. The agent was mathematically blind to the radio signal, explaining why it got stuck spamming `LOOK` (which yields 0.0 points) to minimize loss while waiting to die.
 - *Adjustments needed for the next run:*
   - Overwrote the redundant food-copy feature at `obs[656]` to contain the coordinate direction (`best_heuristic["dir"]`) of the teammate's broadcast.
-  - Run a 2,000,000 step training run loading from `zappy_coordination_v1_2` so the agent can learn to map this newly visible broadcast direction input to correct steering actions and reach Level 3
+  - **Train Run #13**: Run a 2,000,000 step training run loading from `zappy_coordination_v1_2` so the agent can learn to map this newly visible broadcast direction input to correct steering actions and reach Level 3!
+
+
+## Run #13
+- **Base Model**: `Loaded from zappy_coordination_v1_2`
+- **Output Model Name**: `zappy_coordination_v1_2`
+- **Timesteps Run**: `2,000,000`
+- **Real-World Duration**: `12m`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 2000000 -f 1000 -m zappy_coordination_v1_2 -l zappy_coordination_v1_2
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v1_2 --teams team01 --player 2 --width 15 --height 15
+```
+- **Average Level Achieved**: `1.70`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `90.80`
+- **Max Turns Survived**: `159`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_200328.md](../training/results/eval_20260627_200328.md)*
+
+#### Observations
+- *Key observations*
+  - Reached an average level of 1.70 (7 out of 10 players successfully reached Level 2).
+  - `Vision & Info` remained very high at 85.9%, and `Movement` was low at **9.6%**. 
+  - Although we added the broadcast coordinate direction input at `obs[656]` and activated the beacons, the model remained stuck in the `LOOK`/`INVENTORY` spamming loop. This is because it was trained by loading from a collapsed base model (`zappy_coordination_v1_2` from Run #12) whose neural network weights were already heavily saturated with the passive farming bias. Breaking out of such a local minimum in PPO is extremely difficult due to low policy entropy.
+- *Adjustments needed for the next run:*
+  - Clean Restart. Run a fresh 2,000,000 timestep training run loading from the clean, stable **`zappy_level2_v2`** model. Since `zappy_level2_v2` has no prior bias towards spamming `LOOK` and knows how to survive and gather, it will immediately learn to map the active beacon coordinate inputs to correct steering movements and reach Level 3
