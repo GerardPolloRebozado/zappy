@@ -131,6 +131,18 @@ void AssetManager::_loadAnimations() {
             }
             anim->boneCount = 21;
         }
+
+        if (_animations.count("inhabitant_general_Death_B")) {
+            ::ModelAnimation* anim = _animations["inhabitant_general_Death_B"];
+            for (int f = 0; f < anim->keyframeCount; f++) {
+                std::vector<Transform> oldPose(anim->keyframePoses[f],
+                                               anim->keyframePoses[f] + anim->boneCount);
+                for (int i = 0; i < 21; i++) {
+                    anim->keyframePoses[f][i] = oldPose[animMapping[i]];
+                }
+            }
+            anim->boneCount = 21;
+        }
     } catch (const raylib::RaylibException& e) {
         log_error(ErrorAsset("Failed to load animations: " + std::string(e.what())).what());
     }

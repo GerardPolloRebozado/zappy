@@ -66,6 +66,7 @@ void Core::_update() {
 
         _network.update(_world);
         if (_network.isConnected()) {
+            _simulationSystem.update(_world);
             _animationSystem.update(_world);
             _renderSystem.update(_world, dt);
             _particleSystem.update(_world, dt);
@@ -74,6 +75,7 @@ void Core::_update() {
         } else {
             // Server disconnected, go back to menu
             _appState = AppState::MENU;
+            _world.despawn_all_entities();
             _setupMainMenu();
         }
     }

@@ -30,8 +30,16 @@ struct EventIncantationEnd {
 };
 struct EventDeath {};
 struct EventBroadcast {};
-struct TombTag {};
-} // namespace zappy
 struct EventJump {};
+struct EventExpulsion {};
+struct EventExpulsed {};
+struct TombTag {};
+struct EventResourceCollect {
+    ResourceType resourceId;
+};
+struct EventResourceDrop {
+    ResourceType resourceId;
+};
+} // namespace zappy
 
 #endif // ZAPPY_GUI_COMPONENTTAGS_HPP

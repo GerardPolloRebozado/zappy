@@ -55,6 +55,9 @@ class RenderSystem {
      */
     void update(World& w, float dt);
 
+    void renderShowEvents(World& w);
+    void _reanderMapEvents(World& w, const std::string& event, Entity entity);
+
     /**
      * @brief Main draw loop for the rendering system.
      *
@@ -116,6 +119,8 @@ class RenderSystem {
      * @brief Renders the terrain tiles based on their types and positions.
      * @param w The world to fetch terrain data from.
      */
+    void _render3DMapEvents(World& w);
+    void _updateMapEvents(World& w, float dt);
     void _renderTerrain(World& w);
     void _renderEggs(World& w);
     void _renderTombs(World& w);
@@ -150,7 +155,6 @@ class RenderSystem {
      * @param z The Z coordinate of the tile.
      */
     void _renderHoverEffect(int x, int z);
-
     /**
      * @brief Updates the internal state of which tile is currently under the mouse cursor.
      * Uses raycasting from the screen to the world ground plane.
@@ -175,6 +179,8 @@ class RenderSystem {
     bool _showDebugHud = false;
     bool _clickConsumedByUI = false;
     void _renderDebugHud(World& w);
+
+    std::vector<std::string> eventsRunning;
 };
 } // namespace zappy
 

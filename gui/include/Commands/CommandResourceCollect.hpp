@@ -31,9 +31,7 @@ class CommandResourceCollect : public AResourceCommand {
             return;
         }
 
-        auto playerInv = world.get_component<Inventory>(playerEnt);
-        updateInventory(playerInv.get(), resourceId, 1);
-        updateTileInventory(playerPos, resourceId, -1, world);
+        world.add_component<EventResourceCollect>(playerEnt, {resourceId});
 
         log_info("Protocol: Player " + std::to_string(playerId) + " collected resource " +
                  std::to_string(static_cast<int>(resourceId)));
