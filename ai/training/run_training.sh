@@ -5,8 +5,6 @@ set -e
 
 # Default parameters
 TIMESTEPS=50000
-WIDTH=10
-HEIGHT=10
 FREQ=100
 TEAM="TeamAI"
 MODEL_NAME="zappy_ai_model"
@@ -19,8 +17,6 @@ print_usage() {
     echo "Usage: ./run_training.sh [OPTIONS]"
     echo "Options:"
     echo "  -t, --timesteps N   Total timesteps to train (default: $TIMESTEPS)"
-    echo "  -x, --width N       Map width (default: $WIDTH)"
-    echo "  -y, --height N      Map height (default: $HEIGHT)"
     echo "  -f, --freq N        Simulation frequency (default: $FREQ)"
     echo "  -n, --team NAME     Team name (default: $TEAM)"
     echo "  -m, --model NAME    Saved model name (default: $MODEL_NAME)"
@@ -34,8 +30,6 @@ print_usage() {
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -t|--timesteps) TIMESTEPS="$2"; shift ;;
-        -x|--width) WIDTH="$2"; shift ;;
-        -y|--height) HEIGHT="$2"; shift ;;
         -f|--freq) FREQ="$2"; shift ;;
         -n|--team) TEAM="$2"; shift ;;
         -m|--model) MODEL_NAME="$2"; shift ;;
@@ -85,7 +79,6 @@ echo " STARTING ZAPPY AI TRAINING"
 echo "==================================="
 echo "Parameters:"
 echo "  Timesteps: $TIMESTEPS"
-echo "  Map Size:  ${WIDTH}x${HEIGHT}"
 echo "  Frequency: $FREQ"
 echo "  Team:      $TEAM"
 echo "  Model:     $MODEL_NAME"
@@ -105,8 +98,6 @@ fi
 
 python3 ai/training/training_env/train.py \
     --timesteps "$TIMESTEPS" \
-    --width "$WIDTH" \
-    --height "$HEIGHT" \
     --freq "$FREQ" \
     --team "$TEAM" \
     --model-name "$MODEL_NAME" \

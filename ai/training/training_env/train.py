@@ -56,8 +56,6 @@ def main():
     parser.add_argument(
         "--timesteps", type=int, default=50000, help="Total timesteps to train"
     )
-    parser.add_argument("--width", type=int, default=10, help="Map width")
-    parser.add_argument("--height", type=int, default=10, help="Map height")
     parser.add_argument("--freq", type=int, default=100, help="Simulation frequency")
     parser.add_argument("--team", type=str, default="TeamAI", help="Team name")
     parser.add_argument(
