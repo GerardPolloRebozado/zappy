@@ -22,10 +22,14 @@ void AnimationSystem::_update3DMovement(World& w, float freq) {
             const float targetX = static_cast<float>(pos->x);
             const float targetY = static_cast<float>(pos->y);
             const float targetZ = move->targetZ;
-            float speed = (freq / 7.0f) * GetFrameTime();
+            float speed = (freq / 7.0f);
             if (w.get_component<AnimatedResource>(entity)) {
-                speed = 25.0f * GetFrameTime();
+                speed = 25.0f;
             }
+            if (move->minSpeed > 0.0f && speed < move->minSpeed) {
+                speed = move->minSpeed;
+            }
+            speed *= GetFrameTime();
 
             const float dx = targetX - move->visualX;
             const float dy = targetY - move->visualY;

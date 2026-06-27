@@ -1,5 +1,3 @@
-#!/bin/bash
-
 PORT=8080
 IP="localhost"
 COUNT=1
@@ -35,7 +33,7 @@ trap "echo 'Stopping all AI clients...'; kill 0" EXIT
 for TEAM in "${TEAMS[@]}"; do
     for i in $(seq 1 "$COUNT"); do
         echo "Starting AI client $i for team '$TEAM' on $IP:$PORT (heuristic mode)"
-        python3 ai/src/main.py -p "$PORT" -n "$TEAM" -ip "$IP" &
+        python3 ai/src/main.py -p "$PORT" -n "$TEAM" -ip "$IP" --llm&
     done
 done
 

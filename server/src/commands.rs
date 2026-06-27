@@ -118,7 +118,18 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
     }
     //
 
-    let egg = Egg::egg_from_team(&mut server.world, team_name.clone()).unwrap();
+    let egg = Egg::egg_from_team(&mut server.world, team_name.clone());
+    if egg.is_none() {
+        let network_data = server
+            .world
+            .get_component_mut::<NetworkData>(entity)
+            .unwrap();
+        network_data
+            .pending_responses
+            .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
+        return;
+    }
+    let egg = egg.unwrap();
     let egg_position = server.world.get_component::<Position>(egg).unwrap().clone();
     let entity = build_inhabitant_with_entity(
         entity,

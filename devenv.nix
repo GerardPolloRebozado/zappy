@@ -23,6 +23,8 @@
     pkgs.libxcursor
     pkgs.libxi
     pkgs.libxrandr
+    pkgs.zlib
+    pkgs.stdenv.cc.cc.lib
   ];
 
   # https://devenv.sh/packages/
@@ -49,6 +51,9 @@
     pkgs.criterion
     pkgs.ruff
     pkgs.clang-tools
+    pkgs.pyright
+    pkgs.basedpyright
+    pkgs.nodejs
   ];
 
   # https://devenv.sh/languages/
