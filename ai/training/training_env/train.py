@@ -2,14 +2,16 @@ import argparse
 import os
 import multiprocessing
 import time
-
+import logging
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
-
 from training.training_env.ZappyEnv import ZappyEnv
+
+# Suppress verbose decision-making logs from teammate bots during training
+logging.getLogger("zappy_ai").setLevel(logging.CRITICAL)
 
 
 class TimestepCallback(BaseCallback):

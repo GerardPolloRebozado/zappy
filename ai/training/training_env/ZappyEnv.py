@@ -1,5 +1,5 @@
 from typing import Union
-
+import logging
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
@@ -10,6 +10,9 @@ from src.utils import Inventory, ELEVATION_TABLE
 from training.training_env.actions import ControllerAction, ZappyAction
 from training.training_env.broadcast import BroadcastDict, BroadcastHandler
 from training.training_env.env_modes import LibZappyEnv
+
+# Suppress verbose decision-making logs from teammate bots in subprocesses
+logging.getLogger("zappy_ai").setLevel(logging.CRITICAL)
 
 
 class ObservationZappyEnv:
@@ -113,6 +116,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
     def reset(self, *, seed=None, options=None):
         obs, info = self.mode.reset(seed=seed, options=options)
         self.client = self.mode.client
+        self.turns_elapsed = 0
         return obs, info
 
     def close(self):
@@ -369,7 +373,28 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         elif isinstance(response, str) and response.startswith("Current level:"):
             reward += 100.0 * self.client.level
 
+        self.turns_elapsed += 1
+
         if not terminated:
+            # Run background teammate bots once every 5 turns to allow training multi-agent coordination
+            # without bloating the server ticking rate and starving the players instantly.
+            if (
+                hasattr(self.mode, "teammate_clients")
+                and self.mode.teammate_clients
+                and (self.turns_elapsed % 5 == 0)
+            ):
+                from src.strategy.decision_making import take_decision
+                import logging
+
+                logging.getLogger("zappy_ai").setLevel(logging.CRITICAL)
+
+                for teammate in self.mode.teammate_clients:
+                    if not teammate.is_dead:
+                        try:
+                            take_decision(teammate)
+                        except Exception:
+                            teammate.is_dead = True
+
             try:
                 observation = self._get_real_observation()
             except Exception as e:

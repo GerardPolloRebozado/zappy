@@ -43,10 +43,16 @@ class LibZappyEnv:
         )
 
         # -1 player for allies that 1 of them is the ai
+        self.teammate_clients = []
         for _ in range(players_per_team - 1):
-            self.zappy_lib.lib.zappy_add_player(
+            p_id = self.zappy_lib.lib.zappy_add_player(
                 self.server_ptr, teams[0].encode("utf-8")
             )
+            teammate = ZappyLibClient(
+                self.zappy_lib.lib, self.server_ptr, p_id, self.freq
+            )
+            teammate.name = f"TeammateBot_{p_id}"
+            self.teammate_clients.append(teammate)
 
         # Enemies
         for i in range(1, num_teams):
@@ -62,9 +68,14 @@ class LibZappyEnv:
         self.client = ZappyLibClient(
             self.zappy_lib.lib, self.server_ptr, player_id, self.freq
         )
+        self.client.name = teams[0]
         self.env.client = self.client
 
-        # Consume initial auth responses ("ok", slots, map size)
+        # Consume initial auth responses ("ok", slots, map size) for teammates
+        for teammate in self.teammate_clients:
+            for _ in range(2):
+                teammate.wait_for_response()
+
         for _ in range(2):
             self.client.wait_for_response()
 
