@@ -466,3 +466,38 @@ Evaluation file: *[eval_20260627_200328.md](../training/results/eval_20260627_20
   - Although we added the broadcast coordinate direction input at `obs[656]` and activated the beacons, the model remained stuck in the `LOOK`/`INVENTORY` spamming loop. This is because it was trained by loading from a collapsed base model (`zappy_coordination_v1_2` from Run #12) whose neural network weights were already heavily saturated with the passive farming bias. Breaking out of such a local minimum in PPO is extremely difficult due to low policy entropy.
 - *Adjustments needed for the next run:*
   - Clean Restart. Run a fresh 2,000,000 timestep training run loading from the clean, stable **`zappy_level2_v2`** model. Since `zappy_level2_v2` has no prior bias towards spamming `LOOK` and knows how to survive and gather, it will immediately learn to map the active beacon coordinate inputs to correct steering movements and reach Level 3
+
+
+## Run #13
+- **Base Model**: `Loaded from zappy_coordination_v1_2`
+- **Output Model Name**: `zappy_coordination_v1_2`
+- **Timesteps Run**: `2,000,000`
+- **Real-World Duration**: `12m`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 2000000 -f 1000 -m zappy_coordination_v1 -l zappy_level2_v2
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v2 --teams team01 --player 2 --width 15 --height 15
+```
+- **Average Level Achieved**: `1.60`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `64.60`
+- **Max Turns Survived**: `85`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_205408.md](../training/results/eval_20260627_205408.md)*
+
+#### Observations
+- *Key observations*
+  - Verified that the new level-up tracking works perfectly, showing 6 successful incantations out of 27 attempts (representing players successfully leveling up from Level 1 to Level 2).
+  - `Take Food` was 92.5% and `Movement` was only 3.3%.
+  -  When the teammate bot broadcasts a beacon, the PPO agent was getting penalized `-0.5` points on any action that wasn't moving towards the teammate (including necessary survival actions like `TAKE_FOOD`, `LOOK`, or `INVENTORY`). As a result, the agent learned that moving at all was too risky and collapsed into a static food-hoarding policy to minimize starvation losses.
+- *Adjustments needed for the next run:*
+  - Modified `ZappyEnv.py` to only apply the `-0.5` ignore penalty if the agent chose an incorrect movement action (`FORWARD`, `LEFT`, `RIGHT`) in the wrong direction, rather than penalizing it for survival tasks.
+  - Start a fresh 2,000,000 timestep training run loading from `zappy_level2_v2` with the refined reward structure. This will keep the agent's natural survival behaviors intact while safely steering it toward the teammate beacon!
