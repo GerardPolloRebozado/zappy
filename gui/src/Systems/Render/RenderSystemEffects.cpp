@@ -27,6 +27,8 @@
 #include "Vector3.hpp"
 #include "raylib.h"
 
+#include "Systems/RenderSystemBatches.hpp"
+#include "UI/UIText.hpp"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -36,8 +38,6 @@
 #include <rlgl.h>
 #include <set>
 #include <unordered_set>
-
-#include "Systems/RenderSystemBatches.hpp"
 
 namespace zappy {
 
@@ -323,6 +323,200 @@ void RenderSystem::_renderDebugHud(World& w) {
     drawText("Eggs on Map: " + std::to_string(eggStorage ? eggStorage->size() : 0));
 }
 
+void RenderSystem::_updateMapEvents(World& w, float dt) {
+    auto eventStorage = w.get_storage<MapEvent>();
+    if (!eventStorage) {
+        return;
+    }
+
+    for (auto& [entity, mapEvent] : *eventStorage) {
+        if (mapEvent->active && mapEvent->name == "meteor_shower") {
+
+            auto meteor = w.get_component<Meteorite>(entity);
+            if (!meteor) {
+                Meteorite newMeteor;
+
+                newMeteor.worldX = (float)mapEvent->centerX + 15.0f;
+                newMeteor.worldY = 30.0f;
+                newMeteor.worldZ = (float)mapEvent->centerY + 15.0f;
+
+                w.add_component<Meteorite>(entity, newMeteor);
+                meteor = w.get_component<Meteorite>(entity);
+            }
+
+            if (!meteor->hasLanded) {
+                float speed = 25.0f * dt;
+                float dirX = (float)mapEvent->centerX - meteor->worldX;
+                float dirY = 2.0f - meteor->worldY;
+                float dirZ = (float)mapEvent->centerY - meteor->worldZ;
+
+                float distance = std::sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+
+                if (distance > 0.5f) {
+                    meteor->worldX += (dirX / distance) * speed;
+                    meteor->worldY += (dirY / distance) * speed;
+                    meteor->worldZ += (dirZ / distance) * speed;
+                } else {
+                    meteor->hasLanded = true;
+                }
+            }
+
+            meteor->frameCounter++;
+            if (meteor->frameCounter >= meteor->frameDelay) {
+                meteor->currentFrame++;
+
+                if (meteor->currentFrame > meteor->maxFrames) {
+                    meteor->currentFrame = 1;
+                }
+                meteor->frameCounter = 0;
+            }
+        }
+    }
+}
+
+void RenderSystem::_render3DMapEvents(World& w) {
+    auto eventStorage = w.get_storage<MapEvent>();
+    if (!eventStorage) {
+        return;
+    }
+
+    float time = (float)GetTime();
+
+    for (const auto& [entity, mapEvent] : *eventStorage) {
+        if (!mapEvent->active) {
+            continue;
+        }
+
+        if (mapEvent->name == "solar_flare") {
+            auto posStorage = w.get_storage<Position>();
+            for (auto const& [playerEntity, pos] : *posStorage) {
+                if (w.get_component<InhabitantTag>(playerEntity)) {
+                    auto move = w.get_component<MovementInterpolation2D>(playerEntity);
+                    if (move) {
+                        for (int i = 0; i < 4; i++) {
+                            float offsetX = std::sin(time * 10.0f + i) * 0.15f;
+                            float offsetZ = std::cos(time * 12.0f + i) * 0.15f;
+
+                            float offsetY = (i * 0.5f) + (std::sin(time * 5.0f) * 0.2f);
+
+                            float radius = 0.45f - (i * 0.08f);
+                            unsigned char alpha = 200 - (i * 40);
+                            raylib::Color flameColor = {255, (unsigned char)(i * 40), 0, alpha};
+
+                            ::DrawSphere(raylib::Vector3{move->visualX + offsetX, 2.6f + offsetY,
+                                                         move->visualY + offsetZ},
+                                         radius, flameColor);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void RenderSystem::_reanderMapEvents(World& w, const std::string& event, Entity entity) {
+    if (event == "meteor_shower") {
+        auto meteor = w.get_component<Meteorite>(entity);
+        if (!meteor || meteor->hasLanded) {
+            return;
+        }
+
+        std::string text = "M00" + std::to_string(meteor->currentFrame);
+        auto& tex = AssetManager::getInstance().getTexture(text);
+
+        if (tex.id != 0) {
+            raylib::Vector3 pos3D = {meteor->worldX, meteor->worldY, meteor->worldZ};
+            raylib::Vector2 pos2D = ::GetWorldToScreen(pos3D, _camera);
+            float scale = 3.0f;
+            float rotation = 90.0f;
+
+            raylib::Rectangle source = {0.0f, 0.0f, (float)tex.width, (float)tex.height};
+            raylib::Rectangle dest = {pos2D.x, pos2D.y, (float)tex.width * scale,
+                                      (float)tex.height * scale};
+
+            raylib::Vector2 origin = {dest.width / 2.0f, dest.height / 2.0f};
+            ::DrawTexturePro(tex, source, dest, origin, rotation, WHITE);
+        }
+    } else if (event == "psionic_echo") {
+
+        auto time = static_cast<float>(GetTime());
+        int screenW = GetScreenWidth();
+        int screenH = GetScreenHeight();
+
+        auto bgAlpha = static_cast<unsigned char>(30.0f + std::sin(time * 3.0f) * 20.0f);
+        ::DrawRectangle(0, 0, screenW, screenH, raylib::Color{50, 100, 255, bgAlpha});
+
+        raylib::Vector2 center = {(float)screenW / 2.0f, (float)screenH / 2.0f};
+        float maxRadius = std::sqrt(screenW * screenW + screenH * screenH);
+        for (int i = 0; i < 3; i++) {
+            float waveRadius = std::fmod((time * 400.0f) + (i * (maxRadius / 3.0f)), maxRadius);
+            float waveAlpha = 1.0f - (waveRadius / maxRadius); // Loose intensity in the distance
+
+            raylib::Color waveColor = {100, 200, 255, (unsigned char)(150.0f * waveAlpha)};
+
+            ::DrawCircleLines(center.x, center.y, waveRadius, waveColor);
+            ::DrawCircleLines(center.x, center.y, waveRadius + 1.0f, waveColor);
+            ::DrawCircleLines(center.x, center.y, waveRadius + 2.0f, waveColor);
+        }
+    } else if (event == "gravity_well") {
+        auto mapEvent = w.get_component<MapEvent>(entity);
+        if (!mapEvent) {
+            return;
+        }
+
+        float time = (float)GetTime();
+        int screenW = GetScreenWidth();
+        int screenH = GetScreenHeight();
+
+        raylib::Vector3 pos3D = {(float)mapEvent->centerX, 2.0f, (float)mapEvent->centerY};
+        raylib::Vector2 pos2D = ::GetWorldToScreen(pos3D, _camera);
+
+        auto bgAlpha = static_cast<unsigned char>(30.0f + std::sin(time * 3.0f) * 20.0f);
+        ::DrawRectangle(0, 0, screenW, screenH, raylib::Color{48, 25, 52, bgAlpha});
+
+        float maxRadius = std::sqrt(screenW * screenW + screenH * screenH);
+
+        for (int i = 0; i < 3; i++) {
+            float growingRadius = std::fmod((time * 400.0f) + (i * (maxRadius / 3.0f)), maxRadius);
+            float waveRadius = maxRadius - growingRadius;
+            float waveAlpha = 1.0f - (waveRadius / maxRadius);
+            raylib::Color waveColor = {203, 195, 227, (unsigned char)(150.0f * waveAlpha)};
+
+            ::DrawCircleLines(pos2D.x, pos2D.y, waveRadius, waveColor);
+            ::DrawCircleLines(pos2D.x, pos2D.y, waveRadius + 1.0f, waveColor);
+            ::DrawCircleLines(pos2D.x, pos2D.y, waveRadius + 2.0f, waveColor);
+        }
+    }
+}
+
+void RenderSystem::renderShowEvents(World& w) {
+    auto eventStorage = w.get_storage<MapEvent>();
+    if (!eventStorage) {
+        return;
+    }
+    float currentY = 100.0f;
+    int screenW = GetScreenWidth();
+    raylib::Vector2 pos = {static_cast<float>(screenW) / 2.0f - 200.0f, currentY};
+
+    for (const auto& [entity, mapEvent] : *eventStorage) {
+        if (mapEvent->active && mapEvent->name != "none") {
+            auto& font = AssetManager::getInstance().getFont("EventFont");
+
+            std::string text = mapEvent->name;
+            std::transform(text.begin(), text.end(), text.begin(), ::toupper);
+
+            raylib::Rectangle::Draw(pos.x - 10, pos.y, text.length() * 31, 80,
+                                    raylib::Color{255, 255, 255, 130});
+
+            font.DrawText(text, pos, 80, 1.5f, raylib::Color::DarkPurple());
+
+            currentY += 70.0f;
+            pos.y = currentY;
+
+            RenderSystem::_reanderMapEvents(w, mapEvent->name, entity);
+        }
+    }
+}
 void RenderSystem::_renderWormholes(World& w) {
     auto terrainStorage = w.get_storage<TerrainType>();
     if (!terrainStorage) {

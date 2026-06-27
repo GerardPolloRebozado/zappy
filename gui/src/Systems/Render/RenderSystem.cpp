@@ -84,6 +84,7 @@ void RenderSystem::update(World& w, float dt) {
             }
         }
     }
+    _updateMapEvents(w, dt);
 }
 
 void RenderSystem::render(World& w) {
@@ -104,6 +105,8 @@ void RenderSystem::render(World& w) {
     _renderParticles(w);
     _renderTombs(w);
     _renderCelestials(w);
+
+    _render3DMapEvents(w);
 
     // Hardware Instancing Rendering Phase
     // Iterate through batches of grouped models and pass their accumulated
@@ -138,7 +141,7 @@ void RenderSystem::render(World& w) {
     }
 
     _camera.EndMode();
-
+    renderShowEvents(w);
     if (_showDebugHud) {
         _renderDebugHud(w);
     }
