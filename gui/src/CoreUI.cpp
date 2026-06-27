@@ -254,23 +254,32 @@ void Core::_setupGameUI() {
         }
     }
 
-    auto backgroundMusic = _world.spawn();
-    _world.add_component(backgroundMusic,
-                         std::make_shared<ComponentMusic>(std::string(_bckMusic[0]), true));
+    auto musicStorage = _world.get_storage<ComponentMusic>();
+    if (!musicStorage || musicStorage->begin() == musicStorage->end()) {
+        auto backgroundMusic = _world.spawn();
+        _world.add_component(backgroundMusic,
+                             std::make_shared<ComponentMusic>(std::string(_bckMusic[0]), true));
+    }
 
     // music panel
     _uiManager->addComponent(std::make_shared<UIRadio>(
         raylib::Rectangle{40.0f, 40.0f, 160.0f, 100.0f}, _world, 15, 0, _bckMusic));
 
     // Spawn Background parallax
-    auto backgroundParallaxEntity = _world.spawn();
-    _world.add_component(backgroundParallaxEntity, std::make_shared<BackgroundParallax>());
+    auto parallaxStorage = _world.get_storage<BackgroundParallax>();
+    if (!parallaxStorage || parallaxStorage->begin() == parallaxStorage->end()) {
+        auto backgroundParallaxEntity = _world.spawn();
+        _world.add_component(backgroundParallaxEntity, std::make_shared<BackgroundParallax>());
+    }
 
     // Spawn Moon & Sun
-    auto moon = _world.spawn();
-    _world.add_component(moon, std::make_shared<CelestialObject>(0.0f, 0.01f, "moon"));
-    auto sun = _world.spawn();
-    _world.add_component(sun, std::make_shared<CelestialObject>(3.0f, 0.0015f, "sun"));
+    auto celestialStorage = _world.get_storage<CelestialObject>();
+    if (!celestialStorage || celestialStorage->begin() == celestialStorage->end()) {
+        auto moon = _world.spawn();
+        _world.add_component(moon, std::make_shared<CelestialObject>(0.0f, 0.01f, "moon"));
+        auto sun = _world.spawn();
+        _world.add_component(sun, std::make_shared<CelestialObject>(3.0f, 0.0015f, "sun"));
+    }
 
     // Chat Panel
     float chatY = (float)_window->GetHeight() - 260.0f;

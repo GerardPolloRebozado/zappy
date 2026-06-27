@@ -74,6 +74,7 @@ void Core::_update() {
         } else {
             // Server disconnected, go back to menu
             _appState = AppState::MENU;
+            _world.despawn_all_entities();
             _setupMainMenu();
         }
     }
