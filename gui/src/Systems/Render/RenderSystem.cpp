@@ -106,6 +106,8 @@ void RenderSystem::render(World& w) {
     _renderTombs(w);
     _renderCelestials(w);
 
+    _render3DMapEvents(w);
+
     // Hardware Instancing Rendering Phase
     // Iterate through batches of grouped models and pass their accumulated
     // transformation matrices to the GPU via DrawMeshInstanced, significantly

@@ -374,15 +374,53 @@ void RenderSystem::_updateMapEvents(World& w, float dt) {
     }
 }
 
+void RenderSystem::_render3DMapEvents(World& w) {
+    auto eventStorage = w.get_storage<MapEvent>();
+    if (!eventStorage) {
+        return;
+    }
+
+    float time = (float)GetTime();
+
+    for (const auto& [entity, mapEvent] : *eventStorage) {
+        if (!mapEvent->active) {
+            continue;
+        }
+
+        if (mapEvent->name == "solar_flare") {
+            auto posStorage = w.get_storage<Position>();
+            for (auto const& [playerEntity, pos] : *posStorage) {
+                if (w.get_component<InhabitantTag>(playerEntity)) {
+                    auto move = w.get_component<MovementInterpolation2D>(playerEntity);
+                    if (move) {
+                        for (int i = 0; i < 4; i++) {
+                            float offsetX = std::sin(time * 10.0f + i) * 0.15f;
+                            float offsetZ = std::cos(time * 12.0f + i) * 0.15f;
+
+                            float offsetY = (i * 0.5f) + (std::sin(time * 5.0f) * 0.2f);
+
+                            float radius = 0.45f - (i * 0.08f);
+                            unsigned char alpha = 200 - (i * 40);
+                            raylib::Color flameColor = {255, (unsigned char)(i * 40), 0, alpha};
+
+                            ::DrawSphere(raylib::Vector3{move->visualX + offsetX, 2.6f + offsetY,
+                                                         move->visualY + offsetZ},
+                                         radius, flameColor);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 void RenderSystem::_reanderMapEvents(World& w, std::string event, Entity entity) {
     if (event == "meteor_shower") {
         auto meteor = w.get_component<Meteorite>(entity);
-        if (!meteor) {
+        if (!meteor || meteor->hasLanded) {
             return;
         }
-        if (meteor->hasLanded) {
-            return;
-        }
+
         std::string text = "M00" + std::to_string(meteor->currentFrame);
         auto& tex = AssetManager::getInstance().getTexture(text);
 
@@ -390,7 +428,7 @@ void RenderSystem::_reanderMapEvents(World& w, std::string event, Entity entity)
             raylib::Vector3 pos3D = {meteor->worldX, meteor->worldY, meteor->worldZ};
             raylib::Vector2 pos2D = ::GetWorldToScreen(pos3D, _camera);
             float scale = 3.0f;
-            float rotation = 90.0;
+            float rotation = 90.0f;
 
             raylib::Rectangle source = {0.0f, 0.0f, (float)tex.width, (float)tex.height};
             raylib::Rectangle dest = {pos2D.x, pos2D.y, (float)tex.width * scale,
@@ -401,13 +439,15 @@ void RenderSystem::_reanderMapEvents(World& w, std::string event, Entity entity)
         }
     }
 }
+
 void RenderSystem::renderShowEvents(World& w) {
     auto eventStorage = w.get_storage<MapEvent>();
     if (!eventStorage) {
         return;
     }
     float currentY = 100.0f;
-    raylib::Vector2 pos = {static_cast<float>(GetScreenWidth()) / 2.0f - 200.0f, currentY};
+    int screenW = GetScreenWidth();
+    raylib::Vector2 pos = {static_cast<float>(screenW) / 2.0f - 200.0f, currentY};
 
     for (const auto& [entity, mapEvent] : *eventStorage) {
         if (mapEvent->active && mapEvent->name != "none") {
@@ -415,16 +455,19 @@ void RenderSystem::renderShowEvents(World& w) {
 
             std::string text = mapEvent->name;
             std::transform(text.begin(), text.end(), text.begin(), ::toupper);
+
             raylib::Rectangle::Draw(pos.x - 10, pos.y, text.length() * 31, 80,
                                     raylib::Color{255, 255, 255, 130});
+
             font.DrawText(text, pos, 80, 1.5f, raylib::Color::DarkPurple());
+
             currentY += 70.0f;
+            pos.y = currentY;
 
             RenderSystem::_reanderMapEvents(w, mapEvent->name, entity);
         }
     }
 }
-
 void RenderSystem::_renderWormholes(World& w) {
     auto terrainStorage = w.get_storage<TerrainType>();
     if (!terrainStorage) {

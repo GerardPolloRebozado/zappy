@@ -113,7 +113,7 @@ class RenderSystem {
      * @brief Renders the terrain tiles based on their types and positions.
      * @param w The world to fetch terrain data from.
      */
-
+    void _render3DMapEvents(World& w);
     void _updateMapEvents(World& w, float dt);
     void _renderTerrain(World& w);
     void _renderEggs(World& w);
