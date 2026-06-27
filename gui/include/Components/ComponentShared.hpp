@@ -108,6 +108,18 @@ struct BackgroundParallax {
     float scrollingFore = 0.0f;
 };
 
+struct Meteorite {
+    int currentFrame = 1;
+    int maxFrames = 5;
+    int frameCounter = 0;
+    int frameDelay = 10;
+
+    float worldX = 0.0f;
+    float worldY = 0.0f;
+    float worldZ = 0.0f;
+    bool hasLanded = false;
+};
+
 struct CelestialObject {
     float angle =
         0.0f; //< Represent the position of the object on the edge of a circle (like his path)

@@ -143,7 +143,10 @@ void NetworkManager::_handleProtocolMessage(const std::string& message, World& w
 
     try {
         ACommand& command = FactoryCommands::getCommand(cmd);
-        std::string args = message.substr(cmd.length() + 1);
+        std::string args;
+        if (message.length() > cmd.length() + 1) {
+            args = message.substr(cmd.length() + 1);
+        }
         command.execute(args, world);
     } catch (const IError& e) {
         log_error(e.what());

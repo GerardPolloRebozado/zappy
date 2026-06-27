@@ -114,7 +114,7 @@ set(CORE_SOURCES
         include/Commands/ACommand.hpp
         include/Commands/FactoryCommands.hpp
         include/Commands/CommandTimeUpdate.hpp
-        include/Commands/CommandMapEvent.hpp
+        include/Commands/CommandGetMapEvent.hpp
         include/Commands/CommandTileContent.hpp
         include/Commands/CommandTeamNames.hpp
         include/Commands/CommandPlayerPosition.hpp
