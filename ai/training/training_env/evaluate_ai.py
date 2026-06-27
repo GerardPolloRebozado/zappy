@@ -332,6 +332,8 @@ def main():
             if not active_clients:
                 break
 
+            previous_levels = {c: c.level for c in active_clients}
+
             if turns % 100 == 0:
                 levels_str = ", ".join(
                     f"C{i + 1}:L{c.level}" for i, c in enumerate(clients)
@@ -399,15 +401,8 @@ def main():
                     bot_action = ControllerAction(int(action))
                     stats["actions"][bot_action.name] += 1
 
-                    level_before = client.level
-                    level_after = client.level
-
                     if bot_action == ControllerAction.INCANTATION:
                         stats["incantations_attempted"] += 1
-                        if level_after > level_before or (
-                            isinstance(res, str) and res.startswith("Current level:")
-                        ):
-                            stats["incantations_succeeded"] += 1
 
                     if bot_action == ControllerAction.TAKE_FOOD:
                         if res == "ok":
@@ -445,6 +440,12 @@ def main():
                         if client not in dead_clients:
                             dead_clients.add(client)
                             stats["deaths"] += 1
+
+            # Check for successful level ups
+            for client in active_clients:
+                prev_lvl = previous_levels.get(client, 1)
+                if client.level > prev_lvl:
+                    stats["incantations_succeeded"] += client.level - prev_lvl
 
             turns += 1
 
