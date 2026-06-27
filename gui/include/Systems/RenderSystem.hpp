@@ -56,7 +56,7 @@ class RenderSystem {
     void update(World& w, float dt);
 
     void renderShowEvents(World& w);
-    void _reanderMapEvents(World& w, std::string event, Entity entity);
+    void _reanderMapEvents(World& w, const std::string& event, Entity entity);
 
     /**
      * @brief Main draw loop for the rendering system.

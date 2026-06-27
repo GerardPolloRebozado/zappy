@@ -414,7 +414,7 @@ void RenderSystem::_render3DMapEvents(World& w) {
     }
 }
 
-void RenderSystem::_reanderMapEvents(World& w, std::string event, Entity entity) {
+void RenderSystem::_reanderMapEvents(World& w, const std::string& event, Entity entity) {
     if (event == "meteor_shower") {
         auto meteor = w.get_component<Meteorite>(entity);
         if (!meteor || meteor->hasLanded) {
@@ -439,11 +439,11 @@ void RenderSystem::_reanderMapEvents(World& w, std::string event, Entity entity)
         }
     } else if (event == "psionic_echo") {
 
-        float time = (float)GetTime();
+        auto time = static_cast<float>(GetTime());
         int screenW = GetScreenWidth();
         int screenH = GetScreenHeight();
 
-        unsigned char bgAlpha = (unsigned char)(30.0f + std::sin(time * 3.0f) * 20.0f);
+        auto bgAlpha = static_cast<unsigned char>(30.0f + std::sin(time * 3.0f) * 20.0f);
         ::DrawRectangle(0, 0, screenW, screenH, raylib::Color{50, 100, 255, bgAlpha});
 
         raylib::Vector2 center = {(float)screenW / 2.0f, (float)screenH / 2.0f};
@@ -457,6 +457,34 @@ void RenderSystem::_reanderMapEvents(World& w, std::string event, Entity entity)
             ::DrawCircleLines(center.x, center.y, waveRadius, waveColor);
             ::DrawCircleLines(center.x, center.y, waveRadius + 1.0f, waveColor);
             ::DrawCircleLines(center.x, center.y, waveRadius + 2.0f, waveColor);
+        }
+    } else if (event == "gravity_well") {
+        auto mapEvent = w.get_component<MapEvent>(entity);
+        if (!mapEvent) {
+            return;
+        }
+
+        float time = (float)GetTime();
+        int screenW = GetScreenWidth();
+        int screenH = GetScreenHeight();
+
+        raylib::Vector3 pos3D = {(float)mapEvent->centerX, 2.0f, (float)mapEvent->centerY};
+        raylib::Vector2 pos2D = ::GetWorldToScreen(pos3D, _camera);
+
+        auto bgAlpha = static_cast<unsigned char>(30.0f + std::sin(time * 3.0f) * 20.0f);
+        ::DrawRectangle(0, 0, screenW, screenH, raylib::Color{48, 25, 52, bgAlpha});
+
+        float maxRadius = std::sqrt(screenW * screenW + screenH * screenH);
+
+        for (int i = 0; i < 3; i++) {
+            float growingRadius = std::fmod((time * 400.0f) + (i * (maxRadius / 3.0f)), maxRadius);
+            float waveRadius = maxRadius - growingRadius;
+            float waveAlpha = 1.0f - (waveRadius / maxRadius);
+            raylib::Color waveColor = {203, 195, 227, (unsigned char)(150.0f * waveAlpha)};
+
+            ::DrawCircleLines(pos2D.x, pos2D.y, waveRadius, waveColor);
+            ::DrawCircleLines(pos2D.x, pos2D.y, waveRadius + 1.0f, waveColor);
+            ::DrawCircleLines(pos2D.x, pos2D.y, waveRadius + 2.0f, waveColor);
         }
     }
 }
