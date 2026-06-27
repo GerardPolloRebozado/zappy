@@ -54,6 +54,8 @@ The `inventory` tool returns a JSON object containing the quantities of all reso
 ### Actions/Tools
 You have tools to navigate, get inventory/look info, take or set objects, broadcast messages, check messages, and perform incantations.
 
+You can chain/queue multiple actions in a single turn using the `execute_commands` tool (e.g., moving forward 3 times and then looking, or moving to a tile and picking up items). Movement tools (`forward`, `right`, `left`) also accept an optional `steps` parameter to repeat the movement. Use these to reduce latency and save LLM iterations.
+
 Work step-by-step. In each turn, analyze your current inventory, check if you need food, look at the tiles around you, choose the optimal movement or action, and execute it. You can call multiple tools if appropriate (e.g. moving and then taking an item).
 Dont waste the time looking at your inventory all the time, 1 food are 126 seconds to live as 1 time unit is 1 second
 """
@@ -150,24 +152,51 @@ def get_tools_definition():
             "type": "function",
             "function": {
                 "name": "forward",
-                "description": "Move the player forward one tile.",
-                "parameters": {"type": "object", "properties": {}},
+                "description": "Move the player forward one or more tiles.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "steps": {
+                            "type": "integer",
+                            "description": "Number of steps to move forward",
+                            "default": 1,
+                        }
+                    },
+                },
             },
         },
         {
             "type": "function",
             "function": {
                 "name": "right",
-                "description": "Turn the player 90 degrees right.",
-                "parameters": {"type": "object", "properties": {}},
+                "description": "Turn the player 90 degrees right one or more times.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "steps": {
+                            "type": "integer",
+                            "description": "Number of times to turn right",
+                            "default": 1,
+                        }
+                    },
+                },
             },
         },
         {
             "type": "function",
             "function": {
                 "name": "left",
-                "description": "Turn the player 90 degrees left.",
-                "parameters": {"type": "object", "properties": {}},
+                "description": "Turn the player 90 degrees left one or more times.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "steps": {
+                            "type": "integer",
+                            "description": "Number of times to turn left",
+                            "default": 1,
+                        }
+                    },
+                },
             },
         },
         {
@@ -287,6 +316,55 @@ def get_tools_definition():
                 "parameters": {"type": "object", "properties": {}},
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "execute_commands",
+                "description": "Execute a sequence of multiple commands in order. Useful to queue moves and actions (e.g. forward, look, take_object) to run in a single turn.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "commands": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "enum": [
+                                            "forward",
+                                            "right",
+                                            "left",
+                                            "look",
+                                            "inventory",
+                                            "take_object",
+                                            "set_object",
+                                            "broadcast",
+                                            "connect_nbr",
+                                            "fork",
+                                            "eject",
+                                            "incantation",
+                                        ],
+                                        "description": "Name of the tool/command to run",
+                                    },
+                                    "args": {
+                                        "type": "object",
+                                        "description": "Arguments for the tool (e.g., {'name': 'food'} for take_object, or {'steps': 3} for forward)",
+                                        "properties": {
+                                            "name": {"type": "string"},
+                                            "text": {"type": "string"},
+                                            "steps": {"type": "integer"},
+                                        },
+                                    },
+                                },
+                                "required": ["name"],
+                            },
+                        }
+                    },
+                    "required": ["commands"],
+                },
+            },
+        },
     ]
 
 
@@ -313,35 +391,69 @@ def run_llm(client):
             return "dead"
 
         try:
-            if name == "forward":
-                return str(client.forward())
-            elif name == "right":
-                return str(client.right())
-            elif name == "left":
-                return str(client.left())
-            elif name == "look":
-                return json.dumps(client.look())
-            elif name == "inventory":
-                res = client.inventory()
-                if hasattr(res, "__dict__"):
-                    return json.dumps(res.__dict__)
-                return str(res)
-            elif name == "take_object":
-                return str(client.take(args.get("name")))
-            elif name == "set_object":
-                return str(client.set(args.get("name")))
-            elif name == "broadcast":
-                return str(client.broadcast(args.get("text")))
-            elif name == "connect_nbr":
-                return str(client.connect_nbr())
-            elif name == "fork":
-                return str(client.fork())
-            elif name == "eject":
-                return str(client.eject())
-            elif name == "incantation":
-                return str(client.incantation())
-            else:
-                return f"Error: Unknown tool {name}"
+            match name:
+                case "forward":
+                    steps = args.get("steps", 1)
+                    res = "ok"
+                    for _ in range(steps):
+                        res = str(client.forward())
+                        if res == "dead" or client.is_dead:
+                            return "dead"
+                    return res
+                case "right":
+                    steps = args.get("steps", 1)
+                    res = "ok"
+                    for _ in range(steps):
+                        res = str(client.right())
+                        if res == "dead" or client.is_dead:
+                            return "dead"
+                    return res
+                case "left":
+                    steps = args.get("steps", 1)
+                    res = "ok"
+                    for _ in range(steps):
+                        res = str(client.left())
+                        if res == "dead" or client.is_dead:
+                            return "dead"
+                    return res
+                case "look":
+                    return json.dumps(client.look())
+                case "inventory":
+                    res = client.inventory()
+                    if hasattr(res, "__dict__"):
+                        return json.dumps(res.__dict__)
+                    return str(res)
+                case "take_object":
+                    return str(client.take(args.get("name")))
+                case "set_object":
+                    return str(client.set(args.get("name")))
+                case "broadcast":
+                    return str(client.broadcast(args.get("text")))
+                case "connect_nbr":
+                    return str(client.connect_nbr())
+                case "fork":
+                    return str(client.fork())
+                case "eject":
+                    return str(client.eject())
+                case "incantation":
+                    return str(client.incantation())
+                case "execute_commands":
+                    commands_list = args.get("commands", [])
+                    results = []
+                    for cmd in commands_list:
+                        cmd_name = cmd.get("name")
+                        cmd_args = cmd.get("args", {})
+                        if not cmd_name:
+                            continue
+                        res = execute_tool(cmd_name, cmd_args)
+                        results.append(
+                            {"command": cmd_name, "args": cmd_args, "response": res}
+                        )
+                        if res == "dead" or client.is_dead:
+                            break
+                    return json.dumps(results)
+                case _:
+                    return f"Error: Unknown tool {name}"
         except Exception as e:
             return f"Error: {e}"
 

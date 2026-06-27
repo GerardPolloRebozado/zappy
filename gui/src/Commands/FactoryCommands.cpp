@@ -9,10 +9,10 @@
 #include "Commands/CommandEggDeath.hpp"
 #include "Commands/CommandEggLayed.hpp"
 #include "Commands/CommandGameEnd.hpp"
+#include "Commands/CommandGetMapEvent.hpp"
 #include "Commands/CommandIncantationEnd.hpp"
 #include "Commands/CommandIncantationStart.hpp"
 #include "Commands/CommandMapContent.hpp"
-#include "Commands/CommandMapEvent.hpp"
 #include "Commands/CommandMapSize.hpp"
 #include "Commands/CommandPlayerBroadcast.hpp"
 #include "Commands/CommandPlayerConnection.hpp"
@@ -28,6 +28,7 @@
 #include "Commands/CommandTeamNames.hpp"
 #include "Commands/CommandTileContent.hpp"
 #include "Commands/CommandTimeUpdate.hpp"
+#include "Commands/CommandTriggerMapEvent.hpp"
 #include "Commands/CommandUnknown.hpp"
 #include "Commands/CommandsErrors.hpp"
 
@@ -56,8 +57,8 @@ const std::unordered_map<std::string, std::unique_ptr<ACommand>> FactoryCommands
     map["edi"] = std::make_unique<CommandEggDeath>();
     map["sgt"] = std::make_unique<CommandTimeUpdate>();
     map["sst"] = std::make_unique<CommandTimeUpdate>();
-    map["gev"] = std::make_unique<CommandMapEvent>();
-    map["mev"] = std::make_unique<CommandMapEvent>();
+    map["gev"] = std::make_unique<CommandGetMapEvent>();
+    map["mev"] = std::make_unique<CommandTriggerMapEvent>();
     map["seg"] = std::make_unique<CommandGameEnd>();
     map["smg"] = std::make_unique<CommandServerMessage>();
     map["suc"] = std::make_unique<CommandUnknown>();

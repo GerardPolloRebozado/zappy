@@ -59,6 +59,7 @@ set(CORE_SOURCES
         src/Systems/Particles/ParticleSystemHandleIncantationEnd.cpp
         src/Systems/Particles/ParticleSystemHandleJump.cpp
         src/Systems/Particles/ParticleSystemHandleBroadcast.cpp
+        src/Systems/Particles/ParticleSystemHandleExpulsions.cpp
         src/Systems/Particles/ParticleSystemEmitters.cpp
         src/Systems/Animations/AnimationSystem.cpp
         src/Systems/Animations/AnimationSystemMovement2D.cpp
@@ -112,7 +113,7 @@ set(CORE_SOURCES
         include/Commands/ACommand.hpp
         include/Commands/FactoryCommands.hpp
         include/Commands/CommandTimeUpdate.hpp
-        include/Commands/CommandMapEvent.hpp
+        include/Commands/CommandGetMapEvent.hpp
         include/Commands/CommandTileContent.hpp
         include/Commands/CommandTeamNames.hpp
         include/Commands/CommandPlayerPosition.hpp

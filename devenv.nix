@@ -23,6 +23,8 @@
     pkgs.libxcursor
     pkgs.libxi
     pkgs.libxrandr
+    pkgs.zlib
+    pkgs.stdenv.cc.cc.lib
   ];
 
   # https://devenv.sh/packages/

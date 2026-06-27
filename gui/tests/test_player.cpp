@@ -161,7 +161,7 @@ Test(CommandPlayerExpulsionTest, EjectEast) {
 
     auto pos = world.get_component<Position>(victim);
     cr_assert_not_null(pos.get());
-    cr_assert_eq(pos->x, 5);
+    cr_assert_eq(pos->x, 6);
     cr_assert_eq(pos->y, 5);
 }
 
@@ -186,7 +186,7 @@ Test(CommandPlayerExpulsionTest, EjectNorthWithWrap) {
     auto pos = world.get_component<Position>(victim);
     cr_assert_not_null(pos.get());
     cr_assert_eq(pos->x, 3);
-    cr_assert_eq(pos->y, 0);
+    cr_assert_eq(pos->y, 9);
 }
 
 Test(CommandPlayerExpulsionTest, NoCoTileInhabitant) {
