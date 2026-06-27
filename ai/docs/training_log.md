@@ -81,7 +81,7 @@ PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survi
 - **Rating Tier**: `[Tier 1 / Tier 2 / ...]`
 
 #### Observations (when running game with gui)
-- *What actions did the agent prioritize?*
+- *Key observations*
 - *Did it exhibit any loop behaviors or stuck states?*
 - *Adjustments needed for the next run:*
 
@@ -111,7 +111,8 @@ PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survi
 - **Rating Tier**: `Tier 1`
 
 #### Observations (when running game with gui)
-- *What actions did the agent prioritize?*
+2 game runs performed
+- *Key observations*
   - The player would not take any stones from the ground
   - The player manage to evolve to level 2 when the stone needed was already on the tile. 
   - Player would ignore food on the tiles unless it's life bar fell bellow a certain mark
@@ -145,7 +146,8 @@ PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level
 - **Rating Tier**: `Tier 1`
 
 #### Observations (when running game with gui)
-- *What actions did the agent prioritize?*
+3 game runs performed
+- *Key observations*
   - Agent would take food more frequently
   - Agent did pick up Linemate at some point. It died not use it or evolve at any point
   - The agent did perform a turn at some point, but then kept only moving forward
@@ -154,3 +156,38 @@ PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level
 - *Adjustments needed for the next run:*
   - We will continue training Phase 2 for longer. Now that the AI has discovered the stones and started turning, it needs more experience to reinforce and complete the sequence.
   - Make a new run with a training cycle of 500,000 timesteps, loading the current `zappy_level2_v1` model to fine-tune it
+
+### Run #3
+- **Base Model**: `Loaded from zappy_level2_v1`
+- **Output Model Name**: `zappy_level2_v1`
+- **Timesteps Run**: `500,000`
+- **Real-World Duration**: `2m 52s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 500000 -f 1000 -m zappy_level2_v1 -l zappy_level2_v1 
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level2_v1 --teams team01 --players 1 --width 12 --height 12
+```
+- **Average Level Achieved**: `1.8`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `1724.80`
+- **Max Turns Survived**: `3909`
+- **Rating Tier**: `Tier 1`
+
+#### Observations (when running game with gui)
+2 game runs performed
+- *Key observations*
+  - Agent prioritizes taking food
+  - The agent moves forward constantly but did perform some turns
+  - Agent managed to get to level 2 both runs. It did not use the stones to evolve, but it did manage to evolve when the stones were already on the tile.
+- *Did it exhibit any loop behaviors or stuck states?*
+- *Adjustments needed for the next run:*
+  - Change the excess food collection reward from +0.2 to 0.0. This forces it to ignore excess food and spend its energy exploring for stones to get the +4.0 stone reward.
+  - We will continue training Phase 2. With the updated rewards
+  - Make a new run loading zappy_level2_v1` to generate `zappy_level2_v2`
