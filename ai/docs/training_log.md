@@ -468,7 +468,7 @@ Evaluation file: *[eval_20260627_200328.md](../training/results/eval_20260627_20
   - Clean Restart. Run a fresh 2,000,000 timestep training run loading from the clean, stable **`zappy_level2_v2`** model. Since `zappy_level2_v2` has no prior bias towards spamming `LOOK` and knows how to survive and gather, it will immediately learn to map the active beacon coordinate inputs to correct steering movements and reach Level 3
 
 
-## Run #13
+## Run #14
 - **Base Model**: `Loaded from zappy_coordination_v1_2`
 - **Output Model Name**: `zappy_coordination_v1_2`
 - **Timesteps Run**: `2,000,000`
