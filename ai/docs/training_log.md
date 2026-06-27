@@ -185,7 +185,7 @@ updated evaluation script to get more info from it, and avoid having to run full
 #### Evaluation Metrics (via evaluate_ai.py)
 Run (adjust --teams, --players, --width, --height depending on phase):
 ```
-PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level2_v1 --teams team01 --players 1 --width 12 --height 12
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level2_v2 --teams team01 --players 1 --width 12 --height 12
 ```
 - **Average Level Achieved**: `1.8`
 - **Max Level Achieved**: `2`
@@ -204,4 +204,39 @@ Evaluation file: *[eval_20260627_151904.md](../training/results/eval_20260627_15
   - Survival improved by over 180 turns.
   - It successfully reached Level 2 in 4 out of the 5 test episodes.
 - *Adjustments needed for the next run:*
-  - Continue training zappy_level2_v2 for another 300,000 timesteps to let it polish its speed and reach 100% success rate:
+  - Continue training zappy_level2_v2 for another 300,000 timesteps to let it polish its speed and reach 100% success rate
+
+
+### Run #5
+- **Base Model**: `Loaded from zappy_level2_v2`
+- **Output Model Name**: `zappy_level2_v2`
+- **Timesteps Run**: `300,000`
+- **Real-World Duration**: `1m 44s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 300000 -f 1000 -m zappy_level2_v2 -l zappy_level2_v2 
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level2_v1 --teams team01 --players 1 --width 12 --height 12
+```
+- **Average Level Achieved**: `1.80`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `3574.20`
+- **Max Turns Survived**: `8230`
+- **Rating Tier**: `Tier 2: Single-Player Competence`
+
+Evaluation file: *[eval_20260627_153033.md](../training/results/eval_20260627_153033.md)*
+
+#### Observations
+- *Key observations*
+  - Average turns survived increased by over 2,500 turns, indicating the agent is highly stable at finding food.
+  - It only attempted 4 incantations and succeeded in 100% of them.
+  - The shortcut. `Set Stone` was 0.0%. The agent realized that on a 12x12 single-player map, it is faster to wander until standing on a pre-spawned Linemate and incanting, rather than picking up and carrying stones.
+  - Reached **Tier 2: Single-Player Competence**.
+- *Adjustments needed for the next run:*
+  - Transition to Phase 3. We will load the trained `zappy_level2_v2` model and train it under multi-agent conditions to force coordination, radio usage, and active stone-gathering (since multi-stone recipes cannot be solved by the shortcut).
