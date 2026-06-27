@@ -66,6 +66,7 @@ void Core::_update() {
 
         _network.update(_world);
         if (_network.isConnected()) {
+            _simulationSystem.update(_world);
             _animationSystem.update(_world);
             _renderSystem.update(_world, dt);
             _particleSystem.update(_world, dt);

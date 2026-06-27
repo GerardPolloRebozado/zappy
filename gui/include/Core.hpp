@@ -12,10 +12,11 @@
 #include "Logging/ChatLogs.hpp"
 #include "NetworkManager.hpp"
 #include "Systems/AnimationSystem.hpp"
+#include "Systems/BackgroundSystem.hpp"
 #include "Systems/MusicSystem.hpp"
 #include "Systems/ParticleSystem.hpp"
 #include "Systems/RenderSystem.hpp"
-#include "Systems/BackgroundSystem.hpp"
+#include "Systems/SimulationSystem.hpp"
 #include "UI/UIManager.hpp"
 #include <filesystem>
 #include <fstream>
@@ -117,6 +118,7 @@ class Core {
     AnimationSystem _animationSystem;        ///< Handles entity animations.
     MusicSystem _musicSystem;                ///< Handles music system updates.
     BackgroundSystem _backgroundSystem;      ///< Handles background system updates
+    SimulationSystem _simulationSystem;      ///< Handles simulation logic (physics, rules)
     int _port;                               ///< Server port.
     std::string _host;                       ///< Server host.
     AppState _appState = AppState::MENU;     ///< Current application state.
