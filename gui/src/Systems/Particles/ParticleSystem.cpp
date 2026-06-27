@@ -17,6 +17,7 @@ void ParticleSystem::update(World& w, float dt) {
     _handleIncantationStart(w);
     _handleIncantationEnd(w);
     _handleBroadcast(w);
+    _handleExpulsions(w);
     _updateEmitters(w, dt);
 }
 

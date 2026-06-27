@@ -199,7 +199,7 @@ void RenderSystem::_renderCelestials(World& w) {
         auto celestial = w.get_component<CelestialObject>(entity);
         raylib::Model& celestialModel = AssetManager::getInstance().getModel(celestial->model);
         if (celestial) {
-            const raylib::Vector3 vpos(celestial->x, 4.3f,
+            const raylib::Vector3 vpos(celestial->x, celestial->z,
                                        celestial->y);
             render::addInstance(celestial->model, vpos, {0, 1, 0}, 0.0f, {celestial->size, celestial->size, celestial->size}, WHITE,
                                 celestialModel.transform);
