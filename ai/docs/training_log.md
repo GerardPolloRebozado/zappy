@@ -291,3 +291,38 @@ Evaluation file: *[eval_20260627_164313.md](../training/results/eval_20260627_16
   - Update `ZappyEnv.py` to rate-limit the teammate bots to run only once every 5 steps. 
   - In 4 out of 5 turns, only the PPO agent is active and ticking the server. This reduces the tick-acceleration by 80%, returning food consumption to almost normal (1x). 
   - Run a fresh training run for Phase 3 for 500,000 timesteps loading from your stable `zappy_level2_v2` model
+
+
+## Run #9
+- **Base Model**: `Loaded from zappy_level2_v2`
+- **Output Model Name**: `zappy_coordination_v1`
+- **Timesteps Run**: `500,000`
+- **Real-World Duration**: `2m 57s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 500000 -f 1000 -m zappy_coordination_v1 -l zappy_level2_v2
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v1 --teams team01 --player 2 --width 15 --height 15
+```
+- **Average Level Achieved**: `1.80`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `49.40`
+- **Max Turns Survived**: `75`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_170407.md](../training/results/eval_20260627_170407.md)*
+
+#### Observations
+- *Key observations*
+  - Unlike Run #8, the policy did not collapse. The agent spent 49.2% of its actions moving and only 21.8% taking food, demonstrating a healthy balance of survival and exploration.
+  - Reached an average level of 1.80 (with a max of 2.0). They achieved 8 successful incantations out of 15 attempts (53.3% success rate).
+  - Broadcasts were 0% because players spent their short lives at Level 1 collecting Linemates. Since Level 1 -> Level 2 is a single-player incantation, they did not need to broadcast.
+  - Average turns survived was 49.4 turns because the evaluation script still runs sequential ticking (2x starvation). However, the training environment rate-limiting worked perfectly, allowing the model to train successfully.
+- *Adjustments needed for the next run:*
+  - Longer training run of 2,000,000 timesteps loading from `zappy_coordination_v1` so the agent has enough time to practice and optimize its Level 2 stone-gathering and broadcast behaviors.
