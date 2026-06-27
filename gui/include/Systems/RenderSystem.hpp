@@ -93,6 +93,12 @@ class RenderSystem {
      */
     std::optional<Entity> getSelectedPlayer() const { return _selectedPlayer; }
 
+    /**
+     * @brief Signals that a UI element consumed the current frame's click.
+     * Prevents _handleInput from processing the same click as a tile/player selection.
+     */
+    void consumeClick() { _clickConsumedByUI = true; }
+
   private:
     /**
      * @brief Lazily loads textures and models once the OpenGL context is ready.
@@ -167,6 +173,7 @@ class RenderSystem {
     std::optional<Entity> _selectedPlayer = std::nullopt;
 
     bool _showDebugHud = false;
+    bool _clickConsumedByUI = false;
     void _renderDebugHud(World& w);
 };
 } // namespace zappy

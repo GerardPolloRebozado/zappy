@@ -10,6 +10,7 @@
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
 #include "Components/ComponentTile.hpp"
+#include "Components/FollowingEntity.hpp"
 #include "Graphics/AssetManager.hpp"
 #include <string>
 
@@ -17,9 +18,19 @@
 
 namespace zappy {
 
-UIHudPanel::UIHudPanel(raylib::Rectangle bounds, World& world, const RenderSystem& renderSystem,
+UIHudPanel::UIHudPanel(raylib::Rectangle bounds, World& world, RenderSystem& renderSystem,
                        std::function<void()> onClick, int zIndex)
     : AUIComponent(bounds, onClick, zIndex), _world(world), _renderSystem(renderSystem) {}
+
+void UIHudPanel::update(float dt, raylib::Vector2 mousePos,
+                        std::shared_ptr<std::vector<UIEvent>> events) {
+    AUIComponent::update(dt, mousePos, events);
+    auto [selX, selZ] = _renderSystem.getSelectedTile();
+    if (selX != std::numeric_limits<int>::min() && _isHovered &&
+        raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT)) {
+        _renderSystem.consumeClick();
+    }
+}
 
 void UIHudPanel::render() {
     auto [selX, selZ] = _renderSystem.getSelectedTile();
@@ -143,6 +154,11 @@ void UIHudPanel::render() {
 
     bool foundPlayer = false;
     auto posStorage = _world.get_storage<Position>();
+    raylib::Vector2 mousePos = raylib::Mouse::GetPosition();
+    auto followStorage = _world.get_storage<FollowingEntity>();
+    bool isFollowingAny = followStorage && followStorage->size() > 0;
+    Entity followedEntity = isFollowingAny ? followStorage->begin()->first : Entity(0, 0);
+
     if (posStorage) {
         for (auto const& [entity, pos] : *posStorage) {
             if (pos && pos->x == selX && pos->y == selZ &&
@@ -151,9 +167,25 @@ void UIHudPanel::render() {
                 auto serverId = _world.get_component<ServerId>(entity);
                 std::string idStr =
                     serverId ? std::to_string(serverId->id) : std::to_string(entity.id());
+
+                raylib::Rectangle row = {_bounds.x + 15, (float)yOffset, _bounds.width - 30, 16};
+                bool isHovered = mousePos.CheckCollision(row);
+                bool isFollowed = isFollowingAny && followedEntity == entity;
+
                 raylib::Text("Player " + idStr, 14, raylib::Color(150, 40, 40, 255),
                              AssetManager::getInstance().getFont("TextFont"), 1.5f)
                     .Draw(_bounds.x + 30, (float)yOffset);
+
+                if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT) && isHovered) {
+                    if (followStorage) {
+                        followStorage->clear();
+                    }
+                    if (!isFollowed) {
+                        _world.add_component<FollowingEntity>(entity,
+                                                              FollowingEntity{.entity = entity});
+                    }
+                }
+
                 yOffset += 16;
             }
         }

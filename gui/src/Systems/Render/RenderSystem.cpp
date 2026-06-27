@@ -225,7 +225,7 @@ void RenderSystem::_handleInput(World& w, float dt) {
         _camera.target = (raylib::Vector3)_camera.target + up * moveSpeed;
     }
 
-    if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT)) {
+    if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT) && !_clickConsumedByUI) {
         _selectedX = _hoveredX;
         _selectedZ = _hoveredZ;
         _selectedPlayer = std::nullopt;
@@ -269,6 +269,7 @@ void RenderSystem::_handleInput(World& w, float dt) {
             w.add_component<RequestPlayerInventory>(_selectedPlayer.value(), {});
         }
     }
+    _clickConsumedByUI = false;
 
     _showDebugHud =
         raylib::Keyboard::IsKeyDown(KEY_LEFT_SHIFT) || raylib::Keyboard::IsKeyDown(KEY_RIGHT_SHIFT);
