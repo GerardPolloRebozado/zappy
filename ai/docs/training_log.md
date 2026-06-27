@@ -54,39 +54,6 @@ graph TD
 
 ##  Experiment Log
 
-template to document each training run.
-
-(start of template)
-### Run #[Number]
-- **Base Model**: `[Fresh / Loaded from <model_name>]`
-- **Output Model Name**: `[e.g. zappy_survival_v1]`
-- **Timesteps Run**: `[e.g., 200,000]`
-- **Real-World Duration**: `[e.g., 8 minutes]`
-
-#### Parameters
-```bash
-# Paste the exact run command here:
-./ai/training/run_training.sh -t 200000 -f 1000 -n TeamAI -m zappy_survival_v1
-```
-
-#### Evaluation Metrics (via evaluate_ai.py)
-Run (adjust --teams, --players, --width, --height depending on phase):
-```
-PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survival_v1 --teams team01 --players 1 --width 10 --height 10
-```
-- **Average Level Achieved**: `X.XX`
-- **Max Level Achieved**: `X`
-- **Average Turns Survived**: `XXXX`
-- **Max Turns Survived**: `X`
-- **Rating Tier**: `[Tier 1 / Tier 2 / ...]`
-
-#### Observations (when running game with gui)
-- *Key observations*
-- *Did it exhibit any loop behaviors or stuck states?*
-- *Adjustments needed for the next run:*
-
-(end of template)
-
 ### Run #1
 - **Base Model**: `Fresh`
 - **Output Model Name**: `zappy_survival_v1`
@@ -109,6 +76,8 @@ PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_survi
 - **Average Turns Survived**: `84.00`
 - **Max Turns Survived**: `102`
 - **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_134417_zappy_survival_v1_r1.md](../training/results/eval_20260627_134417_zappy_survival_v1_r1.md)*
 
 #### Observations (when running game with gui)
 2 game runs performed
@@ -145,6 +114,8 @@ PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level
 - **Max Turns Survived**: `159`
 - **Rating Tier**: `Tier 1`
 
+Evaluation file: *[eval_20260627_134637_zappy_level2_v1_r1.md](../training/results/eval_20260627_134637_zappy_level2_v1_r1.md)*
+
 #### Observations (when running game with gui)
 3 game runs performed
 - *Key observations*
@@ -180,6 +151,8 @@ PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level
 - **Max Turns Survived**: `3909`
 - **Rating Tier**: `Tier 1`
 
+Evaluation file: *[eval_20260627_142019_zappy_level2_v1_r2.md](../training/results/eval_20260627_142019_zappy_level2_v1_r2.md)*
+
 #### Observations (when running game with gui)
 2 game runs performed
 - *Key observations*
@@ -190,4 +163,45 @@ PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level
 - *Adjustments needed for the next run:*
   - Change the excess food collection reward from +0.2 to 0.0. This forces it to ignore excess food and spend its energy exploring for stones to get the +4.0 stone reward.
   - We will continue training Phase 2. With the updated rewards
-  - Make a new run loading zappy_level2_v1` to generate `zappy_level2_v2`
+  - Make a new run loading `zappy_level2_v1` to generate `zappy_level2_v2`
+
+---
+updated evaluation script to get more info from it, and avoid having to run full game to see hawt the ai was doing
+
+--- 
+
+### Run #4
+- **Base Model**: `Loaded from zappy_level2_v1`
+- **Output Model Name**: `zappy_level2_v2`
+- **Timesteps Run**: `500,000`
+- **Real-World Duration**: `2m 52s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 500000 -f 1000 -m zappy_level2_v2 -l zappy_level2_v1 
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level2_v1 --teams team01 --players 1 --width 12 --height 12
+```
+- **Average Level Achieved**: `1.8`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `1065.40`
+- **Max Turns Survived**: `3974`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_151904.md](../training/results/eval_20260627_151904.md)*
+
+#### Observations
+- *Key observations*
+  - (Compared with the updated evaluation from v1: *[eval_20260627_145555_zappy_level2_v1_r2.md](../training/results/eval_20260627_145555_zappy_level2_v1_r2.md)*)
+  - It stopped spamming blindly and only incants when conditions are correct.
+  - The agent is actively dropping stones to prepare the ritual.
+  - No more wasted actions. It stopped spamming the radio at Level 1.
+  - Survival improved by over 180 turns.
+  - It successfully reached Level 2 in 4 out of the 5 test episodes.
+- *Adjustments needed for the next run:*
+  - Continue training zappy_level2_v2 for another 300,000 timesteps to let it polish its speed and reach 100% success rate:
