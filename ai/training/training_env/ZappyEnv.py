@@ -293,7 +293,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 if item_target == "food":
                     if isinstance(inv, Inventory) and inv.food >= 15:
                         reward += (
-                            0.2  # Small positive reward for maintaining buffer of food
+                            0.0  # No reward for excess food hoarding (focus on stones)
                         )
                     else:
                         reward += 2.0  # Large positive reward for survival
