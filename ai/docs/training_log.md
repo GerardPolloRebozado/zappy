@@ -222,3 +222,72 @@ Evaluation file: *[eval_20260627_154847.md](../training/results/eval_20260627_15
 - *Adjustments needed for the next run:*
   - To train Phase 3 successfully, the teammate cannot be a dummy. It must be active, survive, reach Level 2, and coordinate. 
   - We can achieve this by using the existing heuristic logic (`take_decision` from *src.strategy.decision_making*) to run the teammate players in the background during training.
+
+
+## Run #7
+- **Base Model**: `Loaded from zappy_level2_v2`
+- **Output Model Name**: `zappy_coordination_v1`
+- **Timesteps Run**: `500,000`
+- **Real-World Duration**: `3m 28s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 500000 -f 1000 -m zappy_coordination_v1 -l zappy_level2_v2 
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v1 --teams team01 --player 2 --width 15 --height 15
+```
+- **Average Level Achieved**: `1.40`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `84.80`
+- **Max Turns Survived**: `165`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_161540.md](../training/results/eval_20260627_161540.md)*
+
+#### Observations
+- *Key observations*
+  - Because you are evaluating with 2 active players, they tick the server twice as fast, meaning they starve in fewer rounds. Now that they train with active teammate bots, they are experiencing this faster food consumption during training and are beginning to learn how to deal with it.
+- *Adjustments needed for the next run:*
+  - Need to give the model more training time to optimize its pathing, food collection, and coordinate meeting speed.
+
+
+## Run #8
+- **Base Model**: `Loaded from zappy_coordination_v1`
+- **Output Model Name**: `zappy_coordination_v1`
+- **Timesteps Run**: `1,000,000`
+- **Real-World Duration**: `6m 37s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 1000000 -f 1000 -m zappy_coordination_v1 -l zappy_coordination_v1 
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v1 --teams team01 --player 2 --width 15 --height 15
+```
+- **Average Level Achieved**: `1.40`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `57.00`
+- **Max Turns Survived**: `71`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_164313.md](../training/results/eval_20260627_164313.md)*
+
+#### Observations
+- *Key observations*
+  - The agent spent 55.8% of its actions on Take Food and 25.4% on Vision & Info. 
+  - Movement fell to 17.2% and Broadcast dropped to 0.0%. 
+  - Turns Survived dropped from 84 to 57.
+  -  The time-acceleration starvation pressure (caused by both players ticking the server sequentially) was simply too strong. Over 1,000,000 steps of training, PPO got stuck in a local minimum: "Moving and broadcasting is too expensive and leads to quick starvation. I must stand in one place, check my inventory, and take food. "By refusing to move, they ate all the food on their spawn tile and starved even faster (hence the drop to 57 turns).
+- *Adjustments needed for the next run:*
+  - Update `ZappyEnv.py` to rate-limit the teammate bots to run only once every 5 steps. 
+  - In 4 out of 5 turns, only the PPO agent is active and ticking the server. This reduces the tick-acceleration by 80%, returning food consumption to almost normal (1x). 
+  - Run a fresh training run for Phase 3 for 500,000 timesteps loading from your stable `zappy_level2_v2` model
