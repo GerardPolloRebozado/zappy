@@ -241,6 +241,15 @@ def main():
     all_turns = []
     all_levels = []
 
+    stats = {
+        "actions": {a.name: 0 for a in ControllerAction},
+        "incantations_attempted": 0,
+        "incantations_succeeded": 0,
+        "items_taken": {},
+        "items_set": {},
+        "deaths": 0,
+    }
+
     print(
         f"[Eval] Starting evaluation: {args.episodes} episodes ({num_teams} teams of {clients_nb} players each)..."
     )
@@ -292,11 +301,60 @@ def main():
                 try:
                     obs = get_observation(client, verbose=args.verbose)
                     if client.is_dead:
+                        stats["deaths"] += 1
                         continue
                     action, _ = model.predict(obs, deterministic=True)
-                    perform_action(client, action, verbose=args.verbose)
+
+                    bot_action = ControllerAction(int(action))
+                    stats["actions"][bot_action.name] += 1
+
+                    level_before = client.level
+                    res = perform_action(client, action, verbose=args.verbose)
+                    level_after = client.level
+
+                    if bot_action == ControllerAction.INCANTATION:
+                        stats["incantations_attempted"] += 1
+                        if level_after > level_before or (
+                            isinstance(res, str) and res.startswith("Current level:")
+                        ):
+                            stats["incantations_succeeded"] += 1
+
+                    if bot_action == ControllerAction.TAKE_FOOD:
+                        if res == "ok":
+                            stats["items_taken"]["food"] = (
+                                stats["items_taken"].get("food", 0) + 1
+                            )
+                    elif (
+                        ControllerAction.TAKE_LINEMATE
+                        <= bot_action
+                        <= ControllerAction.TAKE_THYSTAME
+                    ):
+                        if res == "ok":
+                            item_name = bot_action.name.replace("TAKE_", "").lower()
+                            stats["items_taken"][item_name] = (
+                                stats["items_taken"].get(item_name, 0) + 1
+                            )
+                    elif bot_action == ControllerAction.SET_FOOD:
+                        if res == "ok":
+                            stats["items_set"]["food"] = (
+                                stats["items_set"].get("food", 0) + 1
+                            )
+                    elif (
+                        ControllerAction.SET_LINEMATE
+                        <= bot_action
+                        <= ControllerAction.SET_THYSTAME
+                    ):
+                        if res == "ok":
+                            item_name = bot_action.name.replace("SET_", "").lower()
+                            stats["items_set"][item_name] = (
+                                stats["items_set"].get(item_name, 0) + 1
+                            )
+
+                    if res == "dead" or client.is_dead:
+                        stats["deaths"] += 1
                 except Exception:
                     client.is_dead = True
+                    stats["deaths"] += 1
 
             turns += 1
 
@@ -317,7 +375,35 @@ def main():
     max_turns_seen = int(np.max(all_turns))
     tier = classify_performance(avg_level, avg_turns)
 
-    # 1. Print to console
+    # Calculate detailed action analytics
+    total_actions = sum(stats["actions"].values())
+
+    movement_actions = ["FORWARD", "LEFT", "RIGHT"]
+    vision_actions = ["LOOK", "INVENTORY", "CONNECT_NBR"]
+    take_stone_actions = [
+        a.name
+        for a in ControllerAction
+        if a.name.startswith("TAKE_") and a.name != "TAKE_FOOD"
+    ]
+    set_stone_actions = [
+        a.name
+        for a in ControllerAction
+        if a.name.startswith("SET_") and a.name != "SET_FOOD"
+    ]
+
+    movement_count = sum(stats["actions"].get(a, 0) for a in movement_actions)
+    vision_count = sum(stats["actions"].get(a, 0) for a in vision_actions)
+    take_food_count = stats["actions"].get("TAKE_FOOD", 0)
+    take_stone_count = sum(stats["actions"].get(a, 0) for a in take_stone_actions)
+    set_stone_count = sum(stats["actions"].get(a, 0) for a in set_stone_actions)
+    incant_count = stats["actions"].get("INCANTATION", 0)
+    broadcast_count = stats["actions"].get("BROADCAST", 0)
+    fork_count = stats["actions"].get("FORK", 0)
+
+    def pct(count):
+        return (count / total_actions * 100) if total_actions > 0 else 0.0
+
+    # Print to console
     print("\n" + "=" * 50)
     print("           EVALUATION REPORT")
     print("=" * 50)
@@ -329,7 +415,41 @@ def main():
     print(f" RATING TIER: {tier}")
     print("=" * 50 + "\n")
 
-    # 2. Save results to files
+    print("=" * 50)
+    print("           BEHAVIOR ANALYSIS")
+    print("=" * 50)
+    print("| Event / Action Category| Count        | % of Total  |")
+    print("|------------------------|--------------|-------------|")
+    print(
+        f"| Movement (Fwd/L/R)     | {movement_count:<12d} | {pct(movement_count):<10.1f}% |"
+    )
+    print(
+        f"| Vision & Info (Look/Iv)| {vision_count:<12d} | {pct(vision_count):<10.1f}% |"
+    )
+    print(
+        f"| Take Food              | {take_food_count:<12d} | {pct(take_food_count):<10.1f}% |"
+    )
+    print(
+        f"| Take Stone             | {take_stone_count:<12d} | {pct(take_stone_count):<10.1f}% |"
+    )
+    print(
+        f"| Set Stone              | {set_stone_count:<12d} | {pct(set_stone_count):<10.1f}% |"
+    )
+    print(
+        f"| Broadcast Radio        | {broadcast_count:<12d} | {pct(broadcast_count):<10.1f}% |"
+    )
+    print(f"| Fork Allied Slots      | {fork_count:<12d} | {pct(fork_count):<10.1f}% |")
+    print(
+        f"| Incantations Attempted | {incant_count:<12d} | {pct(incant_count):<10.1f}% |"
+    )
+    print("-" * 50)
+    print(
+        f"| Incantations Succeeded | {stats['incantations_succeeded']:<12d} | (Succeed rate: {(stats['incantations_succeeded'] / stats['incantations_attempted'] * 100) if stats['incantations_attempted'] > 0 else 0:.1f}%) |"
+    )
+    print(f"| Starved Deaths         | {stats['deaths']:<12d} |")
+    print("=" * 50 + "\n")
+
+    # Save results to files
     results_dir = pathlib.Path(__file__).resolve().parents[1] / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -345,12 +465,28 @@ def main():
 **Map Size**: `{width}x{height}`
 **Teams**: `{", ".join(teams)} ({clients_nb} players/team)`
 
+## Overall Performance Metrics
 | Metric | Average | Max |
 | :--- | :---: | :---: |
 | Level Achieved | {avg_level:.2f} | {max_level} |
 | Turns Survived | {avg_turns:.2f} | {max_turns_seen} |
 
 **Rating Tier**: {tier}
+
+## Agent Behavior Distribution
+| Event / Action Category | Count | % of Total |
+| :--- | :---: | :---: |
+| Movement (Forward, Left, Right) | {movement_count} | {pct(movement_count):.1f}% |
+| Vision & Info (Look, Inventory, Connect_nbr) | {vision_count} | {pct(vision_count):.1f}% |
+| Take Food | {take_food_count} | {pct(take_food_count):.1f}% |
+| Take Stone | {take_stone_count} | {pct(take_stone_count):.1f}% |
+| Set Stone | {set_stone_count} | {pct(set_stone_count):.1f}% |
+| Broadcast Radio | {broadcast_count} | {pct(broadcast_count):.1f}% |
+| Fork Allied Slots | {fork_count} | {pct(fork_count):.1f}% |
+| Incantations Attempted | {incant_count} | {pct(incant_count):.1f}% |
+
+**Incantations Succeeded**: {stats["incantations_succeeded"]} / {stats["incantations_attempted"]} (Success rate: {(stats["incantations_succeeded"] / stats["incantations_attempted"] * 100) if stats["incantations_attempted"] > 0 else 0:.1f}%)
+**Starved Deaths**: {stats["deaths"]}
 """
 
     try:
