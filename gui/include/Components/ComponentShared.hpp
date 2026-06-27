@@ -108,16 +108,6 @@ struct BackgroundParallax {
     float scrollingFore = 0.0f;
 };
 
-struct mt {
-    raylib::Texture2D Frame1 = LoadTexture("assets/textures/Meteorite/Meteorite/M001.png");
-    raylib::Texture2D Frame2 = LoadTexture("assets/textures/Meteorite/Meteorite/M002.png");
-    raylib::Texture2D Frame3 = LoadTexture("assets/textures/Meteorite/Meteorite/M003.png");
-    raylib::Texture2D Frame4 = LoadTexture("assets/textures/Meteorite/Meteorite/M004.png");
-    raylib::Texture2D Frame5 = LoadTexture("assets/textures/Meteorite/Meteorite/M005.png");
-
-    raylib::Texture2D MGif = LoadTexture("assets/textures/Meteorite/BB000.");
-};
-
 struct Meteorite {
     int currentFrame = 1;
     int maxFrames = 5;
