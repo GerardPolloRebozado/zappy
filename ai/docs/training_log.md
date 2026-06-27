@@ -325,4 +325,75 @@ Evaluation file: *[eval_20260627_170407.md](../training/results/eval_20260627_17
   - Broadcasts were 0% because players spent their short lives at Level 1 collecting Linemates. Since Level 1 -> Level 2 is a single-player incantation, they did not need to broadcast.
   - Average turns survived was 49.4 turns because the evaluation script still runs sequential ticking (2x starvation). However, the training environment rate-limiting worked perfectly, allowing the model to train successfully.
 - *Adjustments needed for the next run:*
+  - Fix ticking distortion in the evaluation script.
   - Longer training run of 2,000,000 timesteps loading from `zappy_coordination_v1` so the agent has enough time to practice and optimize its Level 2 stone-gathering and broadcast behaviors.
+
+
+## Run #10
+- **Base Model**: `Loaded from zappy_coordination_v1`
+- **Output Model Name**: `zappy_coordination_v1`
+- **Timesteps Run**: `2,000,000`
+- **Real-World Duration**: `11m 56s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 2000000 -f 1000 -m zappy_coordination_v1 -l zappy_coordination_v1
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v1 --teams team01 --player 2 --width 15 --height 15
+```
+- **Average Level Achieved**: `1.20`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `81.60`
+- **Max Turns Survived**: `85`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_173747.md](../training/results/eval_20260627_173747.md)*
+
+#### Observations
+- *Key observations*
+  - The new batching logic in `evaluate_ai.py` worked successfully. The server clock now ticks normally (1x starvation rate), extending player survival turns to 81.6 turns (up from 49.4 turns).
+  - Reaching Level 2 was achieved in some cases, but average level achieved dropped to 1.20 and `Set Stone` surged to 76.3%. 
+  - This is a direct result of the clock fix. In Run #9 (2x starvation), the players died almost immediately after reaching Level 2, hiding their behavior. Now that they live longer (81.6 turns), they spend 50+ turns stuck at Level 2. Because they only trained for 500,000 steps, they have not learned how to coordinate or gather Deraumere/Sibur, so they resort to spamming `Set Stone` (their fallback policy).
+- *Adjustments needed for the next run:*
+  - Train the model for another 2,000,000 timesteps loading from the current `zappy_coordination_v1`. This will give the agent the necessary iterations at Level 2 to learn how to gather Deraumere/Sibur and use the radio to broadcast.
+
+
+## Run #11
+- **Base Model**: `Loaded from zappy_coordination_v1`
+- **Output Model Name**: `zappy_coordination_v1`
+- **Timesteps Run**: `2,000,000`
+- **Real-World Duration**: `11m 41s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 2000000 -f 1000 -m zappy_coordination_v1 -l zappy_coordination_v1
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v1 --teams team01 --player 2 --width 15 --height 15
+```
+- **Average Level Achieved**: `1.50`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `80.00`
+- **Max Turns Survived**: `144`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260627_181943.md](../training/results/eval_20260627_181943.md)*
+
+#### Observations
+- *Key observations*
+  - `Set Stone` dropped to **0.0%**. The spamming fallback bug is completely resolved.
+  - `Vision & Info` (Look/Inventory) jumped to **65.9%**. Because the agent has no coordination route to Level 3, it farms safe actions that yield `0.0` points to avoid the negative penalties of movement/starvation and failed actions (`-0.1` to `-10.0`).
+  - Discovered that the standard teammate bot broadcasts in standard text format (`Incantation TeammateBot_X level 2`), while the PPO agent's `BroadcastHandler` only deciphers pipe-separated formats (`team1|ZAPPY_SEC|...`). As a result, the PPO agent was completely deaf to teammate coordinates during the entire training.
+- *Adjustments needed for the next run:*
+  - Modified `lib_client.py` to intercept and translate teammate broadcasts to `team1|ZAPPY_SEC|INCANT` or `COME`.
+  - Modified `ZappyEnv.py` so Level 2 teammates periodically broadcast a `COME` beacon every 10 steps.
+  - Execute a 2,000,000 step training run loading from `zappy_coordination_v1` so the agent can learn to follow the newly unlocked radio signal and coordinate to reach Level 3.
