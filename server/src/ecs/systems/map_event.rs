@@ -1,6 +1,7 @@
 use log::info;
 
 use crate::{
+    commands::gev::build_gev_line,
     ecs::{
         map_events::{EVENT_TRIGGER_INTERVAL, MapEvent, try_trigger_random_event},
         storage::World,
@@ -59,6 +60,8 @@ pub fn activate_map_event(world: &mut World, event: MapEvent, now: u64) {
         world.map_event = event;
         world.last_event_check = now;
         notify_map_event(world, "event_start", name);
+        let gev_line = build_gev_line(world);
+        broadcast_event(world, ServerEvent::TileContent { content: gev_line });
     }
 }
 

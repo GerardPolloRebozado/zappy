@@ -33,7 +33,7 @@ trap "echo 'Stopping all AI clients...'; kill 0" EXIT
 for TEAM in "${TEAMS[@]}"; do
     for i in $(seq 1 "$COUNT"); do
         echo "Starting AI client $i for team '$TEAM' on $IP:$PORT (heuristic mode)"
-        python3 ai/src/main.py -p "$PORT" -n "$TEAM" -ip "$IP" --llm&
+        python3 ai/src/main.py -p "$PORT" -n "$TEAM" -ip "$IP" &
     done
 done
 
