@@ -159,7 +159,7 @@ class RenderSystem {
      * @brief Updates the internal state of which tile is currently under the mouse cursor.
      * Uses raycasting from the screen to the world ground plane.
      */
-    void _updateHoverState();
+    void _updateHoverState(World& w);
 
     /**
      * @brief Update camera position with the current following entity.
