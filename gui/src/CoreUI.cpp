@@ -254,28 +254,37 @@ void Core::_setupGameUI() {
         }
     }
 
-    auto backgroundMusic = _world.spawn();
-    _world.add_component(backgroundMusic,
-                         std::make_shared<ComponentMusic>(std::string(_bckMusic[0]), true));
+    auto musicStorage = _world.get_storage<ComponentMusic>();
+    if (!musicStorage || musicStorage->begin() == musicStorage->end()) {
+        auto backgroundMusic = _world.spawn();
+        _world.add_component(backgroundMusic,
+                             std::make_shared<ComponentMusic>(std::string(_bckMusic[0]), true));
+    }
 
     // music panel
     _uiManager->addComponent(std::make_shared<UIRadio>(
         raylib::Rectangle{40.0f, 40.0f, 160.0f, 100.0f}, _world, 15, 0, _bckMusic));
 
     // Spawn Background parallax
-    auto backgroundParallaxEntity = _world.spawn();
-    _world.add_component(backgroundParallaxEntity, std::make_shared<BackgroundParallax>());
+    auto parallaxStorage = _world.get_storage<BackgroundParallax>();
+    if (!parallaxStorage || parallaxStorage->begin() == parallaxStorage->end()) {
+        auto backgroundParallaxEntity = _world.spawn();
+        _world.add_component(backgroundParallaxEntity, std::make_shared<BackgroundParallax>());
+    }
 
     // Spawn Moon & Sun
-    auto moon = _world.spawn();
-    _world.add_component(moon, std::make_shared<CelestialObject>(0.0f, 0.01f, "moon"));
-    auto sun = _world.spawn();
-    _world.add_component(sun, std::make_shared<CelestialObject>(3.0f, 0.0015f, "sun"));
+    auto celestialStorage = _world.get_storage<CelestialObject>();
+    if (!celestialStorage || celestialStorage->begin() == celestialStorage->end()) {
+        auto moon = _world.spawn();
+        _world.add_component(moon, std::make_shared<CelestialObject>(0.0f, 0.01f, "moon"));
+        auto sun = _world.spawn();
+        _world.add_component(sun, std::make_shared<CelestialObject>(3.0f, 0.0015f, "sun"));
+    }
 
     // Chat Panel
-    float chatY = (float)_window->GetHeight() - 240.0f;
+    float chatY = (float)_window->GetHeight() - 260.0f;
     _uiManager->addComponent(std::make_shared<UIChatPanel>(
-        raylib::Rectangle{10.0f, chatY, 460.0f, 230.0f}, _chatLogs, _world, 10));
+        raylib::Rectangle{10.0f, chatY, 460.0f, 250.0f}, _chatLogs, _world, 10));
 }
 
 void Core::_setupTestingData() {
@@ -289,13 +298,11 @@ void Core::_setupTestingData() {
             _world.add_component(tile, Inventory{x + y, x, y, 0, 0, 0, 0});
         }
     }
-
     auto p1 = _world.spawn();
     _world.add_component(p1, Position{2, 2});
     _world.add_component(p1, Orientation{Orientation::N});
     _world.add_component(p1, Level{1});
     _world.add_component(p1, TeamName{"Team Alpha", raylib::Color::Black()});
-
     auto p2 = _world.spawn();
     _world.add_component(p2, Position{5, 5});
     _world.add_component(p2, Orientation{Orientation::E});

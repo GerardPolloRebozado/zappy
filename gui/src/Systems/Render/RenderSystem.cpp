@@ -57,7 +57,7 @@ void RenderSystem::centerCamera(int width, int height) {
 
 void RenderSystem::update(World& w, float dt) {
     _handleInput(w, dt);
-    _updateHoverState();
+    _updateHoverState(w);
 
     auto incantationStorage = w.get_storage<ComponentIncantationEffect>();
     if (incantationStorage) {
@@ -84,6 +84,7 @@ void RenderSystem::update(World& w, float dt) {
             }
         }
     }
+    _updateMapEvents(w, dt);
 }
 
 void RenderSystem::render(World& w) {
@@ -100,9 +101,12 @@ void RenderSystem::render(World& w) {
     _renderEggs(w);
     _renderPOV(w);
     _renderIncantations(w);
+    _renderWormholes(w);
     _renderParticles(w);
     _renderTombs(w);
     _renderCelestials(w);
+
+    _render3DMapEvents(w);
 
     // Hardware Instancing Rendering Phase
     // Iterate through batches of grouped models and pass their accumulated
@@ -137,7 +141,7 @@ void RenderSystem::render(World& w) {
     }
 
     _camera.EndMode();
-
+    renderShowEvents(w);
     if (_showDebugHud) {
         _renderDebugHud(w);
     }
@@ -224,7 +228,7 @@ void RenderSystem::_handleInput(World& w, float dt) {
         _camera.target = (raylib::Vector3)_camera.target + up * moveSpeed;
     }
 
-    if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT)) {
+    if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT) && !_clickConsumedByUI) {
         _selectedX = _hoveredX;
         _selectedZ = _hoveredZ;
         _selectedPlayer = std::nullopt;
@@ -268,6 +272,7 @@ void RenderSystem::_handleInput(World& w, float dt) {
             w.add_component<RequestPlayerInventory>(_selectedPlayer.value(), {});
         }
     }
+    _clickConsumedByUI = false;
 
     _showDebugHud =
         raylib::Keyboard::IsKeyDown(KEY_LEFT_SHIFT) || raylib::Keyboard::IsKeyDown(KEY_RIGHT_SHIFT);
@@ -293,7 +298,7 @@ void RenderSystem::_handleInput(World& w, float dt) {
     }
 }
 
-void RenderSystem::_updateHoverState() {
+void RenderSystem::_updateHoverState(World& w) {
     raylib::Ray mouseRay = _camera.GetMouseRay(raylib::Mouse::GetPosition());
     _hoveredX = InvalidTileCoord;
     _hoveredZ = InvalidTileCoord;
@@ -302,8 +307,26 @@ void RenderSystem::_updateHoverState() {
         if (t > 0) {
             raylib::Vector3 p =
                 (raylib::Vector3)mouseRay.position + (raylib::Vector3)mouseRay.direction * t;
-            _hoveredX = (int)std::round(p.x);
-            _hoveredZ = (int)std::round(p.z);
+            int potentialX = (int)std::round(p.x);
+            int potentialZ = (int)std::round(p.z);
+
+            // Validate bounds
+            int mapWidth = 0;
+            int mapHeight = 0;
+            auto mapStorage = w.get_storage<MapTag>();
+            if (mapStorage && mapStorage->size() > 0) {
+                Entity mapEntity = mapStorage->begin()->first;
+                if (auto sizeComp = w.get_component<Size>(mapEntity)) {
+                    mapWidth = sizeComp->width;
+                    mapHeight = sizeComp->height;
+                }
+            }
+
+            if (potentialX >= 0 && potentialX < mapWidth && potentialZ >= 0 &&
+                potentialZ < mapHeight) {
+                _hoveredX = potentialX;
+                _hoveredZ = potentialZ;
+            }
         }
     }
 }

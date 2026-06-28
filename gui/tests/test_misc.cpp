@@ -6,10 +6,11 @@
 */
 
 #include "Commands/CommandGameEnd.hpp"
-#include "Commands/CommandMapEvent.hpp"
+#include "Commands/CommandGetMapEvent.hpp"
 #include "Commands/CommandPlayerBroadcast.hpp"
 #include "Commands/CommandServerMessage.hpp"
 #include "Commands/CommandTimeUpdate.hpp"
+#include "Commands/CommandTriggerMapEvent.hpp"
 #include "Commands/CommandUnknown.hpp"
 #include "Components/ComponentShared.hpp"
 #include "ECS/World.hpp"
@@ -126,7 +127,7 @@ Test(CommandMiscTest, ServerMessage) {
 
 Test(CommandMiscTest, MapEventGevNone) {
     World world;
-    CommandMapEvent cmd;
+    CommandGetMapEvent cmd;
 
     cmd.execute("none", world);
 
@@ -144,7 +145,7 @@ Test(CommandMiscTest, MapEventGevNone) {
 
 Test(CommandMiscTest, MapEventGevSolarFlare) {
     World world;
-    CommandMapEvent cmd;
+    CommandGetMapEvent cmd;
 
     cmd.execute("solar_flare", world);
 
@@ -159,7 +160,7 @@ Test(CommandMiscTest, MapEventGevSolarFlare) {
 
 Test(CommandMiscTest, MapEventGevGravityWell) {
     World world;
-    CommandMapEvent cmd;
+    CommandGetMapEvent cmd;
 
     cmd.execute("gravity_well 3 7", world);
 
@@ -171,6 +172,61 @@ Test(CommandMiscTest, MapEventGevGravityWell) {
         cr_assert_eq(mapEvent->centerX, 3);
         cr_assert_eq(mapEvent->centerY, 7);
         cr_assert(mapEvent->active);
+    }
+}
+
+Test(CommandMiscTest, MapEventPsionicEchoLifecycle) {
+    World world;
+    CommandServerMessage smg;
+    CommandTriggerMapEvent mev;
+
+    smg.execute("event_start psionic_echo", world);
+    smg.execute("event_end psionic_echo", world);
+    mev.execute("psionic_echo", world);
+
+    auto storage = world.get_storage<MapEvent>();
+    cr_assert_not_null(storage);
+
+    for (auto const& [ent, mapEvent] : *storage) {
+        cr_assert_eq(mapEvent->name, "none");
+        cr_assert_not(mapEvent->active);
+    }
+}
+
+Test(CommandMiscTest, MapEventTriggerGravityWellCoordsOnly) {
+    World world;
+    CommandServerMessage smg;
+    CommandTriggerMapEvent mev;
+
+    smg.execute("event_start gravity_well", world);
+    mev.execute("gravity_well 3 13", world);
+
+    auto storage = world.get_storage<MapEvent>();
+    cr_assert_not_null(storage);
+
+    for (auto const& [ent, mapEvent] : *storage) {
+        cr_assert_eq(mapEvent->name, "gravity_well");
+        cr_assert_eq(mapEvent->centerX, 3);
+        cr_assert_eq(mapEvent->centerY, 13);
+        cr_assert(mapEvent->active);
+    }
+}
+
+Test(CommandMiscTest, MapEventTriggerDoesNotReactivateAfterEnd) {
+    World world;
+    CommandServerMessage smg;
+    CommandTriggerMapEvent mev;
+
+    smg.execute("event_start solar_flare", world);
+    smg.execute("event_end solar_flare", world);
+    mev.execute("solar_flare", world);
+
+    auto storage = world.get_storage<MapEvent>();
+    cr_assert_not_null(storage);
+
+    for (auto const& [ent, mapEvent] : *storage) {
+        cr_assert_eq(mapEvent->name, "none");
+        cr_assert_not(mapEvent->active);
     }
 }
 

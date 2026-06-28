@@ -118,7 +118,18 @@ pub fn handle_auth_request(server: &mut Server, entity: Entity, request: Request
     }
     //
 
-    let egg = Egg::egg_from_team(&mut server.world, team_name.clone()).unwrap();
+    let egg = Egg::egg_from_team(&mut server.world, team_name.clone());
+    if egg.is_none() {
+        let network_data = server
+            .world
+            .get_component_mut::<NetworkData>(entity)
+            .unwrap();
+        network_data
+            .pending_responses
+            .push(Response::new(ResponseCode::Status(StatusCode::Ko), None));
+        return;
+    }
+    let egg = egg.unwrap();
     let egg_position = server.world.get_component::<Position>(egg).unwrap().clone();
     let entity = build_inhabitant_with_entity(
         entity,
@@ -189,6 +200,7 @@ mod tests {
             ),
             clients_nb: 1,
             team_names: vec!["existing_team".to_string()],
+            seed: None,
         };
 
         let (mock_socket, output) = network::MockSocket::new(vec![]);
@@ -235,6 +247,7 @@ mod tests {
             world: crate::ecs::storage::World::default(),
             clients_nb: 1,
             team_names: vec!["existing_team".to_string()],
+            seed: None,
         };
 
         let ai = server.world.spawn();
@@ -300,7 +313,10 @@ mod tests {
 
     #[test]
     fn test_ai_auth() {
-        let mut server = Server::default();
+        let mut server = Server::new(crate::utils::Config {
+            port: 0,
+            ..crate::utils::Config::default()
+        });
 
         let (mock_socket, _) = network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
@@ -347,6 +363,7 @@ mod tests {
             ),
             clients_nb: 10,
             team_names: vec!["existing_team".to_string()],
+            seed: None,
         };
 
         let (mock_socket, _) = network::MockSocket::new(vec![]);

@@ -3,8 +3,11 @@ use rand::{RngExt, rng};
 use crate::ecs::{
     components::{resource::Resource, tile::Tile},
     map_events::{METEOR_SHOWER_SPAWN_INTERVAL, MapEvent},
+    map_size::get_tile_content_by_entity,
     storage::{Entity, World},
+    systems::task::broadcast_event,
 };
+use crate::protocol::ServerEvent;
 
 /// Spawns `(W * H * 0.05)` random gems on random tiles.
 pub fn spawn_meteor_gems(world: &mut World) {
@@ -25,10 +28,20 @@ pub fn spawn_meteor_gems(world: &mut World) {
     let gem_types: Vec<Resource> = Resource::iter().filter(|r| *r != Resource::Food).collect();
 
     let mut rng = rng();
+    let mut modified_tiles: Vec<Entity> = Vec::new();
     for _ in 0..count {
         let tile_idx = rng.random_range(0..tile_entities.len());
+        let tile_entity = tile_entities[tile_idx];
         let gem = gem_types[rng.random_range(0..gem_types.len())];
-        Tile::add_resource_to_tile(tile_entities[tile_idx], world, gem);
+        Tile::add_resource_to_tile(tile_entity, world, gem);
+        if !modified_tiles.contains(&tile_entity) {
+            modified_tiles.push(tile_entity);
+        }
+    }
+
+    for entity in modified_tiles {
+        let content = get_tile_content_by_entity(world, entity);
+        broadcast_event(world, ServerEvent::TileContent { content });
     }
 }
 

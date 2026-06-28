@@ -96,6 +96,7 @@ struct MovementInterpolation3D {
     bool isMoving =
         false; ///< True if the visual position is currently moving towards the logical position.
     float targetZ = 2.01f;
+    float minSpeed = -1.0f; ///< Minimum travel speed in units per second.
 };
 
 struct BackgroundParallax {
@@ -107,10 +108,25 @@ struct BackgroundParallax {
     float scrollingFore = 0.0f;
 };
 
+struct Meteorite {
+    int currentFrame = 1;
+    int maxFrames = 5;
+    int frameCounter = 0;
+    int frameDelay = 10;
+
+    float worldX = 0.0f;
+    float worldY = 0.0f;
+    float worldZ = 0.0f;
+    bool hasLanded = false;
+};
+
 struct CelestialObject {
-    float angle = 0.0f; //< Represent the position of the object on the edge of a circle (like his path)
-    float x = 0.0f; //< Position in float, to avoid using "tile position" of the normal Positon component
+    float angle =
+        0.0f; //< Represent the position of the object on the edge of a circle (like his path)
+    float x =
+        0.0f; //< Position in float, to avoid using "tile position" of the normal Positon component
     float y = 0.0f;
+    float z = 0.0f;
     float size = 0.01f;
     std::string model; //< Name of the model to use
     CelestialObject(float angle, float size, std::string modelName) : angle(angle), size(size) {

@@ -48,7 +48,7 @@ void VoxelBatcher::addTopFace(const raylib::Vector3& pos, float w, float h, floa
 }
 
 void VoxelBatcher::addTopFaceUV(const raylib::Vector3& pos, float w, float h, float l, float u,
-                                float v, float uw, float vh) {
+                                float v, float uw, float vh, const raylib::Color& color) {
     if (!_batchActive) {
         return;
     }
@@ -56,7 +56,7 @@ void VoxelBatcher::addTopFaceUV(const raylib::Vector3& pos, float w, float h, fl
     float y = pos.y;
     float z = pos.z;
 
-    rlColor4ub(255, 255, 255, 255);
+    rlColor4ub(color.r, color.g, color.b, color.a);
     rlTexCoord2f(u, v);
     rlVertex3f(x - w / 2, y + h / 2, z - l / 2);
     rlTexCoord2f(u, v + vh);
