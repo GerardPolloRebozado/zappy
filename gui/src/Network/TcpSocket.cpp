@@ -6,6 +6,7 @@
 */
 
 #include "Network/TcpSocket.hpp"
+#include <cerrno>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
@@ -47,6 +48,11 @@ bool TcpSocket::connect(const std::string& host, int port) {
         return false;
     }
 
+    int flags = fcntl(_fd, F_GETFL, 0);
+    if (flags != -1) {
+        fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
+    }
+
     return true;
 }
 
@@ -86,13 +92,15 @@ void TcpSocket::flush() {
         return;
     }
 
-    // Since the socket is blocking, we only send if poll said we can
+    // The socket is now non-blocking
     // We send the whole buffer or as much as the OS allows
     ssize_t bytesWritten = ::send(_fd, _writeBuffer.c_str(), _writeBuffer.length(), 0);
     if (bytesWritten > 0) {
         _writeBuffer.erase(0, bytesWritten);
     } else if (bytesWritten < 0) {
-        disconnect();
+        if (errno != EAGAIN && errno != EWOULDBLOCK) {
+            disconnect();
+        }
     }
 }
 
@@ -107,8 +115,12 @@ void TcpSocket::receive() {
     if (bytesRead > 0) {
         buffer[bytesRead] = '\0';
         _readBuffer += buffer;
+    } else if (bytesRead == 0) {
+        disconnect(); // EOF from server
     } else {
-        disconnect();
+        if (errno != EAGAIN && errno != EWOULDBLOCK) {
+            disconnect();
+        }
     }
 }
 
