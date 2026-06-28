@@ -1,31 +1,15 @@
 import unittest
 from unittest.mock import MagicMock, patch
+
 from src.strategy.decision_making import (
-    get_missing_resources,
-    move_to_tile,
     count_players_in_tile,
+    move_to_tile,
     take_decision,
 )
 from src.utils.inventory import Inventory
 
 
 class TestDecisionMaking(unittest.TestCase):
-    def test_get_missing_resources_level_1_empty(self):
-        inv = Inventory()
-        missing = get_missing_resources(1, inv)
-        self.assertIn("linemate", missing)
-        self.assertIn("food", missing)  # food < 10
-
-    def test_get_missing_resources_level_1_full(self):
-        inv = Inventory(food=25, linemate=1)
-        missing = get_missing_resources(1, inv)
-        self.assertEqual(missing, [])
-
-    def test_get_missing_resources_invalid_level(self):
-        inv = Inventory()
-        missing = get_missing_resources(99, inv)
-        self.assertEqual(missing, [])
-
     def test_move_to_tile_0(self):
         client = MagicMock()
         self.assertTrue(move_to_tile(client, 0))

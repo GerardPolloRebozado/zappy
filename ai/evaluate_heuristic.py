@@ -146,8 +146,8 @@ def main():
     parser.add_argument(
         "--server-args",
         type=str,
-        default="-x 10 -y 10 -f 100",
-        help="server CLI args (default: -x 10 -y 10 -f 100)",
+        default="-x 15 -y 15 -f 100",
+        help="server CLI args (default: -x 15 -y 15 -f 100)",
     )
     parser.add_argument(
         "--max-actions",
