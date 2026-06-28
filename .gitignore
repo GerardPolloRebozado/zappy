@@ -4,6 +4,7 @@
 ._*
 Thumbs.db
 desktop.ini
+tensorboard_logs
 .env
 .zed
 
@@ -148,3 +149,5 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+
+results

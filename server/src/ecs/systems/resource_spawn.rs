@@ -20,7 +20,7 @@ pub fn populate_tile_resources(world: &mut World, tile_ent: &Entity, terrain: Te
     let mut spawned_any = false;
 
     let (food_mult, linemate_mult, deraumere_mult, thystame_mult, phiras_mult) = match terrain {
-        TerrainType::ObsidianBarrens => (0.2, 1.5, 1.5, 1.0, 1.0),
+        TerrainType::ObsidianBarrens => (1.0, 1.5, 1.5, 1.0, 1.0),
         TerrainType::LuminousOrchards => (2.0, 1.0, 1.0, 1.0, 1.0),
         TerrainType::CrystalCanyons => (1.0, 1.0, 1.0, 1.8, 1.5),
         _ => (1.0, 1.0, 1.0, 1.0, 1.0),

@@ -1,137 +1,27 @@
-from enum import Enum
+from typing import Union
+
 import gymnasium as gym
-from gymnasium import spaces
 import numpy as np
-from training.training_env.server_manager import ServerManager
-from src.client.ai_client import ZappyAiClient
-from enum import IntEnum
-from src.client.lib_client import ZappyLib, ZappyLibClient
-import ctypes
+from gymnasium import spaces
+from src.client.lib_client import ZappyLibClient
+from src.utils import Inventory, ELEVATION_TABLE
 
-"""
----------------------------------------
-| rollout/                |           |
-|    ep_len_mean          | 2.67e+04  |
-|    ep_rew_mean          | 1.31e+06  |
-| time/                   |           |
-|    fps                  | 453       |
-|    iterations           | 489       |
-|    time_elapsed         | 2209      |
-|    total_timesteps      | 1001472   |
-| train/                  |           |
-|    approx_kl            | 0.0       |
-|    clip_fraction        | 0         |
-|    clip_range           | 0.2       |
-|    entropy_loss         | -0.000338 |
-|    explained_variance   | 0         |
-|    learning_rate        | 0.0003    |
-|    loss                 | 5.07e+04  |
-|    n_updates            | 4880      |
-|    policy_gradient_loss | 1.44e-05  |
-|    value_loss           | 1.04e+05  |
----------------------------------------
-"""
-
-
-class ControllerAction(IntEnum):
-    FORWARD = 0
-    LEFT = 1
-    RIGHT = 2
-    LOOK = 3
-    INVENTORY = 4
-    BROADCAST = 5
-    CONNECT_NBR = 6
-    FORK = 7
-    EJECT = 8
-    TAKE_FOOD = 9
-    TAKE_LINEMATE = 10
-    TAKE_DERAUMERE = 11
-    TAKE_SIBUR = 12
-    TAKE_MENDIANE = 13
-    TAKE_PHIRAS = 14
-    TAKE_THYSTAME = 15
-    SET_FOOD = 16
-    SET_LINEMATE = 17
-    SET_DERAUMERE = 18
-    SET_SIBUR = 19
-    SET_MENDIANE = 20
-    SET_PHIRAS = 21
-    SET_THYSTAME = 22
-    INCANTATION = 23
-
-
-class BroadcastDict(Enum):
-    COME = "COME"
-    FIND = "FIND"
-    DONT_COME = "DCOME"
-    INCANT = "INCANT"
-
-
-class BroadcastHandler:
-    def __init__(self, team_name, secret_key):
-        self.team_name = team_name
-        self.secret_key = secret_key
-
-    def build_message(self, intent: BroadcastDict, params: str = "") -> str:
-        """Build a safe message using the team's secret key."""
-        return f"{self.team_name}|{self.secret_key}|{intent.value}|{params}"
-
-    def parse_message(self, raw_message: str):
-        """Decypher the message to ensure it belongs to our team."""
-        parts = raw_message.split("|")
-        if (
-            len(parts) >= 3
-            and parts[0] == self.team_name
-            and parts[1] == self.secret_key
-        ):
-            return parts[2], parts[3] if len(parts) > 3 else ""
-        return None, None
-
-    def calculate_heuristic(self, direction: int, raw_message: str) -> dict:
-        """Heuristic calculations to determine the importance of the broadcast."""
-        action, params = self.parse_message(raw_message)
-
-        if not action:
-            return {"score": 0, "task": "IGNORE"}
-
-        match action:
-            case BroadcastDict.INCANT.value:
-                return {"score": 100, "task": "MOVE_TO_DIR", "dir": direction}
-            case BroadcastDict.COME.value:
-                return {"score": 70, "task": "MOVE_TO_DIR", "dir": direction}
-            case BroadcastDict.DONT_COME.value:
-                return {"score": 50, "task": "FLEE_FROM_DIR", "dir": direction}
-            case BroadcastDict.FIND.value:
-                return {"score": 30, "task": "SEARCH_RESOURCE", "target": params}
-
-        return {"score": 0, "task": "IGNORE"}
-
-
-class ZappyAction(Enum):
-    """
-    Enum mapping actions to their corresponding Zappy commands logic.
-    """
-
-    FORWARD = "Forward"
-    LEFT = "Left"
-    RIGHT = "Right"
-    LOOK = "Look"
-    INVENTORY = "Inventory"
-    BROADCAST = "Broadcast"
-    CONNECT_NBR = "Connect_nbr"
-    FORK = "Fork"
-    EJECT = "Eject"
-    TAKE = "Take"
-    SET = "Set"
-    INCANTATION = "Incantation"
+# Import and re-export the modularized components for backwards compatibility
+from training.training_env.actions import ControllerAction, ZappyAction
+from training.training_env.broadcast import BroadcastDict, BroadcastHandler
+from training.training_env.env_modes import LibZappyEnv
 
 
 class ObservationZappyEnv:
+    client: Union[ZappyLibClient, None] = None
+
     def _get_real_observation(self):
         """
         Retrieves the player's inventory and vision from the server and maps them
         into the 657-dimensional numpy array used for neural network input.
         """
+        assert self.client is not None, "Client is not connected"
+
         obs = np.zeros(657, dtype=np.int32)
         resources = [
             "player",
@@ -158,7 +48,7 @@ class ObservationZappyEnv:
                         if idx >= 0:
                             obs[idx] = quantity
             obs[656] = obs[0]
-        elif hasattr(inv, "food"):
+        elif isinstance(inv, Inventory):
             obs[0] = inv.food
             obs[1] = inv.linemate
             obs[2] = getattr(inv, "deraumere", 0)
@@ -189,112 +79,6 @@ class ObservationZappyEnv:
         return obs
 
 
-class NetworkZappyEnv:
-    def __init__(self, env, port=4242, ip="127.0.0.1", team_name="team1"):
-        self.env = env
-        self.ip = ip
-        self.port = port
-        self.team_name = team_name
-        self.server_manager = ServerManager(port=port)
-        self.client = None
-
-    def reset(self, seed=None, options=None):
-        if self.client:
-            self.client.close()
-
-        self.server_manager.start()
-        self.port = self.server_manager.port
-
-        self.client = ZappyAiClient(self.port, self.team_name, self.ip)
-        self.client.connect()
-        self.env.client = self.client
-
-        observation = self.env._get_real_observation()
-        info = {}
-        return observation, info
-
-    def close(self):
-        if self.client:
-            self.client.close()
-        self.server_manager.stop()
-
-
-class LibZappyEnv:
-    def __init__(
-        self,
-        env,
-        width=20,
-        height=20,
-        freq=100,
-        teams=["team1", "team2"],
-        clients_nb=10,
-    ):
-        self.env = env
-        self.width = width
-        self.height = height
-        self.freq = freq
-        self.teams = teams
-        self.clients_nb = clients_nb
-        self.zappy_lib = ZappyLib()
-        self.server_ptr = None
-        self.client = None
-
-    def reset(self, seed=None, options=None):
-        if self.server_ptr:
-            self.zappy_lib.lib.zappy_free(self.server_ptr)
-
-        # Convert teams to C types
-        team_count = len(self.teams)
-        TeamArray = ctypes.c_char_p * team_count
-        team_ptrs = TeamArray(*[t.encode("utf-8") for t in self.teams])
-
-        self.server_ptr = self.zappy_lib.lib.zappy_init(
-            self.width, self.height, self.freq, team_ptrs, team_count, self.clients_nb
-        )
-
-        # Add 4 training allies (from the main team: teams[0])
-        for _ in range(4):
-            self.zappy_lib.lib.zappy_add_player(
-                self.server_ptr, self.teams[0].encode("utf-8")
-            )
-
-        # enemies (Distribute 5 remaining slots among rival teams)
-        enemy_slots = 5
-        enemy_teams_count = len(self.teams) - 1
-
-        if enemy_teams_count > 0:
-            bots_per_team = enemy_slots // enemy_teams_count
-            remainder = enemy_slots % enemy_teams_count
-
-            for i in range(1, len(self.teams)):
-                extra = 1 if i <= remainder else 0
-                for _ in range(bots_per_team + extra):
-                    self.zappy_lib.lib.zappy_add_player(
-                        self.server_ptr, self.teams[i].encode("utf-8")
-                    )
-        player_id = self.zappy_lib.lib.zappy_add_player(
-            self.server_ptr, self.teams[0].encode("utf-8")
-        )
-
-        self.client = ZappyLibClient(
-            self.zappy_lib.lib, self.server_ptr, player_id, self.freq
-        )
-        self.env.client = self.client
-
-        # Consume initial auth responses ("ok", slots, map size)
-        for _ in range(2):
-            self.client.wait_for_response()
-
-        observation = self.env._get_real_observation()
-        info = {}
-        return observation, info
-
-    def close(self):
-        if self.server_ptr:
-            self.zappy_lib.lib.zappy_free(self.server_ptr)
-            self.server_ptr = None
-
-
 class ZappyEnv(ObservationZappyEnv, gym.Env):
     """
     Custom Gymnasium environment for the Zappy AI.
@@ -303,9 +87,6 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
 
     def __init__(
         self,
-        use_lib=True,
-        port=4242,
-        ip="127.0.0.1",
         team_name="team1",
         total_teams=2,
         **kwargs,
@@ -317,10 +98,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         for i in range(2, total_teams + 1):
             generated_teams.append(f"team{i}")
 
-        if use_lib:
-            self.mode = LibZappyEnv(self, teams=generated_teams, **kwargs)
-        else:
-            self.mode = NetworkZappyEnv(self, port=port, ip=ip, team_name=team_name)
+        self.mode = LibZappyEnv(self, teams=generated_teams, **kwargs)
 
         self.client = None
         self.action_space = spaces.Discrete(24)
@@ -332,7 +110,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             team_name=team_name, secret_key="ZAPPY_SEC"
         )
 
-    def reset(self, seed=None, options=None):
+    def reset(self, *, seed=None, options=None):
         obs, info = self.mode.reset(seed=seed, options=options)
         self.client = self.mode.client
         return obs, info
@@ -351,6 +129,9 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         zappy_action = None
         item_target = None
 
+        if self.client is None:
+            return np.zeros(657, dtype=np.int32), 0.0, True, False, {}
+
         ZAPPY_ITEMS = [
             "food",
             "linemate",
@@ -367,7 +148,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             bot_action = None
 
         pending_messages = []
-        if hasattr(self.client, "get_unread_messages"):
+        if isinstance(self.client, ZappyLibClient):
             pending_messages = self.client.get_unread_messages()
 
         best_heuristic = {"score": 0, "task": "IGNORE", "dir": 0}
@@ -401,16 +182,17 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
 
                 # Do we have the required stones to reach at least Level 3?
                 has_stones = (
-                    getattr(inv, "linemate", 0) >= 1
-                    and getattr(inv, "deraumere", 0) >= 1
-                    and getattr(inv, "sibur", 0) >= 1
+                    isinstance(inv, Inventory)
+                    and inv.linemate >= 1
+                    and inv.deraumere >= 1
+                    and inv.sibur >= 1
                 )
 
                 if self.client.level >= 2 and has_stones:
                     msg_to_send = self.broadcast_handler.build_message(
                         BroadcastDict.INCANT
                     )
-                elif hasattr(inv, "food") and inv.food < 5:
+                elif isinstance(inv, Inventory) and inv.food < 5:
                     msg_to_send = self.broadcast_handler.build_message(
                         BroadcastDict.FIND, "food"
                     )
@@ -432,7 +214,8 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 response = self.client.eject()
                 zappy_action = ZappyAction.EJECT
             case _ if (
-                ControllerAction.TAKE_FOOD
+                bot_action is not None
+                and ControllerAction.TAKE_FOOD
                 <= bot_action
                 <= ControllerAction.TAKE_THYSTAME
             ):
@@ -440,7 +223,10 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 response = self.client.take(item_target)
                 zappy_action = ZappyAction.TAKE
             case _ if (
-                ControllerAction.SET_FOOD <= bot_action <= ControllerAction.SET_THYSTAME
+                bot_action is not None
+                and ControllerAction.SET_FOOD
+                <= bot_action
+                <= ControllerAction.SET_THYSTAME
             ):
                 item_target = ZAPPY_ITEMS[bot_action - ControllerAction.SET_FOOD]
                 response = self.client.set(item_target)
@@ -462,14 +248,12 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                 ZappyAction.RIGHT: 0.02,
                 ZappyAction.LOOK: 0.1,  # BUFF: Increased reward for looking around
                 ZappyAction.INVENTORY: 0.0,
-                ZappyAction.BROADCAST: 0.0,
                 ZappyAction.CONNECT_NBR: 0.0,
-                ZappyAction.FORK: -2.0,
                 ZappyAction.EJECT: 0.0,
-                ZappyAction.SET: -0.5,
                 ZappyAction.INCANTATION: 0.0,
             }
-            reward += base_rewards.get(zappy_action, 0.0)
+            if zappy_action is not None:
+                reward += base_rewards.get(zappy_action, 0.0)
 
             if best_heuristic["score"] >= 50:
                 target_dir = best_heuristic["dir"]
@@ -507,16 +291,69 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             if zappy_action == ZappyAction.TAKE:
                 inv = self.client.inventory()
                 if item_target == "food":
-                    if hasattr(inv, "food") and inv.food >= 15:
-                        reward -= 0.5
+                    if isinstance(inv, Inventory) and inv.food >= 15:
+                        reward += (
+                            0.2  # Small positive reward for maintaining buffer of food
+                        )
                     else:
-                        reward += 2.0
+                        reward += 2.0  # Large positive reward for survival
                 else:
-                    stone_quantity = getattr(inv, item_target, 0)
-                    if stone_quantity < 5:
-                        reward += 4.0
+                    if isinstance(inv, Inventory) and isinstance(item_target, str):
+                        req = ELEVATION_TABLE.get(self.client.level)
+                        needed = getattr(req, item_target, 0) if req is not None else 0
+                        current_quantity = getattr(inv, item_target, 0)
+                        if current_quantity <= needed:
+                            reward += 4.0
+                        else:
+                            reward -= 0.2
+
+            elif zappy_action == ZappyAction.SET:
+                if item_target == "food":
+                    reward -= 2.0
+                elif isinstance(item_target, str):
+                    inv = self.client.inventory()
+                    if isinstance(inv, Inventory):
+                        req = ELEVATION_TABLE.get(self.client.level)
+                        needed = getattr(req, item_target, 0) if req is not None else 0
+                        current_quantity = getattr(inv, item_target, 0)
+                        if current_quantity < needed:
+                            reward -= 4.0
+                        else:
+                            reward += 0.2
+
+            elif zappy_action == ZappyAction.FORK:
+                slots = self.client.connect_nbr()
+                req = ELEVATION_TABLE.get(self.client.level)
+                if (
+                    req is not None
+                    and req.players > 1
+                    and isinstance(slots, int)
+                    and slots == 0
+                ):
+                    reward += 2.0
+                else:
+                    reward -= 2.0
+
+            elif zappy_action == ZappyAction.BROADCAST:
+                inv = self.client.inventory()
+                req = ELEVATION_TABLE.get(self.client.level)
+                if req is not None and isinstance(inv, Inventory):
+                    has_stones = (
+                        inv.linemate >= req.linemate
+                        and inv.deraumere >= req.deraumere
+                        and inv.sibur >= req.sibur
+                        and inv.mendiane >= req.mendiane
+                        and inv.phiras >= req.phiras
+                        and inv.thystame >= req.thystame
+                    )
+                    if has_stones and req.players > 1:
+                        reward += 2.0
+                    elif inv.food < 5:
+                        reward += 0.5
                     else:
-                        reward -= 0.5
+                        reward -= 0.1
+                else:
+                    reward -= 0.1
 
         elif response == "ko":
             # ANTI-CASINO SYSTEM
@@ -524,11 +361,13 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             # while keeping regular mistake penalties low
             if zappy_action == ZappyAction.TAKE:
                 reward -= 0.5
+            elif zappy_action == ZappyAction.INCANTATION:
+                reward -= 10.0
             else:
                 reward -= 0.1
 
         elif isinstance(response, str) and response.startswith("Current level:"):
-            reward += 100.0
+            reward += 100.0 * self.client.level
 
         if not terminated:
             try:
@@ -543,3 +382,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
 
         info = {}
         return observation, reward, terminated, truncated, info
+
+    @property
+    def player_level(self) -> int:
+        return self.client.level if self.client is not None else 1

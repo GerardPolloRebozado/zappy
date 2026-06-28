@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime
 
 
@@ -29,11 +30,15 @@ class ColorFormatter(logging.Formatter):
         return f"{header} {record.getMessage()}"
 
 
+_level = getattr(
+    logging, os.environ.get("ZAPPY_LOG_LEVEL", "DEBUG").upper(), logging.DEBUG
+)
+
 logger = logging.getLogger("zappy_ai")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(_level)
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(_level)
 
 ch.setFormatter(ColorFormatter())
 

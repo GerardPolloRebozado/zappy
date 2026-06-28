@@ -51,6 +51,7 @@
     pkgs.criterion
     pkgs.ruff
     pkgs.clang-tools
+    pkgs.zlib
     pkgs.pyright
     pkgs.basedpyright
     pkgs.nodejs
