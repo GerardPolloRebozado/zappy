@@ -1,4 +1,5 @@
 import math
+
 from src.utils import ELEVATION_TABLE, can_evolve
 from src.utils.logging_levels import logger
 
@@ -82,7 +83,7 @@ def _has_zero_broadcast(client):
 
 
 def take_decision(client):
-    # 0 detect level change (post-incantation) → stay together as a group
+    # 0 detect level change (post-incantation) stay together as a group
     prev_level = getattr(client, "_prev_level", client.level)
     client._prev_level = client.level
     if client.level > prev_level:
@@ -95,14 +96,28 @@ def take_decision(client):
         client.messages.clear()
         return
 
+    if client.is_dead:
+        return
+
     client._is_waiting = getattr(client, "_is_waiting", False)
 
-    # steering: only respond to direction>0 broadcasts when not already waiting
-    if not client._is_waiting:
+    # steering: respond to direction>0 broadcasts
+    # Non-waiting players always steer. Waiting players at level 3+ also steer
+    # when their group is too small for the next level's player requirement.
+    should_steer = not client._is_waiting
+    if client._is_waiting and client.level >= 3:
+        next_level = client.level + 1
+        if next_level in ELEVATION_TABLE:
+            req = ELEVATION_TABLE[next_level]
+            if req.players > 2:
+                should_steer = True
+
+    if should_steer:
         target_msg = _find_broadcast(client)
         if target_msg is not None:
             direction = target_msg.get("direction", -1)
-            if direction > 0:
+            # Don't leave the group if a same-level player is on the same tile
+            if direction > 0 and not _has_zero_broadcast(client):
                 logger.info(
                     f"Received elevation broadcast from direction {direction}. Steering towards it..."
                 )
@@ -112,9 +127,24 @@ def take_decision(client):
                     client.left()
                 elif direction in [6, 7]:
                     client.right()
+                # Broadcast new position so group members follow, then take food
+                if client.level >= 3:
+                    client.broadcast(
+                        f"Elevation {client.name} level {client.level} follow"
+                    )
                 client.take("food")
                 client.messages.clear()
                 return
+
+    # 1a level 3+ beacon: broadcast periodically so others can converge
+    if client.level >= 3 and not client._is_waiting:
+        client._beacon_count = getattr(client, "_beacon_count", 0) + 1
+        beacon_interval = 3 if client.level >= 4 else 6
+        if client._beacon_count % beacon_interval == 0:
+            logger.info(f"Level {client.level} beacon broadcast...")
+            client.broadcast(f"Elevation {client.name} level {client.level}")
+            client.messages.clear()
+            return
 
     # 1 inventory
     inv = client.inventory()
@@ -136,14 +166,6 @@ def take_decision(client):
     # 3 check if can evolve right now
     if can_evolve(client.level, inv, players_on_tile):
         req = ELEVATION_TABLE[client.level]
-
-        needed_players = req.players
-        if needed_players >= 4 and players_on_tile < needed_players + 1:
-            client.broadcast(f"Elevation {client.name} level {client.level}")
-            if "food" in current_tile and inv.food < 20:
-                client.take("food")
-            client.messages.clear()
-            return
 
         logger.debug(
             f"[SERVER] -> {client.broadcast(f'Incantation {client.name} level {client.level}')}"
@@ -194,10 +216,13 @@ def take_decision(client):
         client._wait_count = getattr(client, "_wait_count", 0) + 1
 
         # Periodically scan nearby tiles for missing resources
-        if client._wait_count % 3 == 0:
+        # Level 3 scans further. Level 4+ stays with the group (no foraging).
+        forage_interval = 4 if client.level == 3 else 3
+        max_tile = 7 if client.level == 3 else 3
+        if client._wait_count % forage_interval == 0 and client.level < 4:
             missing = get_missing_resources(client.level, inv)
             for i, tile in enumerate(look):
-                if i > 0 and i <= 3:
+                if i > 0 and i <= max_tile:
                     for item in tile:
                         if item in missing:
                             logger.info(
