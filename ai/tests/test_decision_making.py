@@ -43,6 +43,9 @@ class TestDecisionMaking(unittest.TestCase):
     @patch("src.strategy.decision_making.can_evolve")
     def test_take_decision_can_evolve(self, mock_can_evolve):
         client = MagicMock()
+        client.is_dead = False
+        client._wait = 0
+        client._explore_step = 0
         client.level = 1
         client.inventory.return_value = Inventory(food=25, linemate=1)
         client.look.return_value = [["player", "food"], ["linemate"]]
@@ -56,6 +59,9 @@ class TestDecisionMaking(unittest.TestCase):
     @patch("src.strategy.decision_making.can_evolve")
     def test_take_decision_waiting_for_players(self, mock_can_evolve):
         client = MagicMock()
+        client.is_dead = False
+        client._wait = 0
+        client._explore_step = 0
         client.name = "TeamA"
         client.level = 2  # Requires 2 players
         client.inventory.return_value = Inventory(
@@ -66,11 +72,14 @@ class TestDecisionMaking(unittest.TestCase):
 
         take_decision(client)
 
-        client.broadcast.assert_called_with("Elevation TeamA level 2")
+        client.broadcast.assert_called_with("come 2 1")
 
     @patch("src.strategy.decision_making.can_evolve")
     def test_take_decision_take_resource_on_tile(self, mock_can_evolve):
         client = MagicMock()
+        client.is_dead = False
+        client._wait = 0
+        client._explore_step = 0
         client.level = 1
         client.inventory.return_value = Inventory(food=25, linemate=0)
         client.look.return_value = [["player", "linemate"], ["food"]]
@@ -84,6 +93,9 @@ class TestDecisionMaking(unittest.TestCase):
     @patch("src.strategy.decision_making.move_to_tile")
     def test_take_decision_move_to_resource(self, mock_move_to_tile, mock_can_evolve):
         client = MagicMock()
+        client.is_dead = False
+        client._wait = 0
+        client._explore_step = 0
         client.level = 1
         client.inventory.return_value = Inventory(food=25, linemate=0)
         client.look.return_value = [["player"], ["linemate"]]  # linemate on tile 1
@@ -96,13 +108,16 @@ class TestDecisionMaking(unittest.TestCase):
     @patch("src.strategy.decision_making.can_evolve")
     def test_take_decision_explore(self, mock_can_evolve):
         client = MagicMock()
+        client.is_dead = False
+        client._wait = 0
+        client._explore_step = 0
         client.level = 1
-        client.inventory.return_value = Inventory(food=25, linemate=0)
+        client.inventory.return_value = Inventory(food=50, linemate=0)
         client.look.return_value = [
             ["player"],
             ["food"],
             ["food"],
-        ]  # No linemate in sight
+        ]  # No linemate in sight, and food comfort met
         mock_can_evolve.return_value = False
 
         take_decision(client)
@@ -111,12 +126,18 @@ class TestDecisionMaking(unittest.TestCase):
 
     def test_take_decision_inventory_fail(self):
         client = MagicMock()
+        client.is_dead = False
+        client._wait = 0
+        client._explore_step = 0
         client.inventory.return_value = None
         take_decision(client)
         client.look.assert_not_called()
 
     def test_take_decision_look_fail(self):
         client = MagicMock()
+        client.is_dead = False
+        client._wait = 0
+        client._explore_step = 0
         client.inventory.return_value = Inventory()
         client.look.return_value = "ko"
         take_decision(client)
@@ -125,26 +146,34 @@ class TestDecisionMaking(unittest.TestCase):
     @patch("src.strategy.decision_making.can_evolve")
     def test_take_decision_same_tile_broadcast(self, mock_can_evolve):
         client = MagicMock()
+        client.is_dead = False
+        client._wait = 0
+        client._explore_step = 0
         client.name = "TeamA"
         client.level = 2
         client.inventory.return_value = Inventory(food=25, linemate=0)
         client.look.return_value = [["player"], ["food"]]
-        client.messages = [{"direction": 0, "text": "Elevation TeamA level 2"}]
+        client.messages = [{"direction": 0, "text": "go 2"}]
         mock_can_evolve.return_value = False
 
         take_decision(client)
 
-        client.inventory.assert_called()
+        client.look.assert_called()
         self.assertEqual(len(client.messages), 0)
 
     @patch("src.strategy.decision_making.can_evolve")
     def test_take_decision_steering_broadcast(self, mock_can_evolve):
         client = MagicMock()
+        client.is_dead = False
+        client._wait = 0
+        client._explore_step = 0
         client.name = "TeamA"
         client.level = 2
-        client.inventory.return_value = Inventory(food=25, linemate=0)
+        client.inventory.return_value = Inventory(
+            food=25, linemate=1, deraumere=1, sibur=1
+        )
         client.look.return_value = [["player"], ["food"]]
-        client.messages = [{"direction": 3, "text": "Elevation TeamA level 2"}]
+        client.messages = [{"direction": 3, "text": "come 2 2"}]
         mock_can_evolve.return_value = False
 
         take_decision(client)
@@ -155,24 +184,25 @@ class TestDecisionMaking(unittest.TestCase):
     @patch("src.strategy.decision_making.can_evolve")
     def test_take_decision_ignore_other_broadcasts(self, mock_can_evolve):
         client = MagicMock()
+        client.is_dead = False
+        client._wait = 0
+        client._explore_step = 0
         client.name = "TeamA"
         client.level = 2
-        client.inventory.return_value = Inventory(food=25, linemate=0)
+        client.inventory.return_value = Inventory(food=50, linemate=0)
         client.look.return_value = [["player"], ["food"]]
         # Message for TeamB or different level should be ignored
         client.messages = [
-            {"direction": 3, "text": "Elevation TeamB level 2"},
-            {"direction": 3, "text": "Elevation TeamA level 3"},
+            {"direction": 3, "text": "come 3 2"},
+            {"direction": 3, "text": "go 3"},
         ]
         mock_can_evolve.return_value = False
 
         take_decision(client)
 
-        # Should fall through to searching for resource (food not missing since food=25, linemate missing, not in sight, so explores)
+        # Should fall through to searching for resource (not in sight, so explores)
         client.forward.assert_called_once()
-        # Messages should NOT be cleared if they are ignored (or wait, the messages remain in the queue or we don't clear them in that case? Yes, they remain or they are not acted upon).
-        # Actually in the code we only clear messages when target_msg is found and handled. So here they shouldn't be cleared:
-        self.assertNotEqual(len(client.messages), 0)
+        self.assertEqual(len(client.messages), 0)
 
 
 if __name__ == "__main__":

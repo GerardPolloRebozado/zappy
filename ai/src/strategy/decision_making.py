@@ -1,7 +1,7 @@
 import math
 import random
 
-from src.utils import ELEVATION_TABLE
+from src.utils import ELEVATION_TABLE, can_evolve
 from src.utils.logging_levels import logger
 
 STONES = ["linemate", "deraumere", "sibur", "mendiane", "phiras", "thystame"]
@@ -214,7 +214,7 @@ def take_decision(client):
         return
 
     # 1. Incantate now if the tile already satisfies our level's requirement.
-    if req and players_here >= req.players and _has_current_stones(level, inv):
+    if req and can_evolve(level, inv, players_here):
         client.messages.clear()
         _perform_incantation(client, level, tile)
         return
