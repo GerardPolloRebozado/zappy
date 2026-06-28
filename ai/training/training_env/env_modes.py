@@ -29,10 +29,9 @@ class LibZappyEnv:
         num_teams = int(np.random.randint(1, 6))
         teams = [self.teams[0]] + [f"team{i}" for i in range(2, num_teams + 1)]
 
-        self.width = int(np.random.randint(10, 25))
-        self.height = int(np.random.randint(10, 25))
-        area = self.width * self.height
-        players_per_team = max(1, area // (50 * num_teams))
+        self.width = int(np.random.randint(10, 31))
+        self.height = int(np.random.randint(10, 31))
+        players_per_team = int(np.random.randint(1, 4))
         clients_nb = players_per_team
 
         TeamArray = ctypes.c_char_p * num_teams

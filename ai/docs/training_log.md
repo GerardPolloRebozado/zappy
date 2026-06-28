@@ -756,9 +756,8 @@ Evaluation file: *[eval_20260628_191601.md](../training/results/eval_20260628_19
 
 #### Observations
 - *Key observations*
-  - **Teammate Execution Fixed**:
-    - Added teammate bot execution to the evaluation script, running decisions once every 5 turns to match the training environment. Also fixed the reporting bug to correctly record teammate and PPO deaths.
-    - Because the direct headless FFI engine is ticked for every command sent by every player, the server time passes much faster than in a real game (~19 ticks per turn instead of 7). This causes agents to consume food at warp speed, resulting in starvation at around 60-90 turns regardless of eating.
+  - Added teammate bot execution to the evaluation script, running decisions once every 5 turns to match the training environment. Also fixed the reporting bug to correctly record teammate and PPO deaths.
+  - Because the direct headless FFI engine is ticked for every command sent by every player, the server time passes much faster than in a real game (~19 ticks per turn instead of 7). This causes agents to consume food at warp speed, resulting in starvation at around 60-90 turns regardless of eating.
 
 
 ## Run #23 (State Machine Refactor Validation)
@@ -783,8 +782,40 @@ Evaluation file: *[eval_20260628_193820.md](../training/results/eval_20260628_19
 
 #### Observations
 - *Key observations*
-  - **Codebase Cleaned**:
-    - All pathfinding, stone verification, and coordination overrides were successfully removed from `main.py` and `evaluate_ai.py` and consolidated into `state_machine.py`. Both client loops are now minimal, clean, and robust.
-  - **Robust Behavior**:
-    - The 2-agent PPO evaluation successfully achieved Level 2 for both players, collected 30 stones, and coordinated incantations with a 100% success rate.
+  - All pathfinding, stone verification, and coordination overrides were successfully removed from `main.py` and `evaluate_ai.py` and consolidated into `state_machine.py`. Both client loops are now minimal, clean, and robust.
+  - The 2-agent PPO evaluation successfully achieved Level 2 for both players, collected 30 stones, and coordinated incantations with a 100% success rate.
 
+
+## Run #24
+- **Base Model**: `zappy_level2_v2`
+- **Output Model Name**: `zappy_general_v1`
+- **Timesteps Run**: 3,000,000`
+- **Real-World Duration**: `19m`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 3000000 -f 1000 -m zappy_general_v1 -l zappy_level2_v2
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_general_v1 --teams team01 --player 2 --width 30 --height 30
+```
+#### Evaluation Metrics (via evaluate_ai.py)
+- **Average Level Achieved**: `1.30`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `388.94`
+- **Max Turns Survived**: `1596`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260628_220609.md](../training/results/eval_20260628_220609.md)*
+
+#### Observations
+- *Key observations*
+  - The client-side position tracker and curiosity reward (`+0.5` discovery, `-0.1` backtracking penalty) led to a massive increase in exploration efficiency. Average survival on a sparse `30x30` map rose to `388.94` turns, with a maximum of `1596` turns.
+  - Set stones (484 sets) and broadcasts (464 broadcasts) increased by over 50x compared to previous runs, demonstrating that the generalized state machine coordinates perfectly with the PPO model's stone gathering.
+  - In many episodes, only 1 of the 2 players managed to elevate to Level 2 before the other player starved. As Level 3 requires 2 active Level 2 players to coordinate, the team was unable to reach Level 3.
+- *Adjustments needed for the next run:*
+  - Train the model for a longer run of 15,000,000 timesteps starting from `zappy_general_v1` to allow both agents to survive and gather resources consistently, unlocking stable Level 3 elevation.

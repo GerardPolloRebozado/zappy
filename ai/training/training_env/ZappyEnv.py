@@ -119,6 +119,13 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         self.client = self.mode.client
         self.turns_elapsed = 0
         self.client_broadcast_dir = 0
+
+        # Local relative coordinates for curiosity reward
+        self.rel_x = 0
+        self.rel_y = 0
+        self.orientation = 0  # 0=North, 1=East, 2=South, 3=West
+        self.visited_tiles = {(0, 0)}
+
         return obs, info
 
     def close(self):
@@ -262,6 +269,37 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             }
             if zappy_action is not None:
                 reward += base_rewards.get(zappy_action, 0.0)
+
+            # Track relative coordinate movement and calculate curiosity reward
+            if zappy_action == ZappyAction.FORWARD:
+                if self.orientation == 0:
+                    self.rel_y += 1
+                elif self.orientation == 1:
+                    self.rel_x += 1
+                elif self.orientation == 2:
+                    self.rel_y -= 1
+                elif self.orientation == 3:
+                    self.rel_x -= 1
+
+                # Toroidal map coordinate wrap-around
+                map_width = getattr(self.mode, "width", 20)
+                map_height = getattr(self.mode, "height", 20)
+                if map_width > 0:
+                    self.rel_x = self.rel_x % map_width
+                if map_height > 0:
+                    self.rel_y = self.rel_y % map_height
+
+                pos = (self.rel_x, self.rel_y)
+                if pos not in self.visited_tiles:
+                    self.visited_tiles.add(pos)
+                    reward += 0.5  # Curiosity exploration reward
+                else:
+                    reward -= 0.1  # Backtracking / Loop penalty
+
+            elif zappy_action == ZappyAction.LEFT:
+                self.orientation = (self.orientation - 1) % 4
+            elif zappy_action == ZappyAction.RIGHT:
+                self.orientation = (self.orientation + 1) % 4
 
             if best_heuristic["score"] >= 50:
                 target_dir = best_heuristic["dir"]
