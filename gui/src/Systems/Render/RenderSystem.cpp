@@ -57,7 +57,7 @@ void RenderSystem::centerCamera(int width, int height) {
 
 void RenderSystem::update(World& w, float dt) {
     _handleInput(w, dt);
-    _updateHoverState();
+    _updateHoverState(w);
 
     auto incantationStorage = w.get_storage<ComponentIncantationEffect>();
     if (incantationStorage) {
@@ -298,7 +298,7 @@ void RenderSystem::_handleInput(World& w, float dt) {
     }
 }
 
-void RenderSystem::_updateHoverState() {
+void RenderSystem::_updateHoverState(World& w) {
     raylib::Ray mouseRay = _camera.GetMouseRay(raylib::Mouse::GetPosition());
     _hoveredX = InvalidTileCoord;
     _hoveredZ = InvalidTileCoord;
@@ -307,8 +307,26 @@ void RenderSystem::_updateHoverState() {
         if (t > 0) {
             raylib::Vector3 p =
                 (raylib::Vector3)mouseRay.position + (raylib::Vector3)mouseRay.direction * t;
-            _hoveredX = (int)std::round(p.x);
-            _hoveredZ = (int)std::round(p.z);
+            int potentialX = (int)std::round(p.x);
+            int potentialZ = (int)std::round(p.z);
+
+            // Validate bounds
+            int mapWidth = 0;
+            int mapHeight = 0;
+            auto mapStorage = w.get_storage<MapTag>();
+            if (mapStorage && mapStorage->size() > 0) {
+                Entity mapEntity = mapStorage->begin()->first;
+                if (auto sizeComp = w.get_component<Size>(mapEntity)) {
+                    mapWidth = sizeComp->width;
+                    mapHeight = sizeComp->height;
+                }
+            }
+
+            if (potentialX >= 0 && potentialX < mapWidth && potentialZ >= 0 &&
+                potentialZ < mapHeight) {
+                _hoveredX = potentialX;
+                _hoveredZ = potentialZ;
+            }
         }
     }
 }
