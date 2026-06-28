@@ -93,6 +93,7 @@ impl Default for Config {
             names: vec!["TeamA".to_string(), "TeamB".to_string()],
             clients_nb: 1,
             freq: 100,
+            seed: None,
         }
     }
 }
@@ -105,6 +106,7 @@ pub struct Config {
     pub names: Vec<String>,
     pub clients_nb: u32,
     pub freq: u32,
+    pub seed: Option<String>,
 }
 
 ///
@@ -151,6 +153,7 @@ pub fn parse_server_args(args: &[String]) -> Result<Config, String> {
     let mut names: Option<Vec<String>> = None;
     let mut clients_nb: Option<u32> = None;
     let mut freq: Option<u32> = None;
+    let mut seed: Option<String> = None;
     let mut i = 1;
 
     while i < args.len() {
@@ -179,6 +182,11 @@ pub fn parse_server_args(args: &[String]) -> Result<Config, String> {
                 i += 1;
                 let value = args.get(i).ok_or("Missing value for -f")?;
                 freq = Some(value.parse::<u32>().map_err(|_| "Invalid value for -f")?);
+            }
+            "--seed" => {
+                i += 1;
+                let value = args.get(i).ok_or("Missing value for --seed")?;
+                seed = Some(value.clone());
             }
             "-n" => {
                 i += 1;
@@ -210,6 +218,7 @@ pub fn parse_server_args(args: &[String]) -> Result<Config, String> {
         clients_nb: clients_nb.ok_or("Missing -c")?,
         names: names.unwrap_or_else(|| vec!["team".to_string()]),
         freq: freq.unwrap_or(100),
+        seed,
     })
 }
 
@@ -284,6 +293,7 @@ mod tests {
             names: vec!["alpha".to_string(), "beta".to_string()],
             clients_nb: 4,
             freq: 20,
+            seed: None,
         };
 
         assert_eq!(parse_server_args(&arguments).unwrap(), config);
@@ -306,6 +316,7 @@ mod tests {
             names: vec!["team".to_string()],
             clients_nb: 4,
             freq: 100,
+            seed: None,
         };
 
         assert_eq!(parse_server_args(&arguments).unwrap(), config);

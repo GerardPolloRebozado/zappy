@@ -200,6 +200,7 @@ mod tests {
             ),
             clients_nb: 1,
             team_names: vec!["existing_team".to_string()],
+            seed: None,
         };
 
         let (mock_socket, output) = network::MockSocket::new(vec![]);
@@ -246,6 +247,7 @@ mod tests {
             world: crate::ecs::storage::World::default(),
             clients_nb: 1,
             team_names: vec!["existing_team".to_string()],
+            seed: None,
         };
 
         let ai = server.world.spawn();
@@ -311,7 +313,10 @@ mod tests {
 
     #[test]
     fn test_ai_auth() {
-        let mut server = Server::default();
+        let mut server = Server::new(crate::utils::Config {
+            port: 0,
+            ..crate::utils::Config::default()
+        });
 
         let (mock_socket, _) = network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
@@ -358,6 +363,7 @@ mod tests {
             ),
             clients_nb: 10,
             team_names: vec!["existing_team".to_string()],
+            seed: None,
         };
 
         let (mock_socket, _) = network::MockSocket::new(vec![]);

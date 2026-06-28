@@ -33,6 +33,7 @@ pub unsafe extern "C" fn zappy_init(
         names,
         clients_nb,
         freq,
+        seed: None,
     };
 
     let mut server = Server::new(config);

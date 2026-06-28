@@ -264,6 +264,7 @@ mod tests {
             ),
             clients_nb: 1,
             team_names: vec!["TeamA".to_string(), "TeamB".to_string()],
+            seed: None,
         }
     }
 
