@@ -1,13 +1,19 @@
 //! Gravity pull effect for the [`MapEvent::GravityWell`](crate::ecs::map_events::MapEvent::GravityWell) anomaly.
 //!
-//! Called by the map-event system every 5 ticks while the event is active.
-//! Each pull moves eligible inhabitants one tile closer to the vortex center.
+//! Called by the map-event system while the event is active.
+//! Each pull drags inhabitants within `R = min(W, H) / 4` one tile closer to the vortex center.
+
+use log::info;
 
 use crate::ecs::{
-    components::{inhabitant_tag::InhabitantTag, position::Position},
+    components::{
+        inhabitant::Inhabitant, inhabitant_tag::InhabitantTag, position::Position, tile::Tile,
+    },
     map_events::{GRAVITY_WELL_PULL_INTERVAL, MapEvent},
     storage::{Entity, World},
+    systems::task::broadcast_event,
 };
+use crate::protocol::ServerEvent;
 
 /// Returns every [`InhabitantTag`] entity with its current tile coordinates.
 fn get_inhabitants(world: &World) -> Option<Vec<(Entity, u32, u32)>> {
@@ -61,14 +67,20 @@ fn step_toward(x: u32, y: u32, dx: i64, dy: i64, width: u32, height: u32) -> (u3
 }
 
 /// Pulls eligible inhabitants one tile closer to the gravity center (GravityWell effect).
+///
+/// Only inhabitants within `R = min(W, H) / 4` (toroidal Chebyshev distance) are affected.
+/// Those already on the center tile are left in place.
 pub fn apply_gravity_pull(world: &mut World, center_x: u32, center_y: u32) {
     let width = world.map_size.width;
     let height = world.map_size.height;
     let radius = width.min(height) / 4;
 
     let Some(entities_to_move) = get_inhabitants(world) else {
+        info!("Gravity pull: no inhabitants found");
         return;
     };
+
+    let mut moved_entities: Vec<Entity> = Vec::new();
 
     for (entity, x, y) in entities_to_move {
         let (dx, dy) = toroidal_delta_to(x, y, center_x, center_y, width, height);
@@ -83,6 +95,14 @@ pub fn apply_gravity_pull(world: &mut World, center_x: u32, center_y: u32) {
         if let Some(pos) = world.get_component_mut::<Position>(entity) {
             pos.x = new_x;
             pos.y = new_y;
+            moved_entities.push(entity);
+        }
+    }
+
+    for entity in moved_entities {
+        Tile::trigger_wormhole_if_any(world, entity);
+        if let Some(inhabitant) = Inhabitant::get(entity, world) {
+            broadcast_event(world, ServerEvent::player_position(&inhabitant));
         }
     }
 }
@@ -175,5 +195,53 @@ mod tests {
         let pos = world.get_component::<Position>(entity).unwrap();
         assert_eq!(pos.x, 0, "should wrap around toward center_x=9 via x=0");
         assert_eq!(pos.y, 0, "should wrap around toward center_y=9 via y=0");
+    }
+
+    #[test]
+    fn ignores_inhabitant_outside_radius() {
+        // On a 100x100 map, R = 25. A player 40 tiles from center is outside the pull zone.
+        let mut world = world_with_tiles(100, 100);
+        let entity = world.spawn();
+        world.add_component(entity, InhabitantTag);
+        world.add_component(entity, Position { x: 10, y: 10 });
+
+        apply_gravity_pull(&mut world, 50, 50);
+
+        let pos = world.get_component::<Position>(entity).unwrap();
+        assert_eq!(
+            (pos.x, pos.y),
+            (10, 10),
+            "player outside radius should not move"
+        );
+    }
+
+    #[test]
+    fn pulls_inhabitant_inside_radius() {
+        let mut world = world_with_tiles(100, 100);
+        let entity = world.spawn();
+        world.add_component(entity, InhabitantTag);
+        world.add_component(entity, Position { x: 48, y: 48 });
+
+        apply_gravity_pull(&mut world, 50, 50);
+
+        let pos = world.get_component::<Position>(entity).unwrap();
+        assert_eq!(
+            (pos.x, pos.y),
+            (49, 49),
+            "player inside radius should be pulled"
+        );
+    }
+
+    #[test]
+    fn inhabitant_on_center_does_not_move() {
+        let mut world = world_with_tiles(10, 10);
+        let entity = world.spawn();
+        world.add_component(entity, InhabitantTag);
+        world.add_component(entity, Position { x: 5, y: 5 });
+
+        apply_gravity_pull(&mut world, 5, 5);
+
+        let pos = world.get_component::<Position>(entity).unwrap();
+        assert_eq!((pos.x, pos.y), (5, 5), "player on center should stay put");
     }
 }
