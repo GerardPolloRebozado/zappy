@@ -5,6 +5,7 @@
 Thumbs.db
 desktop.ini
 tensorboard_logs
+.env
 .zed
 
 .idea/

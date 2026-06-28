@@ -126,7 +126,10 @@ mod tests {
     /// gets an existing resource using tasks
     #[test]
     fn get_resource() {
-        let mut server = Server::default();
+        let mut server = Server::new(crate::utils::Config {
+            port: 0,
+            ..crate::utils::Config::default()
+        });
 
         let (mock_socket, _) = crate::ecs::components::network::MockSocket::new(vec![]);
         let network_data = NetworkData::new(mock_socket);
@@ -202,6 +205,7 @@ mod tests {
             ),
             clients_nb: 1,
             team_names: vec!["existing_team".to_string()],
+            seed: None,
         };
 
         let (mock_socket, _) = crate::ecs::components::network::MockSocket::new(vec![]);

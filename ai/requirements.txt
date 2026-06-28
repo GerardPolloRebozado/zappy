@@ -5,3 +5,4 @@ gymnasium
 numpy
 pytest
 tensorboard
+openai

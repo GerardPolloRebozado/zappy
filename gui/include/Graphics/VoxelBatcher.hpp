@@ -21,7 +21,7 @@ class VoxelBatcher {
     void beginSolidBatch();
     void addTopFace(const raylib::Vector3& pos, float w, float h, float l);
     void addTopFaceUV(const raylib::Vector3& pos, float w, float h, float l, float u, float v,
-                      float uw, float vh);
+                      float uw, float vh, const raylib::Color& color = {255, 255, 255, 255});
     void addSideFaces(const raylib::Vector3& pos, float w, float h, float l,
                       const raylib::Color& color, bool drawFront, bool drawBack, bool drawLeft,
                       bool drawRight);

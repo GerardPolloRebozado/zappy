@@ -12,6 +12,7 @@
 #include "Components/ComponentInhabitant.hpp"
 #include "Components/ComponentShared.hpp"
 #include "Components/ComponentTags.hpp"
+#include "Logging/LogConfig.hpp"
 #include "Logging/Logger.hpp"
 #include <algorithm>
 #include <memory>
@@ -51,8 +52,12 @@ class CommandPlayerExpulsion : public ACommand {
 
         auto [executorEntity, executorPos, executorOri] = *executorData;
 
+        // Add Expulsions effects
+        world.add_component<EventExpulsion>(executorEntity, EventExpulsion{});
+
         auto victims = findVictims(world, posStorage, executorEntity, executorPos);
         if (victims.empty()) {
+            log_info("No players to eject in this tile");
             return;
         }
 
@@ -63,9 +68,6 @@ class CommandPlayerExpulsion : public ACommand {
         int mapWidth = sizeIt->begin()->second->width;
         int mapHeight = sizeIt->begin()->second->height;
 
-        (void)victims;
-        (void)mapWidth;
-        (void)mapHeight;
         log_info("Protocol: Player #" + std::to_string(executorId) +
                  " expelled everyone on their tile");
     }
@@ -120,27 +122,10 @@ class CommandPlayerExpulsion : public ACommand {
             }
             if (pos->x == executorPos->x && pos->y == executorPos->y) {
                 victims.push_back(pos);
+                world.add_component<EventExpulsed>(entity, EventExpulsed{});
             }
         }
         return victims;
-    }
-
-    static void move_forward(const std::shared_ptr<Position>& pos, Orientation::Direction direction,
-                             int mapWidth, int mapHeight) {
-        switch (direction) {
-            case Orientation::N:
-                pos->y = (pos->y + mapHeight - 1) % mapHeight;
-                break;
-            case Orientation::E:
-                pos->x = (pos->x + 1) % mapWidth;
-                break;
-            case Orientation::S:
-                pos->y = (pos->y + 1) % mapHeight;
-                break;
-            case Orientation::W:
-                pos->x = (pos->x + mapWidth - 1) % mapWidth;
-                break;
-        }
     }
 };
 

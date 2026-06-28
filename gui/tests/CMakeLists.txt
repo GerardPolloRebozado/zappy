@@ -13,6 +13,7 @@ set(TEST_SOURCES
     test_misc.cpp
     test_ui.cpp
     test_particle_system.cpp
+    test_simulation_system.cpp
 )
 
 add_executable(unit_tests ${TEST_SOURCES})

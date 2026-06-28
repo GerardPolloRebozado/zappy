@@ -10,7 +10,7 @@ sys.path.insert(
 )
 
 from src.client import ZappyAiClient
-from src.strategy import run_client, run_manual
+from src.strategy import run_client, run_manual, run_llm
 
 try:
     from stable_baselines3 import PPO
@@ -164,6 +164,9 @@ def main():
         "-m", "--manual", action="store_true", help="starts the game in manual mode"
     )
     parser.add_argument(
+        "-llm", "--llm", action="store_true", help="starts the game in LLM mode"
+    )
+    parser.add_argument(
         "--ai", action="store_true", help="starts the game using the trained AI model"
     )
     parser.add_argument(
@@ -181,7 +184,9 @@ def main():
 
         client = ZappyAiClient(args.port, args.name, args.ip)
         if client.connect() == 0:
-            if args.manual:
+            if args.llm:
+                run_llm(client)
+            elif args.manual:
                 run_manual(client)
             elif args.ai:
                 run_hybrid_ai(client, args.name, args.model)

@@ -1,3 +1,7 @@
+#include "Components/ComponentShared.hpp"
+#include "Components/ComponentTags.hpp"
+#include "Components/FollowingEntity.hpp"
+#include "ECS/World.hpp"
 #include "Graphics/AssetManager.hpp"
 #include "UI/UIButton.hpp"
 #include "UI/UIInput.hpp"
@@ -50,6 +54,66 @@ Test(ui_input, default_state, .init = setup_ui_tests, .fini = teardown_ui_tests)
     UIInput input({0, 0, 100, 20}, "Test", "Placeholder", 256, 0);
 
     cr_assert_eq(input.getText(), "Test");
+}
+
+Test(following_entity, toggle_follow_on) {
+    World world;
+    Entity player = world.spawn();
+    world.add_component<ServerId>(player, ServerId{42});
+    world.add_component<Position>(player, Position{5, 5});
+    world.add_component<InhabitantTag>(player, InhabitantTag{});
+
+    auto storage = world.get_storage<FollowingEntity>();
+    cr_assert(storage == nullptr || storage->size() == 0, "No entity should be followed initially");
+
+    world.add_component<FollowingEntity>(player, FollowingEntity{.entity = player});
+
+    storage = world.get_storage<FollowingEntity>();
+    cr_assert_not_null(storage.get());
+    cr_assert_eq(storage->size(), 1);
+    cr_assert(storage->begin()->first == player);
+}
+
+Test(following_entity, toggle_follow_off) {
+    World world;
+    Entity player = world.spawn();
+    world.add_component<ServerId>(player, ServerId{7});
+    world.add_component<Position>(player, Position{3, 3});
+    world.add_component<InhabitantTag>(player, InhabitantTag{});
+
+    world.add_component<FollowingEntity>(player, FollowingEntity{.entity = player});
+
+    auto storage = world.get_storage<FollowingEntity>();
+    cr_assert_eq(storage->size(), 1);
+
+    storage->clear();
+    cr_assert_eq(storage->size(), 0, "Follow should be cleared after toggle off");
+}
+
+Test(following_entity, switch_follow_target) {
+    World world;
+    Entity player1 = world.spawn();
+    world.add_component<ServerId>(player1, ServerId{1});
+    world.add_component<Position>(player1, Position{0, 0});
+    world.add_component<InhabitantTag>(player1, InhabitantTag{});
+
+    Entity player2 = world.spawn();
+    world.add_component<ServerId>(player2, ServerId{2});
+    world.add_component<Position>(player2, Position{1, 1});
+    world.add_component<InhabitantTag>(player2, InhabitantTag{});
+
+    world.add_component<FollowingEntity>(player1, FollowingEntity{.entity = player1});
+
+    auto storage = world.get_storage<FollowingEntity>();
+    cr_assert_eq(storage->size(), 1);
+    cr_assert(storage->begin()->first == player1);
+
+    storage->clear();
+    world.add_component<FollowingEntity>(player2, FollowingEntity{.entity = player2});
+
+    storage = world.get_storage<FollowingEntity>();
+    cr_assert_eq(storage->size(), 1);
+    cr_assert(storage->begin()->first == player2);
 }
 
 Test(ui_manager, manage_components, .init = setup_ui_tests, .fini = teardown_ui_tests) {

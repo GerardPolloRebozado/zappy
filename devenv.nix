@@ -24,6 +24,7 @@
     pkgs.libxi
     pkgs.libxrandr
     pkgs.zlib
+    pkgs.stdenv.cc.cc.lib
   ];
 
   # https://devenv.sh/packages/
@@ -51,6 +52,9 @@
     pkgs.ruff
     pkgs.clang-tools
     pkgs.zlib
+    pkgs.pyright
+    pkgs.basedpyright
+    pkgs.nodejs
   ];
 
   # https://devenv.sh/languages/

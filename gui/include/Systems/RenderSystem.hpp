@@ -55,6 +55,9 @@ class RenderSystem {
      */
     void update(World& w, float dt);
 
+    void renderShowEvents(World& w);
+    void _reanderMapEvents(World& w, const std::string& event, Entity entity);
+
     /**
      * @brief Main draw loop for the rendering system.
      *
@@ -93,6 +96,12 @@ class RenderSystem {
      */
     std::optional<Entity> getSelectedPlayer() const { return _selectedPlayer; }
 
+    /**
+     * @brief Signals that a UI element consumed the current frame's click.
+     * Prevents _handleInput from processing the same click as a tile/player selection.
+     */
+    void consumeClick() { _clickConsumedByUI = true; }
+
   private:
     /**
      * @brief Lazily loads textures and models once the OpenGL context is ready.
@@ -110,11 +119,14 @@ class RenderSystem {
      * @brief Renders the terrain tiles based on their types and positions.
      * @param w The world to fetch terrain data from.
      */
+    void _render3DMapEvents(World& w);
+    void _updateMapEvents(World& w, float dt);
     void _renderTerrain(World& w);
     void _renderEggs(World& w);
     void _renderTombs(World& w);
     void _renderParticles(World& w);
     void _renderIncantations(World& w);
+    void _renderWormholes(World& w);
     void _renderBackground(World& w);
     void _renderCelestials(World& w);
 
@@ -143,12 +155,11 @@ class RenderSystem {
      * @param z The Z coordinate of the tile.
      */
     void _renderHoverEffect(int x, int z);
-
     /**
      * @brief Updates the internal state of which tile is currently under the mouse cursor.
      * Uses raycasting from the screen to the world ground plane.
      */
-    void _updateHoverState();
+    void _updateHoverState(World& w);
 
     /**
      * @brief Update camera position with the current following entity.
@@ -166,7 +177,10 @@ class RenderSystem {
     std::optional<Entity> _selectedPlayer = std::nullopt;
 
     bool _showDebugHud = false;
+    bool _clickConsumedByUI = false;
     void _renderDebugHud(World& w);
+
+    std::vector<std::string> eventsRunning;
 };
 } // namespace zappy
 

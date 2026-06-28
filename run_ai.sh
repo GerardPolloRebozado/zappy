@@ -1,5 +1,3 @@
-#!/bin/bash
-
 PORT=8080
 IP="localhost"
 COUNT=1

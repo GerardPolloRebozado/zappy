@@ -4,7 +4,7 @@ use crate::commands::{gev, ppo};
 use crate::ecs::components::level::Level;
 use crate::ecs::components::network::NetworkData;
 use crate::ecs::components::tile::Tile;
-use crate::ecs::map_events::map_event_from_name;
+use crate::ecs::map_events::{MapEvent, map_event_from_name};
 use crate::ecs::map_size;
 use crate::ecs::storage::{Entity, World};
 use crate::ecs::systems::map_event::activate_map_event;
@@ -151,7 +151,15 @@ pub fn handle_gui_command(server: &mut Server, entity: Entity, request: Request)
             } else if let Some(event) = map_event_from_name(&name, width, height) {
                 let now = Date::now().to_timestamp();
                 activate_map_event(&mut server.world, event, now);
-                Some(format!("mev {name}"))
+                let response = if let MapEvent::GravityWell {
+                    center_x, center_y, ..
+                } = &server.world.map_event
+                {
+                    format!("mev {name} {center_x} {center_y}")
+                } else {
+                    format!("mev {name}")
+                };
+                Some(response)
             } else {
                 None
             };
@@ -256,6 +264,7 @@ mod tests {
             ),
             clients_nb: 1,
             team_names: vec!["TeamA".to_string(), "TeamB".to_string()],
+            seed: None,
         }
     }
 

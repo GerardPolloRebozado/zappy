@@ -42,8 +42,38 @@ void AssetManager::_loadModels() {
         _models["tree_group_1"] = std::make_unique<raylib::Model>("assets/models/tree_group_1.obj");
         _models["tree_group_2"] = std::make_unique<raylib::Model>("assets/models/tree_group_2.obj");
 
+        _models["alien_tree_1"] = std::make_unique<raylib::Model>("assets/models/alien_tree_1.obj");
+        _models["alien_tree_2"] = std::make_unique<raylib::Model>("assets/models/alien_tree_2.obj");
+        _models["alien_tree_group_1"] =
+            std::make_unique<raylib::Model>("assets/models/alien_tree_group_1.obj");
+        _models["alien_tree_group_2"] =
+            std::make_unique<raylib::Model>("assets/models/alien_tree_group_2.obj");
+
+        _models["bush_1"] = std::make_unique<raylib::Model>("assets/models/bush_1.obj");
+        _models["bush_2"] = std::make_unique<raylib::Model>("assets/models/bush_2.obj");
+        _models["grass_item_1"] = std::make_unique<raylib::Model>("assets/models/grass_item_1.obj");
+        _models["grass_item_2"] = std::make_unique<raylib::Model>("assets/models/grass_item_2.obj");
+
+        _models["desert_rock_1"] =
+            std::make_unique<raylib::Model>("assets/models/desert_rock_1.obj");
+        _models["desert_rock_2"] =
+            std::make_unique<raylib::Model>("assets/models/desert_rock_2.obj");
+        _models["desert_rock_3"] =
+            std::make_unique<raylib::Model>("assets/models/desert_rock_3.obj");
+
+        _models["desert_tree_1"] =
+            std::make_unique<raylib::Model>("assets/models/desert_tree_1.obj");
+        _models["desert_tree_2"] =
+            std::make_unique<raylib::Model>("assets/models/desert_tree_2.obj");
+        _models["desert_tree_3"] =
+            std::make_unique<raylib::Model>("assets/models/desert_tree_3.obj");
+
         _models["rock1"] = std::make_unique<raylib::Model>("assets/models/rock1.obj");
         _models["rock2"] = std::make_unique<raylib::Model>("assets/models/rock2.obj");
+
+        _models["mountain_1"] = std::make_unique<raylib::Model>("assets/models/mountain_1.obj");
+        _models["mountain_2"] = std::make_unique<raylib::Model>("assets/models/mountain_2.obj");
+        _models["mountain_3"] = std::make_unique<raylib::Model>("assets/models/mountain_3.obj");
 
         _models["skull"] = std::make_unique<raylib::Model>("assets/models/tomb/skull_candle.obj");
 
