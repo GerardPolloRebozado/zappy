@@ -54,10 +54,17 @@ void UIHudPanel::render() {
         _bounds.DrawLines(raylib::Color(0, 100, 255, 255), 2.0f);
     }
 
-    raylib::Text infoText("Tile [" + std::to_string(selX) + ", " + std::to_string(selZ) + "]", 18,
-                          raylib::Color(80, 50, 40, 255),
-                          AssetManager::getInstance().getFont("TextFont"), 1.5f);
-    infoText.Draw(_bounds.x + 30, _bounds.y + 30);
+    auto drawTextShadow = [](const std::string& txt, float x, float y, float size,
+                             raylib::Color col) {
+        raylib::Text(txt, size, raylib::Color::Black(),
+                     AssetManager::getInstance().getFont("TextFont"), 1.5f)
+            .Draw(x + 1, y + 1);
+        raylib::Text(txt, size, col, AssetManager::getInstance().getFont("TextFont"), 1.5f)
+            .Draw(x, y);
+    };
+
+    drawTextShadow("Tile [" + std::to_string(selX) + ", " + std::to_string(selZ) + "]",
+                   _bounds.x + 15, _bounds.y + 15, 18, raylib::Color(255, 200, 100, 255));
 
     auto terrainStorage = _world.get_storage<TerrainType>();
     std::shared_ptr<Inventory> inv = nullptr;
@@ -74,7 +81,7 @@ void UIHudPanel::render() {
         }
     }
 
-    int yOffset = _bounds.y + 45;
+    int yOffset = _bounds.y + 40;
 
     if (terrain) {
         std::string biomeName = "Unknown";
@@ -111,15 +118,16 @@ void UIHudPanel::render() {
                 biomeName = "Magnetic Tundra";
                 biomeEffect = "Random Bcast Dir";
                 break;
+            case TerrainType::WORMHOLE:
+                biomeName = "Wormhole";
+                biomeEffect = "Teleports player";
+                break;
         }
-        raylib::Text(biomeName, 16, raylib::Color(60, 40, 30, 255),
-                     AssetManager::getInstance().getFont("TextFont"), 1.5f)
-            .Draw(_bounds.x + 15, (float)yOffset);
+        drawTextShadow(biomeName, _bounds.x + 15, (float)yOffset, 16, raylib::Color::White());
         yOffset += 20;
         if (!biomeEffect.empty()) {
-            raylib::Text(biomeEffect, 12, raylib::Color(150, 60, 30, 255),
-                         AssetManager::getInstance().getFont("TextFont"), 1.5f)
-                .Draw(_bounds.x + 15, (float)yOffset);
+            drawTextShadow(biomeEffect, _bounds.x + 15, (float)yOffset, 12,
+                           raylib::Color(200, 150, 100, 255));
             yOffset += 15;
         }
     }
@@ -130,30 +138,42 @@ void UIHudPanel::render() {
         auto drawResource = [&](const std::string& name, int count, raylib::Color col) {
             if (count > 0) {
                 std::string text = name + ": " + std::to_string(count);
-                raylib::Text(text, 14, col, AssetManager::getInstance().getFont("TextFont"), 1.5f)
-                    .Draw(_bounds.x + 20, (float)yOffset);
+                drawTextShadow(text, _bounds.x + 20, (float)yOffset, 14, col);
                 yOffset += 18;
             }
         };
 
-        drawResource("Food", inv->food, raylib::Color(245, 160, 100, 255));         // Peach Orange
-        drawResource("Linemate", inv->linemate, raylib::Color(110, 210, 120, 255)); // Mint Green
+        drawResource("Food", inv->food, raylib::Color(255, 180, 120, 255));         // Peach Orange
+        drawResource("Linemate", inv->linemate, raylib::Color(140, 240, 150, 255)); // Mint Green
         drawResource("Deraumere", inv->deraumere,
-                     raylib::Color(100, 180, 240, 255));                      // Soft Sky Blue
-        drawResource("Sibur", inv->sibur, raylib::Color(190, 130, 230, 255)); // Lavender Purple
-        drawResource("Mendiane", inv->mendiane, raylib::Color(240, 220, 110, 255)); // Warm Yellow
-        drawResource("Phiras", inv->phiras, raylib::Color(235, 120, 120, 255));     // Coral Red
-        drawResource("Thystame", inv->thystame, raylib::Color(245, 245, 245, 255)); // Bright White
+                     raylib::Color(130, 200, 255, 255));                      // Soft Sky Blue
+        drawResource("Sibur", inv->sibur, raylib::Color(210, 150, 255, 255)); // Lavender Purple
+        drawResource("Mendiane", inv->mendiane, raylib::Color(255, 240, 140, 255)); // Warm Yellow
+        drawResource("Phiras", inv->phiras, raylib::Color(255, 140, 140, 255));     // Coral Red
+        drawResource("Thystame", inv->thystame, raylib::Color(255, 255, 255, 255)); // Bright White
+    }
+
+    int eggCount = 0;
+    auto posStorage = _world.get_storage<Position>();
+    if (posStorage) {
+        for (auto const& [entity, pos] : *posStorage) {
+            if (pos && pos->x == selX && pos->y == selZ && _world.get_component<EggTag>(entity)) {
+                eggCount++;
+            }
+        }
+    }
+
+    if (eggCount > 0) {
+        drawTextShadow("Eggs: " + std::to_string(eggCount), _bounds.x + 20, (float)yOffset, 14,
+                       raylib::Color(255, 230, 180, 255));
+        yOffset += 18;
     }
 
     yOffset += 10;
-    raylib::Text("Entities:", 18, raylib::Color(40, 70, 100, 255),
-                 AssetManager::getInstance().getFont("TextFont"), 1.5f)
-        .Draw(_bounds.x + 15, (float)yOffset);
+    drawTextShadow("Entities:", _bounds.x + 15, (float)yOffset, 16, raylib::Color::White());
     yOffset += 25;
 
     bool foundPlayer = false;
-    auto posStorage = _world.get_storage<Position>();
     raylib::Vector2 mousePos = raylib::Mouse::GetPosition();
     auto followStorage = _world.get_storage<FollowingEntity>();
     bool isFollowingAny = followStorage && followStorage->size() > 0;
@@ -172,9 +192,8 @@ void UIHudPanel::render() {
                 bool isHovered = mousePos.CheckCollision(row);
                 bool isFollowed = isFollowingAny && followedEntity == entity;
 
-                raylib::Text("Player " + idStr, 14, raylib::Color(150, 40, 40, 255),
-                             AssetManager::getInstance().getFont("TextFont"), 1.5f)
-                    .Draw(_bounds.x + 30, (float)yOffset);
+                drawTextShadow("Player " + idStr, _bounds.x + 30, (float)yOffset, 14,
+                               raylib::Color(255, 120, 120, 255));
 
                 if (raylib::Mouse::IsButtonPressed(MOUSE_BUTTON_LEFT) && isHovered) {
                     if (followStorage) {
@@ -192,9 +211,8 @@ void UIHudPanel::render() {
     }
 
     if (!foundPlayer) {
-        raylib::Text("None", 16, raylib::Color(100, 80, 80, 255),
-                     AssetManager::getInstance().getFont("TextFont"), 1.5f)
-            .Draw(_bounds.x + 30, (float)yOffset);
+        drawTextShadow("No Players", _bounds.x + 30, (float)yOffset, 14,
+                       raylib::Color(200, 200, 200, 150));
     }
 
     auto selectedPlayer = _renderSystem.getSelectedPlayer();
@@ -230,14 +248,7 @@ void UIHudPanel::render() {
             std::string idStr =
                 serverId ? std::to_string(serverId->id) : std::to_string(ePlayer.id());
 
-            auto drawTextShadow = [](const std::string& txt, float x, float y, float size,
-                                     raylib::Color col) {
-                raylib::Text(txt, size, raylib::Color::Black(),
-                             AssetManager::getInstance().getFont("TextFont"), 1.5f)
-                    .Draw(x + 2, y + 2);
-                raylib::Text(txt, size, col, AssetManager::getInstance().getFont("TextFont"), 1.5f)
-                    .Draw(x, y);
-            };
+            // Shadow text renderer (reused from top of render())
 
             // Left Panel: Identity
             auto& iconTeam = AssetManager::getInstance().getTexture("hud_icon_team");
