@@ -572,4 +572,139 @@ Evaluation file 2: *[eval_20260628_121953.md](../training/results/eval_20260628_
   - Because we reduced the food reward to `0.2`, taking food carried too much risk (a `-0.5` penalty if the tile is empty) compared to walking `FORWARD` (which yields `+0.1` with 0 risk). The agent learned to walk forward endlessly to farm the movement reward, completely ignoring its survival and starving.
 - *Adjustments needed for the next run:*
   - Restored the food pickup reward back to **`2.0`** in `ZappyEnv.py`. Since the ignore teammate penalty is now restricted to movement actions only, players can search and eat food safely without getting hit by radio penalties.
-  - Run two 8,000,000 timestep training run. One from the stable `zappy_level2_v2` model and the other from `zappy_coordination_v2` model, using the restored food reward and movement-restricted radio penalty.
+  - Run a new 8,000,000 timestep training run starting from the stable `zappy_level2_v2` model using the restored food reward and movement-restricted radio penalty.
+
+
+## Run #17
+- **Base Model**: `Loaded from zappy_level2_v2`
+- **Output Model Name**: `zappy_coordination_v2_1`
+- **Timesteps Run**: `8,000,000`
+- **Real-World Duration**: `57m 38s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 8000000 -f 1000 -m zappy_coordination_v2_1 -l zappy_level2_v2
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v2_1 --teams team01 --player 2 --width 10 --height 10
+```
+- **Average Level Achieved**: `1.63`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `105.00`
+- **Max Turns Survived**: `863`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260628_135310.md](../training/results/eval_20260628_135310.md)*
+
+#### Observations
+- *Key observations*
+  - Average turns survived increased to 105.00 turns (Max 863), confirming that restoring the food reward to `2.0` solved the starvation collapse.
+  - The model was evaluated with `2 PPO agents` together, but since the model had learned to never broadcast (due to the `-0.1` penalty during training), they remained 100% silent. Thus, they did not coordinate and stayed at Level 2.
+- *Adjustments needed for the next run:*
+  - Removed Broadcast Penalty. Modified `ZappyEnv.py` to change the broadcast penalty from `-0.1` to `+0.0`. This will allow the agents to learn to broadcast coordinate beacons when they have the stones or when food is low, enabling them to communicate directly with each other.
+  - Run a new 5,000,000 timestep training run loading from the clean, stable `zappy_level2_v2` model with this new zero-penalty broadcast structure.
+
+
+## Run #18
+- **Base Model**: `Loaded from zappy_level2_v2`
+- **Output Model Name**: `zappy_coordination_v3`
+- **Timesteps Run**: `5,000,000`
+- **Real-World Duration**: `28m 54s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 5000000 -f 1000 -m zappy_coordination_v3 -l zappy_level2_v2
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v3 --teams team01 --player 2 --width 10 --height 10
+```
+- **Average Level Achieved**: `1.67`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `64`
+- **Max Turns Survived**: `120`
+- **Rating Tier**: `Tier 1`
+
+Evaluation file: *[eval_20260628_145309.md](../training/results/eval_20260628_145309.md)*
+
+#### Observations
+- *Key observations*
+  - Despite removing the `-0.1` broadcast penalty (setting it to `+0.0`), the PPO agent still broadcasted 0 times during the entire evaluation.
+  - Because other actions like moving (`+0.1`), eating (`+2.0`), or gathering stones (`+4.0`) yield positive rewards, whereas broadcasting fallback yields `+0.0`, the expected value of broadcasting remains relatively low. PPO still pruned it to 0.0% probability.
+  - Stone gathering increased significantly to 13.4% (846 stones), showing that the agent is actively collecting materials when not starving.
+- *Adjustments needed for the next run:*
+  - Modified `ZappyEnv.py` to set the fallback broadcast reward to **`+0.3`**. This places broadcasting perfectly in the hierarchy (`Food/Stones/Coordination > Broadcast (+0.3) > Walking (+0.1) > Turns (+0.02)`), giving the model a positive incentive to call out to teammates without encouraging radio spamming.
+  - Run a new 2,000,000 timestep training run starting from the stable `zappy_level2_v2` model using the new `+0.3` broadcast reward configuration.
+
+
+## Run #19
+- **Base Model**: `Loaded from zappy_level2_v2`
+- **Output Model Name**: `zappy_coordination_v3`
+- **Timesteps Run**: `2,000,000`
+- **Real-World Duration**: `12m 6s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 2000000 -f 1000 -m zappy_coordination_v3 -l zappy_level2_v2
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v3 --teams team01 --player 2 --width 10 --height 10
+```
+- **Average Level Achieved**: Eval 1 - `1.50` | Eval 2 - `1.69`
+- **Max Level Achieved**: Eval 1 - `2` | Eval 2 -`2`
+- **Average Turns Survived**: Eval - `69.86` | Eval 2 -`63.72`
+- **Max Turns Survived**: Eval 1 - `94` | Eval 2 -`90`
+- **Rating Tier**: Eval 1 - `Tier 1` | Eval 2 - `Tier 1`
+
+Evaluation file 2: *[eval_20260628_153854.md](../training/results/eval_20260628_153854.md)*
+
+Evaluation file 2: *[eval_20260628_153904.md](../training/results/eval_20260628_153904.md)*
+
+#### Observations
+- *Key observations*
+  - Both evaluations showed 0 broadcasts.
+  - `Set Stone` rose to 21.3% - 22.5%.
+  - The pre-trained model `zappy_level2_v2` has never seen a non-zero value at `obs[79]` (the teammate broadcast direction index). Feeding a non-zero value (`1-8` direction) to this untrained feature during training shifted hidden layer activations, corrupting the baseline's survival weights from Step 1. The model collapsed, spammed `Set Stone`, and starved.
+- *Adjustments needed for the next run:*
+  - Rather than training coordinate navigation end-to-end (which collapses the pre-trained weights due to distribution shifts), we implemented a hybrid meta-policy in `evaluate_ai.py` that handles coordinate-steering and stone setting explicitly if teammate beacons are active, and falls back to the clean `zappy_level2_v2` model for survival/gathering.
+  - Tested `zappy_level2_v2` with the hybrid meta-policy on a teammate simulation, achieving a 100% elevation success rate.
+
+
+## Run #20 (Validation & Optimization Run)
+- **Base Model**: `zappy_level2_v2` (with Hybrid Meta-Policy Wrapper)
+- **Output Model Name**: `zappy_level2_v2` (Hybrid)
+- **Timesteps Run**: `N/A` (Pure Evaluation & Wrapper Optimizations)
+- **Real-World Duration**: `N/A`
+
+#### Parameters
+```bash
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level2_v2 --teams team01 --player 2 --width 30 --height 30 --teammates
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+- **Average Level Achieved**: `1.43`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `57.70`
+- **Max Turns Survived**: `71`
+- **Rating Tier**: `Tier 1: Starvation/Survival Failure`
+
+Evaluation file: *[eval_20260628_162221.md](../training/results/eval_20260628_162221.md)*
+
+#### Observations
+- *Key observations*
+  - The desynchronization caused by solar flares and broadcasts is successfully resolved. The socket command responses are in perfect alignment.
+  - Premature incantations are successfully blocked, achieving a 100% success rate on attempted incantations (43/43).
+  - Even with the hunger pathfinding safety wrapper, the sparse resource density on the `30x30` map causes agents to starve in ~57 turns when they run out of food during coordination attempts. This is because their PPO policy hasn't learned to gather food high enough (to a safe baseline of 15+) or walk systematically when no food is in sight.
+  - Because 2,000,000 timesteps is insufficient for multi-agent coordination convergence, the neural network's policy remains highly stochastic. To achieve stable Level 3 ascension, the AI needs a longer training run of 15,000,000+ timesteps in the direct FFI environment.
+  
