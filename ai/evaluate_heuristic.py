@@ -30,21 +30,27 @@ from src.strategy import run_client
 
 
 class EvalClient(ZappyAiClient):
-    def __init__(self, port, name, ip):
+    def __init__(self, port, name, ip, max_actions=0):
         super().__init__(port, name, ip)
         self.action_count = 0
         self.peak_level = 1
+        self.max_actions = max_actions
 
     def wait_for_response(self):
         self.action_count += 1
         result = super().wait_for_response()
         if self.level > self.peak_level:
             self.peak_level = self.level
+        # Safety cap: well-fed clients on a rich map may never starve, which
+        # would make the evaluation hang forever. Stop them after a budget of
+        # actions so the harness always terminates and reports statistics.
+        if self.max_actions and self.action_count >= self.max_actions:
+            self.is_dead = True
         return result
 
 
-def run_client_thread(port, team, host, results, index):
-    client = EvalClient(port, team, host)
+def run_client_thread(port, team, host, results, index, max_actions):
+    client = EvalClient(port, team, host, max_actions)
     if client.connect() != 0:
         results[index] = None
         return
@@ -57,7 +63,7 @@ def run_client_thread(port, team, host, results, index):
     }
 
 
-def run_batch(port, host, teams, clients_per_team):
+def run_batch(port, host, teams, clients_per_team, max_actions):
     threads = []
     n_total = len(teams) * clients_per_team
     results = [None] * n_total
@@ -67,7 +73,7 @@ def run_batch(port, host, teams, clients_per_team):
         for _ in range(clients_per_team):
             t = threading.Thread(
                 target=run_client_thread,
-                args=(port, team, host, results, idx),
+                args=(port, team, host, results, idx, max_actions),
             )
             threads.append(t)
             t.start()
@@ -143,6 +149,12 @@ def main():
         default="-x 10 -y 10 -f 100",
         help="server CLI args (default: -x 10 -y 10 -f 100)",
     )
+    parser.add_argument(
+        "--max-actions",
+        type=int,
+        default=4000,
+        help="max actions per client before stopping it (0 = unlimited, default: 4000)",
+    )
 
     args = parser.parse_args()
     port = args.port
@@ -193,7 +205,7 @@ def main():
                 f"({args.teams} teams × {clients_per_team} clients = "
                 f"{args.teams * clients_per_team} total)..."
             )
-            results = run_batch(port, host, teams, clients_per_team)
+            results = run_batch(port, host, teams, clients_per_team, args.max_actions)
 
             if not results:
                 print("  FAILED — no clients connected")

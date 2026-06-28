@@ -1,39 +1,113 @@
 import math
+import random
 
-from src.utils import ELEVATION_TABLE, can_evolve
+from src.utils import ELEVATION_TABLE
 from src.utils.logging_levels import logger
 
+STONES = ["linemate", "deraumere", "sibur", "mendiane", "phiras", "thystame"]
 
-def get_missing_resources(level, inventory):
-    if level not in ELEVATION_TABLE:
-        return []
-    req = ELEVATION_TABLE[level]
-    missing = []
+# Food units left in the inventory. Each unit feeds the player for 126 time
+# units, so these thresholds trade a small survival buffer against the time
+# spent foraging instead of gathering/grouping.
+FOOD_CRITICAL = 18  # below this, abandon everything and find food
+FOOD_COMFORT = 50  # opportunistically top up to this while convenient
 
-    if inventory.food < 20:
-        missing.append("food")
+# Highest level we actively try to reach. Reaching level 6 only requires
+# coordinating 4 players (the level 4->5 and 5->6 incantations); level 7 needs
+# 6 players gathered at once which is far less reliable.
+GOAL_LEVEL = 6
 
-    if inventory.linemate < req.linemate:
-        missing.append("linemate")
-    if inventory.deraumere < req.deraumere:
-        missing.append("deraumere")
-    if inventory.sibur < req.sibur:
-        missing.append("sibur")
-    if inventory.mendiane < req.mendiane:
-        missing.append("mendiane")
-    if inventory.phiras < req.phiras:
-        missing.append("phiras")
-    if inventory.thystame < req.thystame:
-        missing.append("thystame")
+# How long a sub-group that is too small to incant waits before attempting to
+# merge with another group it can hear (randomised to break the symmetry of two
+# equal groups calling each other forever).
+MERGE_TIMEOUT = 12
+# How long a lone caller waits for company before wandering to look for others.
+LONE_WANDER = 10
 
-    return missing
+
+def _stone(obj, name):
+    return getattr(obj, name, 0)
+
+
+def _missing_current(level, inv):
+    """Stones still missing for the current level's incantation."""
+    req = ELEVATION_TABLE.get(level)
+    if req is None:
+        return set()
+    return {s for s in STONES if _stone(inv, s) < _stone(req, s)}
+
+
+def _has_current_stones(level, inv):
+    req = ELEVATION_TABLE.get(level)
+    if req is None:
+        return False
+    return all(_stone(inv, s) >= _stone(req, s) for s in STONES)
+
+
+def _stockpile_target(level):
+    """Cumulative stones needed to climb from `level` up to GOAL_LEVEL.
+
+    Carrying this whole set lets a single player supply every incantation on the
+    way to the goal, so a grouped team never has to disperse to find stones.
+    """
+    target = {s: 0 for s in STONES}
+    for lvl in range(level, GOAL_LEVEL):
+        req = ELEVATION_TABLE.get(lvl)
+        if req is None:
+            continue
+        for s in STONES:
+            target[s] += _stone(req, s)
+    return target
+
+
+def _stockpile_missing(level, inv):
+    target = _stockpile_target(level)
+    return {s for s in STONES if _stone(inv, s) < target[s]}
+
+
+def _scan_calls(client, level):
+    """Inspect heard broadcasts for rendezvous signals at our level.
+
+    Rendezvous calls carry the caller's group size ("come <level> <count>") so
+    that smaller groups can deterministically flow into the largest audible
+    group instead of two equal groups calling each other forever.
+
+    Returns (best_dir, best_count, go_same_tile):
+      best_dir:     direction (1-8) of the largest "come" group heard from
+                    another tile, or None.
+      best_count:   advertised player count of that group (0 if none).
+      go_same_tile: True if an incantation is starting on our tile.
+    """
+    best_dir = None
+    best_count = 0
+    go_same_tile = False
+    if not getattr(client, "messages", None):
+        return best_dir, best_count, go_same_tile
+
+    for msg in client.messages:
+        text = msg.get("text", "")
+        direction = msg.get("direction", -1)
+        parts = text.split()
+        if len(parts) < 2:
+            continue
+        kind, lvl = parts[0], parts[1]
+        if not lvl.isdigit() or int(lvl) != level:
+            continue
+        if kind == "go" and direction == 0:
+            go_same_tile = True
+        elif kind == "come" and direction > 0:
+            count = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 1
+            if count > best_count:
+                best_count = count
+                best_dir = direction
+    return best_dir, best_count, go_same_tile
 
 
 def move_to_tile(client, tile_index):
+    """Walk to a tile from the level-relative look index using its cone math."""
     if tile_index == 0:
         return True
 
-    logger.info("Calculating route to tile")
     d = int(math.sqrt(tile_index))
     x = tile_index - (d**2 + d)
 
@@ -51,249 +125,172 @@ def move_to_tile(client, tile_index):
     return True
 
 
-def count_players_in_tile(tile):
-    return tile.count("player")
-
-
-def _find_broadcast(client):
-    level_str = f"level {client.level}"
-    if hasattr(client, "messages") and client.messages:
-        for msg in reversed(client.messages):
-            text = msg.get("text", "")
-            if level_str in text and (
-                text.startswith("Elevation") or text.startswith("Incantation")
-            ):
-                return msg
-    return None
-
-
-def _has_zero_broadcast(client):
-    level_str = f"level {client.level}"
-    if hasattr(client, "messages") and client.messages:
-        for msg in reversed(client.messages):
-            text = msg.get("text", "")
-            d = msg.get("direction", -1)
-            if (
-                d == 0
-                and level_str in text
-                and (text.startswith("Elevation") or text.startswith("Incantation"))
-            ):
+def _move_to_visible(client, look, items):
+    """Move to the nearest visible tile holding any wanted item."""
+    for i, tile in enumerate(look):
+        if i == 0:
+            continue
+        for item in tile:
+            if item in items:
+                logger.info(f"Heading to {item} on tile {i}.")
+                move_to_tile(client, i)
                 return True
     return False
 
 
-def take_decision(client):
-    # 0 detect level change (post-incantation) stay together as a group
-    prev_level = getattr(client, "_prev_level", client.level)
-    client._prev_level = client.level
-    if client.level > prev_level:
-        logger.info(
-            f"Level increased: {prev_level} -> {client.level}. Broadcasting next level..."
-        )
-        client.broadcast(f"Elevation {client.name} level {client.level}")
-        client._is_waiting = True
-        client._wait_count = 0
-        client.messages.clear()
-        return
+def _steer(client, direction):
+    """Take one step toward a sound coming from relative direction `direction`."""
+    if direction in (1, 2, 8):
+        client.forward()
+    elif direction in (3, 4, 5):
+        client.left()
+    elif direction in (6, 7):
+        client.right()
+    else:
+        client.forward()
 
+
+def _explore(client):
+    """Wander to discover resources and other players."""
+    client._explore_step = getattr(client, "_explore_step", 0) + 1
+    if client._explore_step % 4 == 0:
+        client.right()
+    else:
+        client.forward()
+
+
+def count_players_in_tile(tile):
+    return tile.count("player")
+
+
+def _perform_incantation(client, level, tile):
+    req = ELEVATION_TABLE[level]
+    logger.info(f"Starting incantation for level {level} -> {level + 1}.")
+    client.broadcast(f"go {level}")
+
+    for s in STONES:
+        for _ in range(_stone(req, s)):
+            logger.debug(f"[SERVER] -> {client.set(s)}")
+
+    res = client.incantation()
+    logger.debug(f"[SERVER] -> incantation: {res}")
+    if isinstance(res, str) and res.strip().lower() == "ko":
+        logger.info("Incantation failed, retrieving dropped stones.")
+        for s in STONES:
+            for _ in range(_stone(req, s)):
+                logger.debug(f"[SERVER] -> {client.take(s)}")
+
+
+def take_decision(client):
     if client.is_dead:
         return
 
-    client._is_waiting = getattr(client, "_is_waiting", False)
-
-    # steering: respond to direction>0 broadcasts
-    # Non-waiting players always steer. Waiting players at level 3+ also steer
-    # when their group is too small for the next level's player requirement.
-    should_steer = not client._is_waiting
-    if client._is_waiting and client.level >= 3:
-        next_level = client.level + 1
-        if next_level in ELEVATION_TABLE:
-            req = ELEVATION_TABLE[next_level]
-            if req.players > 2:
-                should_steer = True
-
-    if should_steer:
-        target_msg = _find_broadcast(client)
-        if target_msg is not None:
-            direction = target_msg.get("direction", -1)
-            # Don't leave the group if a same-level player is on the same tile
-            if direction > 0 and not _has_zero_broadcast(client):
-                logger.info(
-                    f"Received elevation broadcast from direction {direction}. Steering towards it..."
-                )
-                if direction in [1, 2, 8]:
-                    client.forward()
-                elif direction in [3, 4, 5]:
-                    client.left()
-                elif direction in [6, 7]:
-                    client.right()
-                # Broadcast new position so group members follow, then take food
-                if client.level >= 3:
-                    client.broadcast(
-                        f"Elevation {client.name} level {client.level} follow"
-                    )
-                client.take("food")
-                client.messages.clear()
-                return
-
-    # 1a level 3+ beacon: broadcast periodically so others can converge
-    if client.level >= 3 and not client._is_waiting:
-        client._beacon_count = getattr(client, "_beacon_count", 0) + 1
-        beacon_interval = 3 if client.level >= 4 else 6
-        if client._beacon_count % beacon_interval == 0:
-            logger.info(f"Level {client.level} beacon broadcast...")
-            client.broadcast(f"Elevation {client.name} level {client.level}")
-            client.messages.clear()
-            return
-
-    # 1 inventory
     inv = client.inventory()
-    logger.debug(f"[SERVER] -> {inv}")
     if inv is None or isinstance(inv, str):
         logger.error(f"Failed to get inventory: {inv}")
         return
 
-    # 2 look
     look = client.look()
-    logger.debug(f"[SERVER] -> {look}")
     if look is None or isinstance(look, str):
         logger.error(f"Failed to look: {look}")
         return
 
-    current_tile = look[0]
-    players_on_tile = count_players_in_tile(current_tile)
+    tile = look[0]
+    players_here = count_players_in_tile(tile)
+    level = client.level
+    req = ELEVATION_TABLE.get(level)
+    best_dir, best_count, go_same_tile = _scan_calls(client, level)
 
-    # 3 check if can evolve right now
-    if can_evolve(client.level, inv, players_on_tile):
-        req = ELEVATION_TABLE[client.level]
-
-        logger.debug(
-            f"[SERVER] -> {client.broadcast(f'Incantation {client.name} level {client.level}')}"
-        )
-        logger.info(f"Evolving to level {client.level + 1}! Dropping resources...")
-        for _ in range(req.linemate):
-            logger.debug(f"[SERVER] -> {client.set('linemate')}")
-        for _ in range(req.deraumere):
-            logger.debug(f"[SERVER] -> {client.set('deraumere')}")
-        for _ in range(req.sibur):
-            logger.debug(f"[SERVER] -> {client.set('sibur')}")
-        for _ in range(req.mendiane):
-            logger.debug(f"[SERVER] -> {client.set('mendiane')}")
-        for _ in range(req.phiras):
-            logger.debug(f"[SERVER] -> {client.set('phiras')}")
-        for _ in range(req.thystame):
-            logger.debug(f"[SERVER] -> {client.set('thystame')}")
-        res = client.incantation()
-        logger.debug(f"[SERVER] -> {res}")
-        if isinstance(res, str) and res.strip().lower() == "ko":
-            logger.info("Incantation failed! Retrieving dropped stones...")
-            stones = [
-                ("linemate", req.linemate),
-                ("deraumere", req.deraumere),
-                ("sibur", req.sibur),
-                ("mendiane", req.mendiane),
-                ("phiras", req.phiras),
-                ("thystame", req.thystame),
-            ]
-            for name, count in stones:
-                for _ in range(count):
-                    logger.debug(f"[SERVER] -> {client.take(name)}")
-        client._is_waiting = False
+    # 0. Survival: nothing matters if we starve.
+    if inv.food < FOOD_CRITICAL:
         client.messages.clear()
+        if "food" in tile:
+            logger.info("Critical food, eating.")
+            client.take("food")
+            return
+        if _move_to_visible(client, look, ["food"]):
+            return
+        _explore(client)
         return
 
-    # 4 respond to broadcasts on the same tile — wait as long as the leader is here
-    if _has_zero_broadcast(client) or client._is_waiting:
-        client._is_waiting = True
-        if not _has_zero_broadcast(client):
-            logger.info(
-                "Waiting but no broadcast — re-broadcasting to maintain contact."
-            )
-            client.broadcast(f"Elevation {client.name} level {client.level}")
-            client.messages.clear()
-            return
+    # 1. Incantate now if the tile already satisfies our level's requirement.
+    if req and players_here >= req.players and _has_current_stones(level, inv):
+        client.messages.clear()
+        _perform_incantation(client, level, tile)
+        return
 
-        client._wait_count = getattr(client, "_wait_count", 0) + 1
-
-        # Periodically scan nearby tiles for missing resources
-        # Level 3 scans further. Level 4+ stays with the group (no foraging).
-        forage_interval = 4 if client.level == 3 else 3
-        max_tile = 7 if client.level == 3 else 3
-        if client._wait_count % forage_interval == 0 and client.level < 4:
-            missing = get_missing_resources(client.level, inv)
-            for i, tile in enumerate(look):
-                if i > 0 and i <= max_tile:
-                    for item in tile:
-                        if item in missing:
-                            logger.info(
-                                f"Leaving waiting to grab {item} on tile {i}..."
-                            )
-                            client._is_waiting = False
-                            move_to_tile(client, i)
-                            client.take(item)
-                            client.messages.clear()
-                            return
-
-        if "food" in current_tile:
-            logger.info("Waiting on leader's tile (taking food)...")
+    # 2. A neighbour on our tile is starting an incantation: hold position so we
+    #    are still counted when it resolves (the level-up event will reach us).
+    if go_same_tile:
+        client.messages.clear()
+        if "food" in tile:
             client.take("food")
-        elif inv.food < 3:
-            logger.info("Food too low, gave up waiting.")
-            client._is_waiting = False
-            client.messages.clear()
         else:
-            client.take("food")
-        client.messages.clear()
+            client.look()
         return
 
-    client._is_waiting = False
+    # 3. We hold our level's stones: rendezvous with same-level players.
+    #    Calls advertise our group size so the team coalesces into a single
+    #    growing pile instead of several small ones that never reach the player
+    #    count a high-level incantation needs.
+    if req and _has_current_stones(level, inv):
+        client.broadcast(f"come {level} {players_here}")
 
-    # 5 we have enough resources but not enough players, broadcast
-    if client.level in ELEVATION_TABLE:
-        req = ELEVATION_TABLE[client.level]
-        has_resources = (
-            inv.linemate >= req.linemate
-            and inv.deraumere >= req.deraumere
-            and inv.sibur >= req.sibur
-            and inv.mendiane >= req.mendiane
-            and inv.phiras >= req.phiras
-            and inv.thystame >= req.thystame
+        join_bigger = best_dir is not None and best_count > players_here
+        # Two equal-sized groups would otherwise anchor forever waiting for each
+        # other; after a grace period one of them randomly moves to merge.
+        client._wait = getattr(client, "_wait", 0) + 1
+        merge_equal = (
+            best_dir is not None
+            and best_count == players_here
+            and players_here < req.players
+            and client._wait > MERGE_TIMEOUT
+            and random.random() < 0.3
         )
-        if has_resources and players_on_tile < req.players:
-            logger.info(
-                f"Waiting for players for level {client.level}. Current: {players_on_tile}/{req.players}"
-            )
-            logger.debug(
-                f"[SERVER] -> {client.broadcast(f'Elevation {client.name} level {client.level}')}"
-            )
-            if "food" in current_tile:
-                logger.info("Taking food while waiting...")
-                logger.debug(f"[SERVER] -> {client.take('food')}")
+
+        if join_bigger or merge_equal:
+            client._wait = 0
             client.messages.clear()
+            _steer(client, best_dir)
             return
 
-    client.messages.clear()
+        # Anchor and let others converge. Keep eating; a lone caller with no
+        # answer for a while wanders to bump into stragglers.
+        client.messages.clear()
+        if "food" in tile and inv.food < FOOD_COMFORT:
+            client.take("food")
+        elif players_here <= 1 and client._wait > LONE_WANDER:
+            client._wait = 0
+            _explore(client)
+        else:
+            client.look()
+        return
 
-    # 6 search for needed resources
-    missing = get_missing_resources(client.level, inv)
+    client._wait = 0
 
-    if "food" in current_tile:
-        logger.info("Taking food from current tile.")
+    # 4. We still need stones: gather, grabbing useful future stones in passing.
+    missing_now = _missing_current(level, inv)
+    wants = missing_now | _stockpile_missing(level, inv)
+
+    if "food" in tile and inv.food < FOOD_COMFORT:
+        logger.info("Topping up food.")
+        client.messages.clear()
         client.take("food")
         return
 
-    for item in current_tile:
-        if item in missing:
-            logger.info(f"Taking {item} from current tile.")
-            logger.debug(f"[SERVER] -> {client.take(item)}")
+    for s in STONES:
+        if s in tile and s in wants:
+            logger.info(f"Picking up {s}.")
+            client.messages.clear()
+            client.take(s)
             return
 
-    for i, tile in enumerate(look):
-        for item in tile:
-            if item in missing:
-                logger.info(f"Found {item} on tile {i}. Moving...")
-                move_to_tile(client, i)
-                return
+    targets = set(wants)
+    if inv.food < FOOD_COMFORT:
+        targets.add("food")
+    if _move_to_visible(client, look, targets):
+        client.messages.clear()
+        return
 
-    logger.info("Nothing interesting in sight. Exploring...")
-    logger.debug(f"[SERVER] -> {client.forward()}")
+    client.messages.clear()
+    _explore(client)
