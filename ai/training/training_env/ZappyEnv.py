@@ -1,5 +1,5 @@
 from typing import Union
-
+import logging
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
@@ -10,6 +10,9 @@ from src.utils import Inventory, ELEVATION_TABLE
 from training.training_env.actions import ControllerAction, ZappyAction
 from training.training_env.broadcast import BroadcastDict, BroadcastHandler
 from training.training_env.env_modes import LibZappyEnv
+
+# Suppress verbose decision-making logs from teammate bots in subprocesses
+logging.getLogger("zappy_ai").setLevel(logging.CRITICAL)
 
 
 class ObservationZappyEnv:
@@ -75,6 +78,7 @@ class ObservationZappyEnv:
                         offset_resource = resources.index(entity)
                         obs[base_index + (i * 8) + offset_resource] += 1
         obs[655] = self.client.level
+        obs[79] = getattr(self, "client_broadcast_dir", 0)
 
         return obs
 
@@ -113,6 +117,15 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
     def reset(self, *, seed=None, options=None):
         obs, info = self.mode.reset(seed=seed, options=options)
         self.client = self.mode.client
+        self.turns_elapsed = 0
+        self.client_broadcast_dir = 0
+
+        # Local relative coordinates for curiosity reward
+        self.rel_x = 0
+        self.rel_y = 0
+        self.orientation = 0  # 0=North, 1=East, 2=South, 3=West
+        self.visited_tiles = {(0, 0)}
+
         return obs, info
 
     def close(self):
@@ -160,6 +173,8 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             if heuristic["score"] > best_heuristic["score"]:
                 best_heuristic = heuristic
                 best_heuristic["dir"] = direction
+
+        self.client_broadcast_dir = best_heuristic["dir"]
 
         match bot_action:
             case ControllerAction.FORWARD:
@@ -255,6 +270,37 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
             if zappy_action is not None:
                 reward += base_rewards.get(zappy_action, 0.0)
 
+            # Track relative coordinate movement and calculate curiosity reward
+            if zappy_action == ZappyAction.FORWARD:
+                if self.orientation == 0:
+                    self.rel_y += 1
+                elif self.orientation == 1:
+                    self.rel_x += 1
+                elif self.orientation == 2:
+                    self.rel_y -= 1
+                elif self.orientation == 3:
+                    self.rel_x -= 1
+
+                # Toroidal map coordinate wrap-around
+                map_width = getattr(self.mode, "width", 20)
+                map_height = getattr(self.mode, "height", 20)
+                if map_width > 0:
+                    self.rel_x = self.rel_x % map_width
+                if map_height > 0:
+                    self.rel_y = self.rel_y % map_height
+
+                pos = (self.rel_x, self.rel_y)
+                if pos not in self.visited_tiles:
+                    self.visited_tiles.add(pos)
+                    reward += 0.5  # Curiosity exploration reward
+                else:
+                    reward -= 0.1  # Backtracking / Loop penalty
+
+            elif zappy_action == ZappyAction.LEFT:
+                self.orientation = (self.orientation - 1) % 4
+            elif zappy_action == ZappyAction.RIGHT:
+                self.orientation = (self.orientation + 1) % 4
+
             if best_heuristic["score"] >= 50:
                 target_dir = best_heuristic["dir"]
                 task = best_heuristic["task"]
@@ -285,15 +331,19 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
 
                 if zappy_action in ideal_actions:
                     reward += 3.0  # reward for listening to the radio
-                else:
-                    reward -= 0.5  # Penalty for ignoring teammates
+                elif zappy_action in [
+                    ZappyAction.FORWARD,
+                    ZappyAction.LEFT,
+                    ZappyAction.RIGHT,
+                ]:
+                    reward -= 0.5  # Penalty for incorrect movement direction when teammate is calling
 
             if zappy_action == ZappyAction.TAKE:
                 inv = self.client.inventory()
                 if item_target == "food":
                     if isinstance(inv, Inventory) and inv.food >= 15:
                         reward += (
-                            0.2  # Small positive reward for maintaining buffer of food
+                            0.0  # No reward for excess food hoarding (focus on stones)
                         )
                     else:
                         reward += 2.0  # Large positive reward for survival
@@ -351,9 +401,9 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                     elif inv.food < 5:
                         reward += 0.5
                     else:
-                        reward -= 0.1
+                        reward += 0.3  # Buffed to encourage the agent to broadcast coordinate signals
                 else:
-                    reward -= 0.1
+                    reward += 0.3  # Buffed to encourage the agent to broadcast coordinate signals
 
         elif response == "ko":
             # ANTI-CASINO SYSTEM
@@ -369,7 +419,32 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
         elif isinstance(response, str) and response.startswith("Current level:"):
             reward += 100.0 * self.client.level
 
+        self.turns_elapsed += 1
+
         if not terminated:
+            # Run background teammate bots once every 5 turns to allow training multi-agent coordination
+            # without bloating the server ticking rate and starving the players instantly.
+            if (
+                hasattr(self.mode, "teammate_clients")
+                and self.mode.teammate_clients
+                and (self.turns_elapsed % 5 == 0)
+            ):
+                from src.strategy.decision_making import take_decision
+                import logging
+
+                logging.getLogger("zappy_ai").setLevel(logging.CRITICAL)
+
+                for teammate in self.mode.teammate_clients:
+                    if not teammate.is_dead:
+                        try:
+                            # Periodically send a COME beacon if teammate is Level 2
+                            # to teach the agent to follow the radio signal
+                            if teammate.level >= 2 and (self.turns_elapsed % 10 == 0):
+                                teammate.broadcast("COME")
+                            take_decision(teammate)
+                        except Exception:
+                            teammate.is_dead = True
+
             try:
                 observation = self._get_real_observation()
             except Exception as e:

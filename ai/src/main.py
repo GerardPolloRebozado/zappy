@@ -25,6 +25,11 @@ try:
         def __init__(self, client):
             self.client = client
 
+        def _get_real_observation(self):
+            obs = super()._get_real_observation()
+            obs[79] = 0
+            return obs
+
     CAN_RUN_AI = True
 except ImportError:
     CAN_RUN_AI = False
@@ -78,6 +83,9 @@ def execute_action(client, action_id, handler):
 
 def run_hybrid_ai(client, team_name, model_path):
     """heuristic helps ai decisions."""
+    from src.strategy.state_machine import get_hybrid_action
+    from training.training_env.ZappyEnv import parse_look
+
     full_path = model_path if model_path.endswith(".zip") else f"{model_path}.zip"
     if not os.path.exists(full_path):
         print(f"[Error]: None module found {full_path}")
@@ -93,33 +101,53 @@ def run_hybrid_ai(client, team_name, model_path):
         except Exception:
             obs = np.zeros(657, dtype=np.int32)
 
+        try:
+            current_level = client.level
+            inv = client.inventory()
+        except Exception:
+            current_level = 1
+            inv = None
+
+        try:
+            look_resp = client.look()
+            vision_list = (
+                parse_look(look_resp)
+                if isinstance(look_resp, str) and look_resp.startswith("[")
+                else look_resp
+            )
+        except Exception:
+            vision_list = []
+
         messages = (
             client.get_unread_messages()
             if hasattr(client, "get_unread_messages")
             else []
         )
-        best_h = {"score": 0, "task": "IGNORE", "dir": 0}
+        best_h = {"score": 0, "task": "IGNORE", "dir": 0, "text": ""}
         for msg in messages:
             h = handler.calculate_heuristic(msg["dir"], msg["text"])
             if h["score"] > best_h["score"]:
-                best_h = {**h, "dir": msg["dir"]}
+                best_h = {**h, "dir": msg["dir"], "text": msg["text"]}
 
-        override = False
-        if best_h["score"] >= 70:
-            override = True
-            if best_h["dir"] in [1, 2, 8]:
-                client.forward()
-            elif best_h["dir"] in [3, 4, 5]:
-                client.left()
-            elif best_h["dir"] in [6, 7]:
-                client.right()
-        elif best_h["score"] == 50 and best_h["task"] == "FLEE_FROM_DIR":
-            override = True
-            client.right()
+        # Check if flee condition is active
+        if best_h["score"] == 50 and best_h["task"] == "FLEE_FROM_DIR":
+            action = int(ControllerAction.RIGHT)
+        else:
+            best_dir = best_h["dir"] if best_h["score"] >= 70 else 0
+            best_text = best_h["text"] if best_h["score"] >= 70 else ""
 
-        if not override:
-            action, _ = model.predict(obs, deterministic=True)
-            execute_action(client, action, handler)
+            action, _ = get_hybrid_action(
+                client=client,
+                parsed_inv=inv,
+                vision_list=vision_list,
+                current_level=current_level,
+                best_dir=best_dir,
+                best_text=best_text,
+                model=model,
+                obs=obs,
+            )
+
+        execute_action(client, action, handler)
 
 
 def main():

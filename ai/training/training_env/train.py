@@ -2,14 +2,16 @@ import argparse
 import os
 import multiprocessing
 import time
-
+import logging
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
-
 from training.training_env.ZappyEnv import ZappyEnv
+
+# Suppress verbose decision-making logs from teammate bots during training
+logging.getLogger("zappy_ai").setLevel(logging.CRITICAL)
 
 
 class TimestepCallback(BaseCallback):
@@ -56,8 +58,6 @@ def main():
     parser.add_argument(
         "--timesteps", type=int, default=50000, help="Total timesteps to train"
     )
-    parser.add_argument("--width", type=int, default=10, help="Map width")
-    parser.add_argument("--height", type=int, default=10, help="Map height")
     parser.add_argument("--freq", type=int, default=100, help="Simulation frequency")
     parser.add_argument("--team", type=str, default="TeamAI", help="Team name")
     parser.add_argument(
@@ -81,6 +81,11 @@ def main():
         help="Name or path of a saved model to continue training from",
     )
     args = parser.parse_args()
+
+    models_dir = os.path.abspath(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), "../models")
+    )
+    os.makedirs(models_dir, exist_ok=True)
 
     print("Verifying single environment compliance")
     temp_env = ZappyEnv(
@@ -126,6 +131,11 @@ def main():
     if args.load_model:
         # Resolve path
         load_path = args.load_model
+        if not os.path.dirname(load_path):
+            load_path = os.path.join(models_dir, load_path)
+        else:
+            load_path = os.path.abspath(load_path)
+
         if not load_path.endswith(".zip") and not os.path.exists(load_path):
             if os.path.exists(load_path + ".zip"):
                 load_path = load_path + ".zip"
@@ -153,8 +163,16 @@ def main():
     model.learn(total_timesteps=args.timesteps, callback=callback)
 
     # Save the trained model weights to a zip file
-    model.save(args.model_name)
-    print(f"Finished and saved on {args.model_name}.zip")
+    model_path = args.model_name
+    if not os.path.dirname(model_path):
+        model_path = os.path.join(models_dir, model_path)
+    else:
+        model_path = os.path.abspath(model_path)
+
+    model.save(model_path)
+    if not model_path.endswith(".zip"):
+        model_path += ".zip"
+    print(f"Finished and saved on {model_path}")
 
     elapsed_time = time.time() - start_time
     minutes = int(elapsed_time // 60)

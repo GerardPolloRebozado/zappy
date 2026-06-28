@@ -2,7 +2,7 @@
 
 # Configuration variables
 PORT=8080
-MODEL="../zappy_ai_model"
+MODEL="training/models/zappy_level2_v2"
 
 # Loop through the list of teams
 for team in "team01" "team02"; do

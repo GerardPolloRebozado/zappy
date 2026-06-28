@@ -138,7 +138,7 @@ compile_commands.json
 *.backup
 *.old
 
-*.zip
+models
 # Devenv
 .devenv*
 devenv.local.nix
@@ -149,5 +149,3 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
-
-results

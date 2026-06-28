@@ -163,6 +163,18 @@ class ZappyLibClient:
         return resp
 
     def broadcast(self, text):
+        # Translate teammate standard broadcasts to PPO format so the learning agent can parse them
+        if (
+            hasattr(self, "name")
+            and isinstance(self.name, str)
+            and self.name.startswith("TeammateBot_")
+        ):
+            team = getattr(self, "team_name", "team1")
+            if "Incantation" in text:
+                text = f"{team}|ZAPPY_SEC|INCANT"
+            else:
+                text = f"{team}|ZAPPY_SEC|COME"
+
         cmd = f"Broadcast {text}\n".encode("utf-8")
         self.lib.zappy_send_command(self.server_ptr, self.player_id, cmd)
         return self.wait_for_response()
