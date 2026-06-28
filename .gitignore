@@ -137,7 +137,7 @@ compile_commands.json
 *.backup
 *.old
 
-*.zip
+models
 # Devenv
 .devenv*
 devenv.local.nix
