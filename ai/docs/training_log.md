@@ -707,4 +707,84 @@ Evaluation file: *[eval_20260628_162221.md](../training/results/eval_20260628_16
   - Premature incantations are successfully blocked, achieving a 100% success rate on attempted incantations (43/43).
   - Even with the hunger pathfinding safety wrapper, the sparse resource density on the `30x30` map causes agents to starve in ~57 turns when they run out of food during coordination attempts. This is because their PPO policy hasn't learned to gather food high enough (to a safe baseline of 15+) or walk systematically when no food is in sight.
   - Because 2,000,000 timesteps is insufficient for multi-agent coordination convergence, the neural network's policy remains highly stochastic. To achieve stable Level 3 ascension, the AI needs a longer training run of 15,000,000+ timesteps in the direct FFI environment.
-  
+
+
+## Run #21 (25M Coordination Run)
+- **Base Model**: `Loaded from zappy_level2_v2`
+- **Output Model Name**: `zappy_coordination_v4`
+- **Timesteps Run**: `25,000,000`
+- **Real-World Duration**: `~2h`
+
+#### Parameters
+```bash
+./run_training.sh -t 25000000 -f 1000 -m zappy_coordination_v4 -l zappy_level2_v2
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+- **Average Level Achieved**: `1.00`
+- **Max Level Achieved**: `1`
+- **Average Turns Survived**: `70.84`
+- **Max Turns Survived**: `71`
+- **Rating Tier**: `Tier 1: Starvation/Survival Failure`
+
+Evaluation file: *[eval_20260628_191041.md](../training/results/eval_20260628_191041.md)*
+
+#### Observations
+- *Key observations*
+  - Over 25,000,000 timesteps, the model completely forgot how to gather stones (only 6 stones taken). Because taking food yields a massive `+2.0` reward while stones are rarer and harder to find, the model converged to a local minimum: walking forward and hoarding food to gather easy rewards.
+  - Like previous runs, the agent starves in ~71 turns due to the artificial server ticking rate bloat of teammate bots.
+
+## Run #22 (Baseline Evaluation with Fixed Teammate Logic)
+- **Base Model**: `zappy_level2_v2` (with Hybrid Meta-Policy Wrapper)
+- **Output Model Name**: `zappy_level2_v2` (Hybrid)
+- **Timesteps Run**: `N/A`
+- **Real-World Duration**: `N/A`
+
+#### Parameters
+```bash
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level2_v2 --teams team01 --player 2 --width 30 --height 30 --teammates
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+- **Average Level Achieved**: `1.50`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `62.24`
+- **Max Turns Survived**: `92`
+- **Rating Tier**: `Tier 1: Starvation/Survival Failure`
+
+Evaluation file: *[eval_20260628_191601.md](../training/results/eval_20260628_191601.md)*
+
+#### Observations
+- *Key observations*
+  - **Teammate Execution Fixed**:
+    - Added teammate bot execution to the evaluation script, running decisions once every 5 turns to match the training environment. Also fixed the reporting bug to correctly record teammate and PPO deaths.
+    - Because the direct headless FFI engine is ticked for every command sent by every player, the server time passes much faster than in a real game (~19 ticks per turn instead of 7). This causes agents to consume food at warp speed, resulting in starvation at around 60-90 turns regardless of eating.
+
+
+## Run #23 (State Machine Refactor Validation)
+- **Base Model**: `zappy_level2_v2` (with Centralized State Machine)
+- **Output Model Name**: `zappy_level2_v2` (Centralized)
+- **Timesteps Run**: `N/A`
+- **Real-World Duration**: `N/A`
+
+#### Parameters
+```bash
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_level2_v2 --teams team01 --player 2 --width 10 --height 10 --episodes 1
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+- **Average Level Achieved**: `2.00`
+- **Max Level Achieved**: `2`
+- **Average Turns Survived**: `303.00`
+- **Max Turns Survived**: `303`
+- **Rating Tier**: `Tier 2: Single-Player Competence` (with Multi-Agent Stability)
+
+Evaluation file: *[eval_20260628_193820.md](../training/results/eval_20260628_193820.md)*
+
+#### Observations
+- *Key observations*
+  - **Codebase Cleaned**:
+    - All pathfinding, stone verification, and coordination overrides were successfully removed from `main.py` and `evaluate_ai.py` and consolidated into `state_machine.py`. Both client loops are now minimal, clean, and robust.
+  - **Robust Behavior**:
+    - The 2-agent PPO evaluation successfully achieved Level 2 for both players, collected 30 stones, and coordinated incantations with a 100% success rate.
+
