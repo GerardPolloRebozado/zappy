@@ -10,16 +10,70 @@ use noise::{NoiseFn, Perlin};
 use rand::{RngExt, rng};
 
 /// Initializes the game map by registering components and spawning a grid of tiles using noise
-pub fn setup_map(world: &mut World, width: u32, height: u32) {
+pub fn setup_map(world: &mut World, width: u32, height: u32, seed_str: Option<String>) {
     world.map_size = MapSize { width, height };
 
-    let mut rng = rng();
-    let seed = rng.random();
-    //    println!("Map Generation: Seed = {}", seed);
-    let perlin_elevation = Perlin::new(seed);
-    let perlin_moisture = Perlin::new(seed.wrapping_add(1));
+    let mut hardcoded_terrain = None;
+    let seed_val: u32 = if let Some(s) = seed_str {
+        let s_lower = s.to_lowercase();
+        match s_lower.as_str() {
+            "grass" => {
+                hardcoded_terrain = Some(TerrainType::Grass);
+                0
+            }
+            "water" => {
+                hardcoded_terrain = Some(TerrainType::Water);
+                0
+            }
+            "mountain" => {
+                hardcoded_terrain = Some(TerrainType::Mountain);
+                0
+            }
+            "sand" => {
+                hardcoded_terrain = Some(TerrainType::Sand);
+                0
+            }
+            "forest" => {
+                hardcoded_terrain = Some(TerrainType::Forest);
+                0
+            }
+            "magnetictundra" | "tundra" => {
+                hardcoded_terrain = Some(TerrainType::MagneticTundra);
+                0
+            }
+            "luminousorchards" | "orchards" => {
+                hardcoded_terrain = Some(TerrainType::LuminousOrchards);
+                0
+            }
+            "crystalcanyons" | "canyons" => {
+                hardcoded_terrain = Some(TerrainType::CrystalCanyons);
+                0
+            }
+            "obsidianbarrens" | "obsidian" => {
+                hardcoded_terrain = Some(TerrainType::ObsidianBarrens);
+                0
+            }
+            _ => {
+                if let Ok(num) = s.parse::<u32>() {
+                    num
+                } else {
+                    use std::hash::{Hash, Hasher};
+                    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                    s.hash(&mut hasher);
+                    hasher.finish() as u32
+                }
+            }
+        }
+    } else {
+        let mut rng = rng();
+        rng.random()
+    };
+
+    let perlin_elevation = Perlin::new(seed_val);
+    let perlin_moisture = Perlin::new(seed_val.wrapping_add(1));
 
     let mut wormholes_count = 0;
+    let mut rng = rng();
     let groups_of_100 = (width * height) / 100;
     for _ in 0..groups_of_100 {
         wormholes_count += rng.random_range(2..=3);
@@ -41,7 +95,9 @@ pub fn setup_map(world: &mut World, width: u32, height: u32) {
 
     for y in 0..height {
         for x in 0..width {
-            let terrain = if wormhole_positions.contains(&(x, y)) {
+            let terrain = if let Some(ref t) = hardcoded_terrain {
+                *t
+            } else if wormhole_positions.contains(&(x, y)) {
                 TerrainType::Wormhole
             } else {
                 let nx = x as f64 * scale;
@@ -132,7 +188,7 @@ mod tests {
     #[test]
     fn test_setup_map() {
         let mut world = World::default();
-        setup_map(&mut world, 10, 10);
+        setup_map(&mut world, 10, 10, None);
 
         let tiles = world.get_storage::<Tile>().unwrap();
         assert_eq!(tiles.iter().count(), 100);

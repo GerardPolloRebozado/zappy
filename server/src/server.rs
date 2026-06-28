@@ -27,6 +27,7 @@ pub struct Server {
     pub world: World,
     pub clients_nb: u32,
     pub team_names: Vec<String>,
+    pub seed: Option<String>,
 }
 
 impl Default for Server {
@@ -62,6 +63,7 @@ impl Server {
             ),
             clients_nb: config.clients_nb,
             team_names: config.names,
+            seed: config.seed,
         }
     }
 
@@ -235,7 +237,7 @@ impl Server {
     pub fn load(&mut self) {
         let width = self.world.map_size.width;
         let height = self.world.map_size.height;
-        setup_map(&mut self.world, width, height);
+        setup_map(&mut self.world, width, height, self.seed.clone());
         for team in self.team_names.clone() {
             for _ in 0..self.clients_nb {
                 spawn_egg(self.world.map_size, &mut self.world, 0, team.clone());
@@ -278,6 +280,7 @@ mod tests {
             ),
             clients_nb: 1,
             team_names: vec!["team".to_string()],
+            seed: None,
         };
 
         let client_socket = std::net::TcpStream::connect(addr).unwrap();
@@ -320,6 +323,7 @@ mod tests {
             ),
             clients_nb: 1,
             team_names: vec!["team".to_string()],
+            seed: None,
         };
 
         let socket_a = std::net::TcpStream::connect(addr).unwrap();
