@@ -6,6 +6,8 @@
 */
 #include "UI/UIRadio.hpp"
 #include "Components/ComponentMusic.hpp"
+#include "Graphics/AssetManager.hpp"
+#include <filesystem>
 #include <raylib.h>
 
 namespace zappy {
@@ -157,6 +159,17 @@ void UIRadio::render() {
     } else {
         if (_menuRadio) {
             _menuRadio->render();
+        }
+
+        if (!_playlist.empty() && _songIdxM >= 0 && _songIdxM < _playlist.size()) {
+            std::filesystem::path p(_playlist[_songIdxM]);
+            std::string songName = p.stem().string();
+            raylib::Text(songName, 18, raylib::Color::Black(),
+                         AssetManager::getInstance().getFont("TextFont"), 1.0f)
+                .Draw(_bounds.x + 32, _bounds.y + 27);
+            raylib::Text(songName, 18, raylib::Color::White(),
+                         AssetManager::getInstance().getFont("TextFont"), 1.0f)
+                .Draw(_bounds.x + 30, _bounds.y + 25);
         }
         if (_closeRadio) {
             _closeRadio->render();
