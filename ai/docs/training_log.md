@@ -535,4 +535,41 @@ Evaluation file: *[eval_20260627_220735.md](../training/results/eval_20260627_22
   - Picking up food yielded a massive `+2.0` reward (when inventory was < 15), while moving forward only gave `+0.1` and consumed energy. The agent learned that standing still and waiting for food to spawn on its tile to pick it up was a low-risk, highly lucrative reward farming loop, completely overshadowing navigation and stone gathering.
 - *Adjustments needed for the next run:*
   - Reduced `Take Food` reward in `ZappyEnv.py` from `2.0` to `0.2` (making it enough to incentivize survival but too small to farm). This ensures coordinate beacon steering (`+3.0`) and stone collection (`+4.0`) are the dominant reward sources.
-  - Run a fresh 2,000,000 timestep training run loading from `zappy_level2_v2` with the reduced food reward.
+  - Run a fresh 10,000,000 timestep training run loading from `zappy_level2_v2` with the reduced food reward.
+
+  
+## Run #16
+- **Base Model**: `Loaded from zappy_level2_v2`
+- **Output Model Name**: `zappy_coordination_v2`
+- **Timesteps Run**: `10,000,000`
+- **Real-World Duration**: `61m 47s`
+
+#### Parameters
+```bash
+# Paste the exact run command here:
+./run_training.sh -t 10000000 -f 1000 -m zappy_coordination_v2 -l zappy_level2_v2
+```
+
+#### Evaluation Metrics (via evaluate_ai.py)
+Run (adjust --teams, --players, --width, --height depending on phase):
+```
+PYTHONPATH=ai python ai/training/training_env/evaluate_ai.py --model zappy_coordination_v2 --teams team01 --player 2 --width 10 --height 10
+```
+- **Average Level Achieved**: Eval 1 - `1.62` | Eval 2 - `1.57`
+- **Max Level Achieved**: Eval 1 - `2` | Eval 2 - `2`
+- **Average Turns Survived**: Eval 1 - `59.30` | Eval 2 - `62.75`
+- **Max Turns Survived**: Eval 1 - `85` | Eval 2 - `85`
+- **Rating Tier**: Eval 1 - `Tier 1` | Eval 2 - `Tier 1`
+
+Evaluation file 1: *[eval_20260628_003412.md](../training/results/eval_20260628_003412.md)*
+
+Evaluation file 2: *[eval_20260628_121953.md](../training/results/eval_20260628_121953.md)*
+
+#### Observations
+- *Key observations*
+  - Players got stuck at Level 2 (average level ~1.60) in both runs because they starved to death.
+  - The average turns survived collapsed to ~60 turns. Both evaluations showed that `Take Food` dropped to virtually 0.0% (1 time and 6 times total), and `Movement` rose to 89-96%
+  - Because we reduced the food reward to `0.2`, taking food carried too much risk (a `-0.5` penalty if the tile is empty) compared to walking `FORWARD` (which yields `+0.1` with 0 risk). The agent learned to walk forward endlessly to farm the movement reward, completely ignoring its survival and starving.
+- *Adjustments needed for the next run:*
+  - Restored the food pickup reward back to **`2.0`** in `ZappyEnv.py`. Since the ignore teammate penalty is now restricted to movement actions only, players can search and eat food safely without getting hit by radio penalties.
+  - Run two 8,000,000 timestep training run. One from the stable `zappy_level2_v2` model and the other from `zappy_coordination_v2` model, using the restored food reward and movement-restricted radio penalty.
