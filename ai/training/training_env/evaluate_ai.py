@@ -27,6 +27,89 @@ def parse_inventory_resp(resp):
     return resp
 
 
+def get_survival_action(client, parsed_inv, vision_list, item_name="food"):
+    # If we have a cached path, continue executing it
+    if hasattr(client, "path_steps") and client.path_steps:
+        return client.path_steps.pop(0)
+
+    # Otherwise, find the nearest tile containing the target item
+    if not isinstance(vision_list, list):
+        return None
+
+    target_tile = -1
+    for i, tile in enumerate(vision_list):
+        if i >= 81:
+            break
+        if isinstance(tile, str):
+            entities = tile.strip().split(" ")
+        else:
+            entities = tile
+        if item_name in entities:
+            target_tile = i
+            break
+
+    if target_tile == -1:
+        return None
+
+    if target_tile == 0:
+        action_name = f"TAKE_{item_name.upper()}"
+        return int(getattr(ControllerAction, action_name))
+
+    # Calculate path steps
+    import math as pymath
+
+    d = int(pymath.sqrt(target_tile))
+    x = target_tile - (d**2 + d)
+    path = [int(ControllerAction.FORWARD)] * d
+    if x < 0:
+        path.append(int(ControllerAction.LEFT))
+        path.extend([int(ControllerAction.FORWARD)] * abs(x))
+    elif x > 0:
+        path.append(int(ControllerAction.RIGHT))
+        path.extend([int(ControllerAction.FORWARD)] * x)
+
+    action_name = f"TAKE_{item_name.upper()}"
+    path.append(int(getattr(ControllerAction, action_name)))
+
+    client.path_steps = path
+    return client.path_steps.pop(0)
+
+
+def has_stones_for_level(parsed_inv, vision_list, level):
+    tile_0_stones = {
+        "linemate": 0,
+        "deraumere": 0,
+        "sibur": 0,
+        "mendiane": 0,
+        "phiras": 0,
+        "thystame": 0,
+    }
+    if isinstance(vision_list, list) and len(vision_list) > 0:
+        tile_0 = vision_list[0]
+        entities = tile_0.strip().split(" ") if isinstance(tile_0, str) else tile_0
+        for entity in entities:
+            if entity in tile_0_stones:
+                tile_0_stones[entity] += 1
+
+    inv_linemate = parsed_inv.linemate if isinstance(parsed_inv, Inventory) else 0
+    inv_deraumere = (
+        getattr(parsed_inv, "deraumere", 0) if isinstance(parsed_inv, Inventory) else 0
+    )
+    inv_sibur = (
+        getattr(parsed_inv, "sibur", 0) if isinstance(parsed_inv, Inventory) else 0
+    )
+
+    total_linemate = inv_linemate + tile_0_stones["linemate"]
+    total_deraumere = inv_deraumere + tile_0_stones["deraumere"]
+    total_sibur = inv_sibur + tile_0_stones["sibur"]
+
+    if level == 1:
+        return total_linemate >= 1
+    elif level == 2:
+        return total_linemate >= 1 and total_deraumere >= 1 and total_sibur >= 1
+    return True
+
+
 def build_observation(client, inv, look_resp, verbose=False):
     obs = np.zeros(657, dtype=np.int32)
     resources = [
@@ -73,7 +156,7 @@ def build_observation(client, inv, look_resp, verbose=False):
 
     obs[655] = client.level
     obs[656] = parsed_inv.food if isinstance(parsed_inv, Inventory) else 10
-    obs[79] = getattr(client, "last_broadcast_dir", 0)
+    obs[79] = 0
     return obs
 
 
@@ -174,14 +257,36 @@ def batch_send_command(clients, command_bytes_list, max_wait_ticks=2000):
             if responses[client] is None:
                 resp = wait_for_response_no_tick(client)
                 if resp is not None:
-                    if resp.startswith("message"):
-                        from src.client.lib_client import parse_broadcast
+                    cmd = command_bytes_list[clients.index(client)]
+                    cmd_str = (
+                        cmd.decode("utf-8").strip() if isinstance(cmd, bytes) else ""
+                    )
 
-                        parsed = parse_broadcast(resp)
-                        if parsed:
-                            client.messages.append(parsed)
-                        all_done = False
-                    elif resp.startswith("eject:"):
+                    is_async = False
+                    if (
+                        resp.startswith("message")
+                        or resp.startswith("eject:")
+                        or resp.startswith("event_start")
+                        or resp.startswith("event_end")
+                        or resp == "elevation en cours"
+                    ):
+                        is_async = True
+                    elif cmd_str in ["Inventory", "Look"]:
+                        if not resp.startswith("[") and resp != "dead":
+                            is_async = True
+                    else:
+                        if resp not in ["ok", "ko", "dead"] and not resp.startswith(
+                            "Current level:"
+                        ):
+                            is_async = True
+
+                    if is_async:
+                        if resp.startswith("message"):
+                            from src.client.lib_client import parse_broadcast
+
+                            parsed = parse_broadcast(resp)
+                            if parsed:
+                                client.messages.append(parsed)
                         all_done = False
                     else:
                         responses[client] = resp
@@ -243,6 +348,11 @@ def main():
     )
     parser.add_argument(
         "--players", type=int, default=2, help="Number of players per team"
+    )
+    parser.add_argument(
+        "--teammates",
+        action="store_true",
+        help="Use rule-based teammate bots for the other players on the team (matching training env)",
     )
     args = parser.parse_args()
 
@@ -309,13 +419,21 @@ def main():
 
         # 2. Add players and clients dynamically
         clients = []
+        ppo_clients = []
+        teammate_clients = []
         for team_name in teams:
-            for _ in range(clients_nb):
+            for i in range(clients_nb):
                 p_id = zappy_lib.lib.zappy_add_player(
                     server_ptr, team_name.encode("utf-8")
                 )
                 client = ZappyLibClient(zappy_lib.lib, server_ptr, p_id, args.freq)
                 client.team_name = team_name
+                if args.teammates and i > 0:
+                    client.name = f"TeammateBot_{p_id}"
+                    teammate_clients.append(client)
+                else:
+                    client.name = f"Player_{p_id}"
+                    ppo_clients.append(client)
                 clients.append(client)
 
         # Consume initial server logs
@@ -358,7 +476,7 @@ def main():
             # 2.5 Parse broadcasts for all active clients to find coordinate direction
             for client in active_clients:
                 unread = client.get_unread_messages()
-                best_h = {"score": 0, "dir": 0}
+                best_h = {"score": 0, "dir": 0, "text": ""}
                 handler = BroadcastHandler(
                     team_name=client.team_name, secret_key="ZAPPY_SEC"
                 )
@@ -369,11 +487,14 @@ def main():
                     if h["score"] > best_h["score"]:
                         best_h = h
                         best_h["dir"] = direction
+                        best_h["text"] = text
                 client.last_broadcast_dir = best_h["dir"]
+                client.last_broadcast_text = best_h["text"]
 
-            # 3. Build observations and predict actions
+            # 3. Build observations and predict actions for PPO agents only
             actions = {}
-            for client in active_clients:
+            active_ppo = [c for c in ppo_clients if not c.is_dead]
+            for client in active_ppo:
                 inv = inventories.get(client)
                 look_resp = looks.get(client)
 
@@ -384,9 +505,157 @@ def main():
                         stats["deaths"] += 1
                     continue
 
-                obs = build_observation(client, inv, look_resp, verbose=args.verbose)
-                action, _ = model.predict(obs, deterministic=True)
+                # Parse inventory for hybrid logic
+                parsed_inv = parse_inventory_resp(inv)
+                has_stones_for_lvl3 = False
+                if isinstance(parsed_inv, Inventory):
+                    has_stones_for_lvl3 = (
+                        parsed_inv.linemate >= 1
+                        and parsed_inv.deraumere >= 1
+                        and parsed_inv.sibur >= 1
+                    )
+
+                best_dir = getattr(client, "last_broadcast_dir", 0)
+                best_text = getattr(client, "last_broadcast_text", "")
+
+                # Hybrid Meta-Policy with Hunger Priority:
+                food_count = (
+                    parsed_inv.food if isinstance(parsed_inv, Inventory) else 10
+                )
+                vision_list = (
+                    parse_look(look_resp)
+                    if look_resp and look_resp.startswith("[")
+                    else look_resp
+                )
+
+                # 1. Critical Starvation (food < 4): Find food first!
+                if food_count < 4:
+                    if hasattr(client, "path_steps") and client.path_steps:
+                        if client.path_steps[-1] != int(ControllerAction.TAKE_FOOD):
+                            client.path_steps = []
+                    survival_action = get_survival_action(
+                        client, parsed_inv, vision_list, "food"
+                    )
+                    if survival_action is not None:
+                        action = survival_action
+                    else:
+                        # No food in sight: Force movement to explore!
+                        action = int(ControllerAction.FORWARD)
+
+                # 2. Teammate Calling (COME): Walk towards teammate (only if food >= 4)
+                elif client.level == 2 and best_dir != 0 and food_count >= 4:
+                    client.path_steps = []  # Clear food path
+                    if best_dir in [1, 2, 8]:
+                        action = int(ControllerAction.FORWARD)
+                    elif best_dir in [3, 4, 5]:
+                        action = int(ControllerAction.LEFT)
+                    else:
+                        action = int(ControllerAction.RIGHT)
+
+                # 3. Teammate Calling (INCANT) and together: Drop stones (only if food >= 4)
+                elif (
+                    client.level == 2
+                    and best_dir == 0
+                    and "INCANT" in best_text
+                    and food_count >= 4
+                ):
+                    client.path_steps = []
+                    if has_stones_for_lvl3:
+                        if parsed_inv.linemate >= 1:
+                            action = int(ControllerAction.SET_LINEMATE)
+                        elif parsed_inv.deraumere >= 1:
+                            action = int(ControllerAction.SET_DERAUMERE)
+                        elif parsed_inv.sibur >= 1:
+                            action = int(ControllerAction.SET_SIBUR)
+                    else:
+                        action = int(ControllerAction.LOOK)
+
+                # 4. Have all stones, Level 2, no caller: Broadcast coordinates (only if food >= 8)
+                elif (
+                    client.level == 2
+                    and has_stones_for_lvl3
+                    and best_dir == 0
+                    and food_count >= 8
+                ):
+                    client.path_steps = []
+                    action = int(ControllerAction.BROADCAST)
+
+                # 5. Normal Hunger (food < 8): Walk to food
+                elif food_count < 8:
+                    if hasattr(client, "path_steps") and client.path_steps:
+                        if client.path_steps[-1] != int(ControllerAction.TAKE_FOOD):
+                            client.path_steps = []
+                    survival_action = get_survival_action(
+                        client, parsed_inv, vision_list, "food"
+                    )
+                    if survival_action is not None:
+                        action = survival_action
+                    else:
+                        # No food in sight: Force movement to explore!
+                        action = int(ControllerAction.FORWARD)
+
+                # 6. Opportunistic Eating (food < 15): Take food only if visible in Look cone!
+                elif (
+                    food_count < 15
+                    and get_survival_action(client, parsed_inv, vision_list, "food")
+                    is not None
+                ):
+                    action = get_survival_action(
+                        client, parsed_inv, vision_list, "food"
+                    )
+
+                # 7. Stone Gathering for Level 3:
+                elif client.level == 2:
+                    action = None
+                    missing_stones = []
+                    if isinstance(parsed_inv, Inventory):
+                        if parsed_inv.linemate < 1:
+                            missing_stones.append("linemate")
+                        if parsed_inv.deraumere < 1:
+                            missing_stones.append("deraumere")
+                        if parsed_inv.sibur < 1:
+                            missing_stones.append("sibur")
+
+                    for stone in missing_stones:
+                        stone_action = get_survival_action(
+                            client, parsed_inv, vision_list, stone
+                        )
+                        if stone_action is not None:
+                            action = stone_action
+                            break
+
+                    if action is None:
+                        client.path_steps = []
+                        obs = build_observation(
+                            client, inv, look_resp, verbose=args.verbose
+                        )
+                        action, _ = model.predict(obs, deterministic=True)
+                        action = int(action)
+                        if action == int(ControllerAction.INCANTATION):
+                            if not has_stones_for_level(
+                                parsed_inv, vision_list, client.level
+                            ):
+                                action = int(ControllerAction.FORWARD)
+
+                # 8. Default fallback to PPO for exploration/gathering
+                else:
+                    client.path_steps = []  # Clear path
+                    obs = build_observation(
+                        client, inv, look_resp, verbose=args.verbose
+                    )
+                    action, _ = model.predict(obs, deterministic=True)
+                    action = int(action)
+                    if action == int(ControllerAction.INCANTATION):
+                        if not has_stones_for_level(
+                            parsed_inv, vision_list, client.level
+                        ):
+                            action = int(ControllerAction.FORWARD)
+
                 actions[client] = action
+                if args.verbose:
+                    print(
+                        f"[Turn {turns}] Client {client.player_id}: Food={food_count}, RawInv={repr(inv)}, Action={ControllerAction(action).name}, Path={getattr(client, 'path_steps', [])}"
+                    )
 
             # 4. Batch execute the actions
             clients_to_act = [c for c in active_clients if c in actions]

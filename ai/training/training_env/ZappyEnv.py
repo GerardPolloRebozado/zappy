@@ -363,9 +363,9 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                     elif inv.food < 5:
                         reward += 0.5
                     else:
-                        reward -= 0.1
+                        reward += 0.3  # Buffed to encourage the agent to broadcast coordinate signals
                 else:
-                    reward -= 0.1
+                    reward += 0.3  # Buffed to encourage the agent to broadcast coordinate signals
 
         elif response == "ko":
             # ANTI-CASINO SYSTEM

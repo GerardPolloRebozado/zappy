@@ -25,6 +25,11 @@ try:
         def __init__(self, client):
             self.client = client
 
+        def _get_real_observation(self):
+            obs = super()._get_real_observation()
+            obs[79] = 0
+            return obs
+
     CAN_RUN_AI = True
 except ImportError:
     CAN_RUN_AI = False
@@ -76,6 +81,85 @@ def execute_action(client, action_id, handler):
             client.set(items[bot_action - ControllerAction.SET_FOOD])
 
 
+def get_survival_action(client, parsed_inv, vision_list, item_name="food"):
+    import math as pymath
+
+    # If we have a cached path, continue executing it
+    if hasattr(client, "path_steps") and client.path_steps:
+        return client.path_steps.pop(0)
+
+    # Otherwise, find the nearest tile containing the target item
+    if not isinstance(vision_list, list):
+        return None
+
+    target_tile = -1
+    for i, tile in enumerate(vision_list):
+        if i >= 81:
+            break
+        if isinstance(tile, str):
+            entities = tile.strip().split(" ")
+        else:
+            entities = tile
+        if item_name in entities:
+            target_tile = i
+            break
+
+    if target_tile == -1:
+        return None
+
+    if target_tile == 0:
+        action_name = f"TAKE_{item_name.upper()}"
+        return int(getattr(ControllerAction, action_name))
+
+    # Calculate path steps
+    d = int(pymath.sqrt(target_tile))
+    x = target_tile - (d**2 + d)
+    path = [int(ControllerAction.FORWARD)] * d
+    if x < 0:
+        path.append(int(ControllerAction.LEFT))
+        path.extend([int(ControllerAction.FORWARD)] * abs(x))
+    elif x > 0:
+        path.append(int(ControllerAction.RIGHT))
+        path.extend([int(ControllerAction.FORWARD)] * x)
+
+    action_name = f"TAKE_{item_name.upper()}"
+    path.append(int(getattr(ControllerAction, action_name)))
+
+    client.path_steps = path
+    return client.path_steps.pop(0)
+
+
+def has_stones_for_level(parsed_inv, vision_list, level):
+    tile_0_stones = {
+        "linemate": 0,
+        "deraumere": 0,
+        "sibur": 0,
+        "mendiane": 0,
+        "phiras": 0,
+        "thystame": 0,
+    }
+    if isinstance(vision_list, list) and len(vision_list) > 0:
+        tile_0 = vision_list[0]
+        entities = tile_0.strip().split(" ") if isinstance(tile_0, str) else tile_0
+        for entity in entities:
+            if entity in tile_0_stones:
+                tile_0_stones[entity] += 1
+
+    inv_linemate = parsed_inv.linemate if parsed_inv is not None else 0
+    inv_deraumere = getattr(parsed_inv, "deraumere", 0) if parsed_inv is not None else 0
+    inv_sibur = getattr(parsed_inv, "sibur", 0) if parsed_inv is not None else 0
+
+    total_linemate = inv_linemate + tile_0_stones["linemate"]
+    total_deraumere = inv_deraumere + tile_0_stones["deraumere"]
+    total_sibur = inv_sibur + tile_0_stones["sibur"]
+
+    if level == 1:
+        return total_linemate >= 1
+    elif level == 2:
+        return total_linemate >= 1 and total_deraumere >= 1 and total_sibur >= 1
+    return True
+
+
 def run_hybrid_ai(client, team_name, model_path):
     """heuristic helps ai decisions."""
     full_path = model_path if model_path.endswith(".zip") else f"{model_path}.zip"
@@ -93,32 +177,152 @@ def run_hybrid_ai(client, team_name, model_path):
         except Exception:
             obs = np.zeros(657, dtype=np.int32)
 
+        try:
+            current_level = client.level
+            inv = client.inventory()
+        except Exception:
+            current_level = 1
+            inv = None
+
+        food_count = getattr(inv, "food", 10) if inv is not None else 10
+        try:
+            look_resp = client.look()
+        except Exception:
+            look_resp = []
+
+        has_stones_for_lvl3 = False
+        if inv is not None and hasattr(inv, "linemate"):
+            has_stones_for_lvl3 = (
+                inv.linemate >= 1 and inv.deraumere >= 1 and inv.sibur >= 1
+            )
+
         messages = (
             client.get_unread_messages()
             if hasattr(client, "get_unread_messages")
             else []
         )
-        best_h = {"score": 0, "task": "IGNORE", "dir": 0}
+        best_h = {"score": 0, "task": "IGNORE", "dir": 0, "text": ""}
         for msg in messages:
             h = handler.calculate_heuristic(msg["dir"], msg["text"])
             if h["score"] > best_h["score"]:
-                best_h = {**h, "dir": msg["dir"]}
+                best_h = {**h, "dir": msg["dir"], "text": msg["text"]}
 
         override = False
-        if best_h["score"] >= 70:
+        action = None
+
+        # 1. Critical Starvation (food < 4): Find food first!
+        if food_count < 4:
+            if hasattr(client, "path_steps") and client.path_steps:
+                if client.path_steps[-1] != int(ControllerAction.TAKE_FOOD):
+                    client.path_steps = []
+            survival_action = get_survival_action(client, inv, look_resp, "food")
+            if survival_action is not None:
+                override = True
+                action = survival_action
+            else:
+                # No food in sight: Force movement to explore!
+                override = True
+                action = int(ControllerAction.FORWARD)
+
+        # 2. Teammate Calling (COME): Walk towards teammate (only if food >= 4)
+        elif (
+            current_level == 2
+            and best_h["score"] >= 70
+            and best_h["dir"] != 0
+            and food_count >= 4
+        ):
             override = True
+            client.path_steps = []
             if best_h["dir"] in [1, 2, 8]:
-                client.forward()
+                action = int(ControllerAction.FORWARD)
             elif best_h["dir"] in [3, 4, 5]:
-                client.left()
-            elif best_h["dir"] in [6, 7]:
-                client.right()
+                action = int(ControllerAction.LEFT)
+            else:
+                action = int(ControllerAction.RIGHT)
+
+        # 3. Teammate Calling (INCANT) and together: Drop stones (only if food >= 4)
+        elif (
+            current_level == 2
+            and best_h["score"] >= 70
+            and best_h["dir"] == 0
+            and "INCANT" in best_h["text"]
+            and food_count >= 4
+        ):
+            override = True
+            client.path_steps = []
+            if has_stones_for_lvl3:
+                if inv.linemate >= 1:
+                    action = int(ControllerAction.SET_LINEMATE)
+                elif inv.deraumere >= 1:
+                    action = int(ControllerAction.SET_DERAUMERE)
+                elif inv.sibur >= 1:
+                    action = int(ControllerAction.SET_SIBUR)
+            else:
+                action = int(ControllerAction.LOOK)
+
+        # 4. Have all stones, Level 2, no caller: Broadcast coordinates (only if food >= 8)
+        elif (
+            current_level == 2
+            and has_stones_for_lvl3
+            and best_h["score"] < 70
+            and food_count >= 8
+        ):
+            override = True
+            client.path_steps = []
+            action = int(ControllerAction.BROADCAST)
+
+        # 5. Normal Hunger (food < 8): Walk to food
+        elif food_count < 8:
+            if hasattr(client, "path_steps") and client.path_steps:
+                if client.path_steps[-1] != int(ControllerAction.TAKE_FOOD):
+                    client.path_steps = []
+            survival_action = get_survival_action(client, inv, look_resp, "food")
+            if survival_action is not None:
+                override = True
+                action = survival_action
+            else:
+                override = True
+                action = int(ControllerAction.FORWARD)
+
+        # 6. Opportunistic Eating (food < 15): Take food only if visible in Look cone!
+        elif (
+            food_count < 15
+            and get_survival_action(client, inv, look_resp, "food") is not None
+        ):
+            override = True
+            action = get_survival_action(client, inv, look_resp, "food")
+
         elif best_h["score"] == 50 and best_h["task"] == "FLEE_FROM_DIR":
             override = True
-            client.right()
+            action = int(ControllerAction.RIGHT)
 
-        if not override:
-            action, _ = model.predict(obs, deterministic=True)
+        if override and action is not None:
+            execute_action(client, action, handler)
+        else:
+            action = None
+            if current_level == 2:
+                missing_stones = []
+                if inv is not None:
+                    if inv.linemate < 1:
+                        missing_stones.append("linemate")
+                    if inv.deraumere < 1:
+                        missing_stones.append("deraumere")
+                    if inv.sibur < 1:
+                        missing_stones.append("sibur")
+
+                for stone in missing_stones:
+                    stone_action = get_survival_action(client, inv, look_resp, stone)
+                    if stone_action is not None:
+                        action = stone_action
+                        break
+
+            if action is None:
+                client.path_steps = []  # Clear path
+                action, _ = model.predict(obs, deterministic=True)
+                action = int(action)
+                if action == int(ControllerAction.INCANTATION):
+                    if not has_stones_for_level(inv, look_resp, current_level):
+                        action = int(ControllerAction.FORWARD)
             execute_action(client, action, handler)
 
 

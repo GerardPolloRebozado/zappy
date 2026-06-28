@@ -169,10 +169,11 @@ class ZappyLibClient:
             and isinstance(self.name, str)
             and self.name.startswith("TeammateBot_")
         ):
+            team = getattr(self, "team_name", "team1")
             if "Incantation" in text:
-                text = "team1|ZAPPY_SEC|INCANT"
+                text = f"{team}|ZAPPY_SEC|INCANT"
             else:
-                text = "team1|ZAPPY_SEC|COME"
+                text = f"{team}|ZAPPY_SEC|COME"
 
         cmd = f"Broadcast {text}\n".encode("utf-8")
         self.lib.zappy_send_command(self.server_ptr, self.player_id, cmd)
