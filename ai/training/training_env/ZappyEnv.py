@@ -50,7 +50,7 @@ class ObservationZappyEnv:
                         idx = resources.index(name) - 1
                         if idx >= 0:
                             obs[idx] = quantity
-            obs[656] = getattr(self, "client_broadcast_dir", 0)
+            obs[656] = obs[0]
         elif isinstance(inv, Inventory):
             obs[0] = inv.food
             obs[1] = inv.linemate
@@ -59,7 +59,7 @@ class ObservationZappyEnv:
             obs[4] = getattr(inv, "mendiane", 0)
             obs[5] = getattr(inv, "phiras", 0)
             obs[6] = getattr(inv, "thystame", 0)
-            obs[656] = getattr(self, "client_broadcast_dir", 0)
+            obs[656] = inv.food
 
         # Parse Vision (Look)
         vision_list = self.client.look()
@@ -78,6 +78,7 @@ class ObservationZappyEnv:
                         offset_resource = resources.index(entity)
                         obs[base_index + (i * 8) + offset_resource] += 1
         obs[655] = self.client.level
+        obs[79] = getattr(self, "client_broadcast_dir", 0)
 
         return obs
 
@@ -307,7 +308,7 @@ class ZappyEnv(ObservationZappyEnv, gym.Env):
                             0.0  # No reward for excess food hoarding (focus on stones)
                         )
                     else:
-                        reward += 0.2  # Reduced from 2.0 to prevent food-farming loops
+                        reward += 2.0  # Large positive reward for survival
                 else:
                     if isinstance(inv, Inventory) and isinstance(item_target, str):
                         req = ELEVATION_TABLE.get(self.client.level)

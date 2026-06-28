@@ -72,7 +72,8 @@ def build_observation(client, inv, look_resp, verbose=False):
                     obs[base_index + (i * 8) + offset_resource] += 1
 
     obs[655] = client.level
-    obs[656] = getattr(client, "last_broadcast_dir", 0)
+    obs[656] = parsed_inv.food if isinstance(parsed_inv, Inventory) else 10
+    obs[79] = getattr(client, "last_broadcast_dir", 0)
     return obs
 
 
@@ -222,7 +223,7 @@ def main():
         "--model", type=str, default="zappy_ai_model", help="Saved model path/name"
     )
     parser.add_argument(
-        "--episodes", type=int, default=5, help="Number of test episodes to run"
+        "--episodes", type=int, default=50, help="Number of test episodes to run"
     )
     parser.add_argument(
         "--freq", type=int, default=1000, help="Simulation tick frequency"
